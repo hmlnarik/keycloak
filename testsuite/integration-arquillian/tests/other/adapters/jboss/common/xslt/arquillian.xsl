@@ -37,10 +37,12 @@
                     <property name="jbossArguments">
                         -Djboss.socket.binding.port-offset=${app.server.port.offset} 
                         ${adapter.test.props}
+                        -Djboss.shutdown.forceHalt=false
                     </property>
                     <property name="javaVmArguments">
                         ${app.server.memory.settings}
                         -Djava.net.preferIPv4Stack=true
+                        -javaagent:/home/hmlnarik/.m2/repository/org/jacoco/org.jacoco.agent/0.7.8/org.jacoco.agent-0.7.8-runtime.jar=destfile=/home/hmlnarik/src/keycloak/target/coverage-reports/jacoco-app-server.exec
                     </property>
                     <property name="managementProtocol">${app.server.management.protocol}</property>
                     <property name="managementPort">${app.server.management.port}</property>

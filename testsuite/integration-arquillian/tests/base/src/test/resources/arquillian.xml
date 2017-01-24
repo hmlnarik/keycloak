@@ -69,10 +69,12 @@
                 ${migration.import.properties}
                 ${auth.server.profile}
                 ${auth.server.feature}
+                -Djboss.shutdown.forceHalt=false
             </property>
             <property name="javaVmArguments">
                 ${auth.server.memory.settings}
                 -Djava.net.preferIPv4Stack=true
+                -javaagent:/home/hmlnarik/.m2/repository/org/jacoco/org.jacoco.agent/0.7.8/org.jacoco.agent-0.7.8-runtime.jar=destfile=/home/hmlnarik/src/keycloak/target/coverage-reports/jacoco-auth-server.exec
             </property>
             <property name="managementPort">${auth.server.management.port}</property>
             <property name="startupTimeoutInSeconds">${auth.server.jboss.startup.timeout}</property>
