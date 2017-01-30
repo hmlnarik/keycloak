@@ -68,6 +68,7 @@
             -Djava.security.krb5.conf=${project.build.directory}/dependency/kerberos/test-krb5.conf
             -Dkie.maven.settings.custom=${settings.path}
             -Drepo.url=${repo.url}
+            -Djava.security.egd=file:/dev/urandom
         </adapter.test.props>
         
         <app.server.home>${containers.home}/app-server-${app.server}</app.server.home>

@@ -6,6 +6,7 @@ cache:
 
 before_cache:
   - rm -rf $HOME/.m2/repository/org/keycloak
+  - find $HOME/.m2 -name *.lastUpdated -delete
 
 env:
   global:
@@ -17,6 +18,13 @@ env:
     - TESTS=group3
     - TESTS=group4
     - TESTS=adapter
+    - APP_SERVER=wildfly AUTH_SERVER=wildfly TESTS=adapter-arquillian
+    - APP_SERVER=wildfly AUTH_SERVER=wildfly TESTS=adapter-examples-arquillian
+    - APP_SERVER=tomcat9 AUTH_SERVER=wildfly TESTS=adapter-arquillian
+    - APP_SERVER=tomcat9 AUTH_SERVER=wildfly TESTS=adapter-examples-arquillian
+    # Fuse only has tests for examples, the next line is hence commented out intentionally
+    # - APP_SERVER=fuse63 AUTH_SERVER=wildfly TESTS=adapter-arquillian
+    - APP_SERVER=fuse63 AUTH_SERVER=wildfly TESTS=adapter-examples-arquillian
     - TESTS=old
 
 jdk:
@@ -25,10 +33,10 @@ jdk:
 before_script:
   - export MAVEN_SKIP_RC=true
 
-install: 
+install:
   - travis_wait 60 mvn install -Pdistribution -DskipTests=true -B -V -q
 
 script:
-  - ./travis-run-tests.sh $TESTS
+  - ./travis-run-tests.sh "$TESTS" "$APP_SERVER" "$AUTH_SERVER"
 
 sudo: false

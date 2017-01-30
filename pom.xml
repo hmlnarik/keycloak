@@ -124,6 +124,7 @@
 
         <!-- Surefire Settings -->
         <surefire.memory.settings>-Xms512m -Xmx2048m -XX:MetaspaceSize=96m -XX:MaxMetaspaceSize=256m</surefire.memory.settings>
+        <surefire.plugin.version>2.19</surefire.plugin.version>
     </properties>
 
     <url>http://keycloak.org</url>
@@ -1367,6 +1368,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire.plugin.version}</version>
                     <configuration>
                         <forkMode>once</forkMode>
                         <argLine>${surefire.memory.settings}</argLine>

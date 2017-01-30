@@ -23,6 +23,7 @@ import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.AuthorizationResource;
 import org.keycloak.admin.client.resource.ClientResource;
@@ -629,6 +630,7 @@ public abstract class AbstractPhotozExampleAdapterTest extends AbstractExampleAd
     
     //KEYCLOAK-3777
     @Test
+    @Ignore("unignore after https://issues.jboss.org/browse/KEYCLOAK-4343 is fixed")
     public void testEntitlementRequest() {
         try {
             this.deployer.deploy(RESOURCE_SERVER_ID);
