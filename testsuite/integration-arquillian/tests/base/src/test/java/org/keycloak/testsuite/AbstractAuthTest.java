@@ -60,11 +60,16 @@ public abstract class AbstractAuthTest extends AbstractKeycloakTest {
 
     protected UserRepresentation bburkeUser;
 
+    private static final String TEST_REALM_PRIVATE_KEY_STR = "MIIBOgIBAAJBAIU1QC8WYII5ePfEEoWHPNUSBYoPinCckHUwrgv52PD27phX5oCNYgBOBucJzUqfVHl2dEZiC6B31zK7ZQDJy6MCAwEAAQJAaQnqiLbedxGWv9kOudhAMcu6Lnm+srnid2Zhd/QWCzugLBpi414YkDIAjk0jGx8iFFtGSx8JdskI3sfs8r2igQIhAOwWxmkPPCTwM82WtucSQF9vC4D1d6HRWUi17MfiKw+DAiEAkHE/dfvHnR1dpAanNIcf3sLg/sHdUpY1S8f9vr4MeWECIAlggjLsCvyAmd4hjVQyMmJX+8H8ferscLpll2j8/67XAiEAgfiVTPnY3UReTUj7TaXFBLJAuJwDJdwpat4zMl5aZSECIEB8irTqPdAlTa9KnAvndKojoGEsYn6KKycuO3PeTbUV";
+    private static final String TEST_REALM_PUBLIC_KEY_STR = "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIU1QC8WYII5ePfEEoWHPNUSBYoPinCckHUwrgv52PD27phX5oCNYgBOBucJzUqfVHl2dEZiC6B31zK7ZQDJy6MCAwEAAQ==";
+
     @Override
     public void addTestRealms(List<RealmRepresentation> testRealms) {
         RealmRepresentation testRealmRep = new RealmRepresentation();
         testRealmRep.setRealm(TEST);
         testRealmRep.setEnabled(true);
+        testRealmRep.setPrivateKey(TEST_REALM_PRIVATE_KEY_STR);
+        testRealmRep.setPublicKey(TEST_REALM_PUBLIC_KEY_STR);
         testRealms.add(testRealmRep);
     }
 
