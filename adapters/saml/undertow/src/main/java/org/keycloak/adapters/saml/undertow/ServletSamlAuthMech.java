@@ -24,13 +24,12 @@ import io.undertow.util.Headers;
 import org.keycloak.adapters.saml.SamlDeployment;
 import org.keycloak.adapters.saml.SamlDeploymentContext;
 import org.keycloak.adapters.saml.SamlSessionStore;
-import org.keycloak.adapters.spi.HttpFacade;
-import org.keycloak.adapters.spi.InMemorySessionIdMapper;
-import org.keycloak.adapters.spi.SessionIdMapper;
+import org.keycloak.adapters.spi.*;
 import org.keycloak.adapters.undertow.ServletHttpFacade;
 import org.keycloak.adapters.undertow.UndertowHttpFacade;
 import org.keycloak.adapters.undertow.UndertowUserSessionManagement;
 
+import io.undertow.servlet.api.DeploymentInfo;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -43,13 +42,19 @@ import java.io.IOException;
  */
 public class ServletSamlAuthMech extends AbstractSamlAuthMech {
     protected SessionIdMapper idMapper = new InMemorySessionIdMapper();
+
     public ServletSamlAuthMech(SamlDeploymentContext deploymentContext, UndertowUserSessionManagement sessionManagement, String errorPage) {
         super(deploymentContext, sessionManagement, errorPage);
+
+    }
+
+    public void addTokenStoreUpdaters(DeploymentInfo deploymentInfo) {
+        deploymentInfo.addSessionListener(new IdMapperUpdaterSessionListener(idMapper));    // This takes cares of HTTP sessions manipulated locally
     }
 
     @Override
     protected SamlSessionStore getTokenStore(HttpServerExchange exchange, HttpFacade facade, SamlDeployment deployment, SecurityContext securityContext) {
-        return new ServletSamlSessionStore(exchange, sessionManagement, securityContext, idMapper, deployment);
+        return new ServletSamlSessionStore(exchange, sessionManagement, securityContext, idMapper, SessionIdMapperUpdater.EXTERNAL, deployment);
     }
 
     @Override

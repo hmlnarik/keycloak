@@ -98,7 +98,7 @@ public class SamlServletExtension implements ServletExtension {
 
     @Override
     @SuppressWarnings("UseSpecificCatch")
-    public void handleDeployment(DeploymentInfo deploymentInfo, final ServletContext servletContext) {
+    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext) {
         if (!isAuthenticationMechanismPresent(deploymentInfo, "KEYCLOAK-SAML")) {
             log.debug("auth-method is not keycloak saml!");
             return;
@@ -154,7 +154,7 @@ public class SamlServletExtension implements ServletExtension {
         servletContext.setAttribute(SamlDeploymentContext.class.getName(), deploymentContext);
         UndertowUserSessionManagement userSessionManagement = new UndertowUserSessionManagement();
         final ServletSamlAuthMech mech = createAuthMech(deploymentInfo, deploymentContext, userSessionManagement);
-
+        mech.addTokenStoreUpdaters(deploymentInfo);
 
         // setup handlers
 
