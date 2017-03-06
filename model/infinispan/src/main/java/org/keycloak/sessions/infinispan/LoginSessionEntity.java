@@ -15,64 +15,49 @@
  * limitations under the License.
  */
 
-package org.keycloak.models.sessions.infinispan.entities;
+package org.keycloak.sessions.infinispan;
 
-import org.keycloak.models.ClientSessionModel;
-import org.keycloak.sessions.LoginSessionModel;
-
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.keycloak.models.sessions.infinispan.entities.SessionEntity;
+import org.keycloak.sessions.LoginSessionModel;
+
 /**
- * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class ClientSessionEntity extends SessionEntity {
+public class LoginSessionEntity extends SessionEntity {
 
-    private String client;
-
-    private String userSession;
-
-    private String authMethod;
+    private String clientUuid;
+    private String authUserId;
 
     private String redirectUri;
-
     private int timestamp;
-
     private String action;
-
     private Set<String> roles;
     private Set<String> protocolMappers;
+
+    private Map<String, LoginSessionModel.ExecutionStatus> executionStatus;
+    private String protocol;
+
     private Map<String, String> notes;
+    private Set<String> requiredActions;
     private Map<String, String> userSessionNotes;
-    private Map<String, ClientSessionModel.ExecutionStatus> authenticatorStatus = new HashMap<>();
-    private String authUserId;
-    private Set<String> requiredActions = new HashSet<>();
 
-
-    public String getClient() {
-        return client;
+    public String getClientUuid() {
+        return clientUuid;
     }
 
-    public void setClient(String client) {
-        this.client = client;
+    public void setClientUuid(String clientUuid) {
+        this.clientUuid = clientUuid;
     }
 
-    public String getUserSession() {
-        return userSession;
+    public String getAuthUserId() {
+        return authUserId;
     }
 
-    public void setUserSession(String userSession) {
-        this.userSession = userSession;
-    }
-
-    public String getAuthMethod() {
-        return authMethod;
-    }
-
-    public void setAuthMethod(String authMethod) {
-        this.authMethod = authMethod;
+    public void setAuthUserId(String authUserId) {
+        this.authUserId = authUserId;
     }
 
     public String getRedirectUri() {
@@ -115,6 +100,22 @@ public class ClientSessionEntity extends SessionEntity {
         this.protocolMappers = protocolMappers;
     }
 
+    public Map<String, LoginSessionModel.ExecutionStatus> getExecutionStatus() {
+        return executionStatus;
+    }
+
+    public void setExecutionStatus(Map<String, LoginSessionModel.ExecutionStatus> executionStatus) {
+        this.executionStatus = executionStatus;
+    }
+
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
+    }
+
     public Map<String, String> getNotes() {
         return notes;
     }
@@ -123,20 +124,12 @@ public class ClientSessionEntity extends SessionEntity {
         this.notes = notes;
     }
 
-    public Map<String, ClientSessionModel.ExecutionStatus> getAuthenticatorStatus() {
-        return authenticatorStatus;
+    public Set<String> getRequiredActions() {
+        return requiredActions;
     }
 
-    public void setAuthenticatorStatus(Map<String, ClientSessionModel.ExecutionStatus> authenticatorStatus) {
-        this.authenticatorStatus = authenticatorStatus;
-    }
-
-    public String getAuthUserId() {
-        return authUserId;
-    }
-
-    public void setAuthUserId(String authUserId) {
-        this.authUserId = authUserId;
+    public void setRequiredActions(Set<String> requiredActions) {
+        this.requiredActions = requiredActions;
     }
 
     public Map<String, String> getUserSessionNotes() {
@@ -145,9 +138,5 @@ public class ClientSessionEntity extends SessionEntity {
 
     public void setUserSessionNotes(Map<String, String> userSessionNotes) {
         this.userSessionNotes = userSessionNotes;
-    }
-
-    public Set<String> getRequiredActions() {
-        return requiredActions;
     }
 }

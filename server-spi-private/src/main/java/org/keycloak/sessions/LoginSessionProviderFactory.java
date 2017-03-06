@@ -15,20 +15,12 @@
  * limitations under the License.
  */
 
-package org.keycloak.protocol.saml.mappers;
+package org.keycloak.sessions;
 
-import org.keycloak.dom.saml.v2.protocol.ResponseType;
-import org.keycloak.models.ClientLoginSessionModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.ProtocolMapperModel;
-import org.keycloak.models.UserSessionModel;
+import org.keycloak.provider.ProviderFactory;
 
 /**
- * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
- * @version $Revision: 1 $
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface SAMLLoginResponseMapper {
-
-    ResponseType transformLoginResponse(ResponseType response, ProtocolMapperModel mappingModel, KeycloakSession session,
-                                        UserSessionModel userSession, ClientLoginSessionModel clientSession);
+public interface LoginSessionProviderFactory extends ProviderFactory<LoginSessionProvider> {
 }

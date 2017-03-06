@@ -23,6 +23,7 @@ import org.infinispan.context.Flag;
 import org.jboss.logging.Logger;
 import org.keycloak.common.util.Time;
 import org.keycloak.models.ClientInitialAccessModel;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -624,27 +625,17 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     }
 
     @Override
-    public List<ClientSessionModel> getOfflineClientSessions(RealmModel realm, UserModel user) {
+    public List<UserSessionModel> getOfflineUserSessions(RealmModel realm, UserModel user) {
         Iterator<Map.Entry<String, SessionEntity>> itr = offlineSessionCache.entrySet().stream().filter(UserSessionPredicate.create(realm.getId()).user(user.getId())).iterator();
-        List<ClientSessionModel> clientSessions = new LinkedList<>();
+        List<UserSessionModel> userSessions = new LinkedList<>();
 
         while(itr.hasNext()) {
             UserSessionEntity entity = (UserSessionEntity) itr.next().getValue();
-            Set<String> currClientSessions = entity.getClientSessions();
-
-            if (currClientSessions == null) {
-                continue;
-            }
-
-            for (String clientSessionId : currClientSessions) {
-                ClientSessionEntity cls = (ClientSessionEntity) offlineSessionCache.get(clientSessionId);
-                if (cls != null) {
-                    clientSessions.add(wrap(realm, cls, true));
-                }
-            }
+            UserSessionModel userSession = wrap(realm, entity, true);
+            userSessions.add(userSession);
         }
 
-        return clientSessions;
+        return userSessions;
     }
 
     @Override
@@ -876,7 +867,8 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
             }
 
             public void execute() {
-                log.tracev("Executing cache operation: {0} on {1}", operation, key);
+                // TODO: Revert to trace?
+                log.debugv("Executing cache operation: {0} on {1} valueClass {2}", operation, key, value == null ? "null" : value.getClass().getSimpleName());
 
                 switch (operation) {
                     case ADD:

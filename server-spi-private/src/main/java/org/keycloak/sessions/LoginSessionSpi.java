@@ -15,20 +15,35 @@
  * limitations under the License.
  */
 
-package org.keycloak.protocol.saml.mappers;
+package org.keycloak.sessions;
 
-import org.keycloak.dom.saml.v2.protocol.ResponseType;
-import org.keycloak.models.ClientLoginSessionModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.ProtocolMapperModel;
-import org.keycloak.models.UserSessionModel;
+import org.keycloak.provider.Provider;
+import org.keycloak.provider.ProviderFactory;
+import org.keycloak.provider.Spi;
 
 /**
- * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
- * @version $Revision: 1 $
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface SAMLLoginResponseMapper {
+public class LoginSessionSpi implements Spi {
 
-    ResponseType transformLoginResponse(ResponseType response, ProtocolMapperModel mappingModel, KeycloakSession session,
-                                        UserSessionModel userSession, ClientLoginSessionModel clientSession);
+    @Override
+    public boolean isInternal() {
+        return true;
+    }
+
+    @Override
+    public String getName() {
+        return "loginSessions";
+    }
+
+    @Override
+    public Class<? extends Provider> getProviderClass() {
+        return LoginSessionProvider.class;
+    }
+
+    @Override
+    public Class<? extends ProviderFactory> getProviderFactoryClass() {
+        return LoginSessionProviderFactory.class;
+    }
+
 }

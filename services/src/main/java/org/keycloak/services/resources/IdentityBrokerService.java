@@ -45,6 +45,7 @@ import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationFlowModel;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.Constants;
@@ -78,6 +79,7 @@ import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.services.validation.Validation;
+import org.keycloak.sessions.LoginSessionModel;
 import org.keycloak.util.JsonSerialization;
 
 import javax.ws.rs.GET;
@@ -108,7 +110,6 @@ import java.util.UUID;
 
 import static org.keycloak.models.AccountRoles.MANAGE_ACCOUNT;
 import static org.keycloak.models.AccountRoles.MANAGE_ACCOUNT_LINKS;
-import static org.keycloak.models.ClientSessionModel.Action.AUTHENTICATE;
 import static org.keycloak.models.Constants.ACCOUNT_MANAGEMENT_CLIENT_ID;
 
 /**
@@ -243,8 +244,8 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
 
 
 
-        ClientSessionModel clientSession = null;
-        for (ClientSessionModel cs : cookieResult.getSession().getClientSessions()) {
+        ClientLoginSessionModel clientSession = null;
+        for (ClientLoginSessionModel cs : cookieResult.getSession().getClientLoginSessions().values()) {
             if (cs.getClient().getClientId().equals(clientId)) {
                 byte[] decoded = Base64Url.decode(hash);
                 MessageDigest md = null;
@@ -296,7 +297,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         }
 
 
-
+        // TODO: Create LoginSessionModel and Login cookie and set the state inside. See my notes document
         ClientSessionCode clientSessionCode = new ClientSessionCode(session, realmModel, clientSession);
         clientSessionCode.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
         clientSessionCode.getCode();
@@ -475,7 +476,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         if (parsedCode.response != null) {
             return parsedCode.response;
         }
-        ClientSessionCode clientCode = parsedCode.clientSessionCode;
+        ClientSessionCode<LoginSessionModel> clientCode = parsedCode.clientSessionCode;
 
         String providerId = identityProviderConfig.getAlias();
         if (!identityProviderConfig.isStoreToken()) {
@@ -485,10 +486,10 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
             context.setToken(null);
         }
 
-        ClientSessionModel clientSession = clientCode.getClientSession();
-        context.setClientSession(clientSession);
+        LoginSessionModel loginSession = clientCode.getClientSession();
+        context.setLoginSession(loginSession);
 
-        session.getContext().setClient(clientSession.getClient());
+        session.getContext().setClient(loginSession.getClient());
 
         context.getIdp().preprocessFederatedIdentity(session, realmModel, context);
         Set<IdentityProviderMapperModel> mappers = realmModel.getIdentityProviderMappersByAlias(context.getIdpConfig().getAlias());
@@ -504,13 +505,13 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
                 context.getUsername(), context.getToken());
 
         this.event.event(EventType.IDENTITY_PROVIDER_LOGIN)
-                .detail(Details.REDIRECT_URI, clientSession.getRedirectUri())
+                .detail(Details.REDIRECT_URI, loginSession.getRedirectUri())
                 .detail(Details.IDENTITY_PROVIDER_USERNAME, context.getUsername());
 
         UserModel federatedUser = this.session.users().getUserByFederatedIdentity(federatedIdentityModel, this.realmModel);
 
         // Check if federatedUser is already authenticated (this means linking social into existing federatedUser account)
-        if (clientSession.getUserSession() != null) {
+        if (loginSession.getUserSession() != null) {
             return performAccountLinking(clientSession, context, federatedIdentityModel, federatedUser);
         }
 
@@ -699,30 +700,30 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         if (parsedCode.response != null) {
             return parsedCode.response;
         }
-        ClientSessionModel clientSession = parsedCode.clientSessionCode.getClientSession();
+        LoginSessionModel loginSession = parsedCode.clientSessionCode.getClientSession();
 
         try {
-            SerializedBrokeredIdentityContext serializedCtx = SerializedBrokeredIdentityContext.readFromClientSession(clientSession, PostBrokerLoginConstants.PBL_BROKERED_IDENTITY_CONTEXT);
+            SerializedBrokeredIdentityContext serializedCtx = SerializedBrokeredIdentityContext.readFromLoginSession(loginSession, PostBrokerLoginConstants.PBL_BROKERED_IDENTITY_CONTEXT);
             if (serializedCtx == null) {
                 throw new IdentityBrokerException("Not found serialized context in clientSession. Note " + PostBrokerLoginConstants.PBL_BROKERED_IDENTITY_CONTEXT + " was null");
             }
-            BrokeredIdentityContext context = serializedCtx.deserialize(session, clientSession);
+            BrokeredIdentityContext context = serializedCtx.deserialize(session, loginSession);
 
-            String wasFirstBrokerLoginNote = clientSession.getNote(PostBrokerLoginConstants.PBL_AFTER_FIRST_BROKER_LOGIN);
+            String wasFirstBrokerLoginNote = loginSession.getNote(PostBrokerLoginConstants.PBL_AFTER_FIRST_BROKER_LOGIN);
             boolean wasFirstBrokerLogin = Boolean.parseBoolean(wasFirstBrokerLoginNote);
 
             // Ensure the post-broker-login flow was successfully finished
             String authStateNoteKey = PostBrokerLoginConstants.PBL_AUTH_STATE_PREFIX + context.getIdpConfig().getAlias();
-            String authState = clientSession.getNote(authStateNoteKey);
+            String authState = loginSession.getNote(authStateNoteKey);
             if (!Boolean.parseBoolean(authState)) {
                 throw new IdentityBrokerException("Invalid request. Not found the flag that post-broker-login flow was finished");
             }
 
             // remove notes
-            clientSession.removeNote(PostBrokerLoginConstants.PBL_BROKERED_IDENTITY_CONTEXT);
-            clientSession.removeNote(PostBrokerLoginConstants.PBL_AFTER_FIRST_BROKER_LOGIN);
+            loginSession.removeNote(PostBrokerLoginConstants.PBL_BROKERED_IDENTITY_CONTEXT);
+            loginSession.removeNote(PostBrokerLoginConstants.PBL_AFTER_FIRST_BROKER_LOGIN);
 
-            return afterPostBrokerLoginFlowSuccess(clientSession, context, wasFirstBrokerLogin, parsedCode.clientSessionCode);
+            return afterPostBrokerLoginFlowSuccess(loginSession, context, wasFirstBrokerLogin, parsedCode.clientSessionCode);
         } catch (IdentityBrokerException e) {
             return redirectToErrorPage(Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR, e);
         }
@@ -770,6 +771,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         this.event.user(federatedUser);
         this.event.session(userSession);
 
+        // TODO: This is supposed to be called after requiredActions are processed
         TokenManager.attachClientSession(userSession, clientSession);
         context.getIdp().attachUserSession(userSession, clientSession, context);
         userSession.setNote(Details.IDENTITY_PROVIDER, providerId);
@@ -900,16 +902,12 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
     }
 
     private ParsedCodeContext parseClientSessionCode(String code) {
-        ClientSessionCode clientCode = ClientSessionCode.parse(code, this.session, this.realmModel);
+        ClientSessionCode<LoginSessionModel> clientCode = ClientSessionCode.parse(code, this.session, this.realmModel, LoginSessionModel.class);
 
         if (clientCode != null) {
-            ClientSessionModel clientSession = clientCode.getClientSession();
+            LoginSessionModel loginSession = clientCode.getClientSession();
 
-            if (clientSession.getUserSession() != null) {
-                this.event.session(clientSession.getUserSession());
-            }
-
-            ClientModel client = clientSession.getClient();
+            ClientModel client = loginSession.getClient();
 
             if (client != null) {
 
@@ -918,7 +916,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
                 this.session.getContext().setClient(client);
 
                 if (!clientCode.isValid(AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-                    logger.debugf("Authorization code is not valid. Client session ID: %s, Client session's action: %s", clientSession.getId(), clientSession.getAction());
+                    logger.debugf("Authorization code is not valid. Client session ID: %s, Client session's action: %s", loginSession.getId(), loginSession.getAction());
 
                     // Check if error happened during login or during linking from account management
                     Response accountManagementFailedLinking = checkAccountManagementFailedLinking(clientCode.getClientSession(), Messages.STALE_CODE_ACCOUNT);
@@ -967,28 +965,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         return ParsedCodeContext.clientSessionCode(new ClientSessionCode(session, this.realmModel, clientSession));
     }
 
-    /**
-     * Returns {@code true} if the client session is defined for the given code
-     * in the current session and for the current realm.
-     * Does <b>not</b> check the session validity. To obtain client session if
-     * and only if it exists and is valid, use {@link ClientSessionCode#parse}.
-     *
-     * @param code
-     * @return
-     */
-    protected boolean isClientSessionRegistered(String code) {
-        if (code == null) {
-            return false;
-        }
-
-        try {
-            return ClientSessionCode.getClientSession(code, this.session, this.realmModel) != null;
-        } catch (RuntimeException e) {
-            return false;
-        }
-    }
-
-    private Response checkAccountManagementFailedLinking(ClientSessionModel clientSession, String error, Object... parameters) {
+    private Response checkAccountManagementFailedLinking(LoginSessionModel loginSession, String error, Object... parameters) {
         if (clientSession.getUserSession() != null && clientSession.getClient() != null && clientSession.getClient().getClientId().equals(ACCOUNT_MANAGEMENT_CLIENT_ID)) {
 
             this.event.event(EventType.FEDERATED_IDENTITY_LINK);
@@ -1002,12 +979,12 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         }
     }
 
-    private AuthenticationRequest createAuthenticationRequest(String providerId, ClientSessionCode clientSessionCode) {
-        ClientSessionModel clientSession = null;
+    private AuthenticationRequest createAuthenticationRequest(String providerId, ClientSessionCode<LoginSessionModel> clientSessionCode) {
+        LoginSessionModel loginSession = null;
         String relayState = null;
 
         if (clientSessionCode != null) {
-            clientSession = clientSessionCode.getClientSession();
+            loginSession = clientSessionCode.getClientSession();
             relayState = clientSessionCode.getCode();
         }
 
@@ -1177,10 +1154,10 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
 
 
     private static class ParsedCodeContext {
-        private ClientSessionCode clientSessionCode;
+        private ClientSessionCode<LoginSessionModel> clientSessionCode;
         private Response response;
 
-        public static ParsedCodeContext clientSessionCode(ClientSessionCode clientSessionCode) {
+        public static ParsedCodeContext clientSessionCode(ClientSessionCode<LoginSessionModel> clientSessionCode) {
             ParsedCodeContext ctx = new ParsedCodeContext();
             ctx.clientSessionCode = clientSessionCode;
             return ctx;

@@ -15,23 +15,27 @@
  * limitations under the License.
  */
 
-package org.keycloak.models;
+package org.keycloak.sessions;
 
 import java.util.Map;
 import java.util.Set;
 
-import org.keycloak.sessions.CommonClientSessionModel;
+import org.keycloak.models.UserModel;
 
 /**
- * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
+ * Using class for now to avoid many updates among implementations
+ *
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface ClientSessionModel extends CommonClientSessionModel {
+public interface LoginSessionModel extends CommonClientSessionModel {
 
-    public UserSessionModel getUserSession();
-    public void setUserSession(UserSessionModel userSession);
+//
+//    public UserSessionModel getUserSession();
+//    public void setUserSession(UserSessionModel userSession);
 
     public String getRedirectUri();
     public void setRedirectUri(String uri);
+
 
     public Map<String, ExecutionStatus> getExecutionStatus();
     public void setExecutionStatus(String authenticator, ExecutionStatus status);
@@ -39,15 +43,8 @@ public interface ClientSessionModel extends CommonClientSessionModel {
     public UserModel getAuthenticatedUser();
     public void setAuthenticatedUser(UserModel user);
 
-
-
-    /**
-     * Authentication request type, i.e. OAUTH, SAML 2.0, SAML 1.1, etc.
-     *
-     * @return
-     */
-    public String getAuthMethod();
-    public void setAuthMethod(String method);
+    public String getProtocol();
+    public void setProtocol(String method);
 
     /**
      * Required actions that are attached to this client session.
@@ -81,6 +78,5 @@ public interface ClientSessionModel extends CommonClientSessionModel {
     public Map<String, String> getUserSessionNotes();
 
     public void clearUserSessionNotes();
-
 
 }
