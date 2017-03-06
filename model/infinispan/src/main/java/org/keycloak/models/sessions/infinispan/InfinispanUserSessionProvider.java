@@ -877,7 +877,8 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
             }
 
             public void execute() {
-                log.tracev("Executing cache operation: {0} on {1}", operation, key);
+                // TODO: Revert to trace?
+                log.debugv("Executing cache operation: {0} on {1} valueClass {2}", operation, key, value==null ? "null" : value.getClass().getSimpleName());
 
                 switch (operation) {
                     case ADD:
