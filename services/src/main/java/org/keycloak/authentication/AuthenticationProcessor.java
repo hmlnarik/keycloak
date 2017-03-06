@@ -87,7 +87,6 @@ public class AuthenticationProcessor {
      * This could be an success message forwarded from another authenticator
      */
     protected FormMessage forwardedSuccessMessage;
-    protected boolean userSessionCreated;
 
     // Used for client authentication
     protected ClientModel client;
@@ -146,10 +145,6 @@ public class AuthenticationProcessor {
 
     public UserSessionModel getUserSession() {
         return userSession;
-    }
-
-    public boolean isUserSessionCreated() {
-        return userSessionCreated;
     }
 
     public AuthenticationProcessor setRealm(RealmModel realm) {
@@ -828,7 +823,6 @@ public class AuthenticationProcessor {
         if (userSession == null) { // if no authenticator attached a usersession
             userSession = session.sessions().createUserSession(realm, clientSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), clientSession.getAuthMethod(), remember, null, null);
             userSession.setState(UserSessionModel.State.LOGGING_IN);
-            userSessionCreated = true;
         }
         if (remember) {
             event.detail(Details.REMEMBER_ME, "true");
