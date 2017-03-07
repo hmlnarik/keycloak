@@ -31,6 +31,7 @@ import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.jose.jws.JWSInputException;
 import org.keycloak.jose.jws.crypto.HashProvider;
 import org.keycloak.jose.jws.crypto.RSAProvider;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.ClientTemplateModel;
@@ -60,6 +61,7 @@ import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.UserSessionManager;
+import org.keycloak.sessions.LoginSessionModel;
 import org.keycloak.util.TokenUtil;
 import org.keycloak.common.util.Time;
 
@@ -107,10 +109,10 @@ public class TokenManager {
     public static class TokenValidation {
         public final UserModel user;
         public final UserSessionModel userSession;
-        public final ClientSessionModel clientSession;
+        public final ClientLoginSessionModel clientSession;
         public final AccessToken newToken;
 
-        public TokenValidation(UserModel user, UserSessionModel userSession, ClientSessionModel clientSession, AccessToken newToken) {
+        public TokenValidation(UserModel user, UserSessionModel userSession, ClientLoginSessionModel clientSession, AccessToken newToken) {
             this.user = user;
             this.userSession = userSession;
             this.clientSession = clientSession;
@@ -129,29 +131,18 @@ public class TokenManager {
         }
 
         UserSessionModel userSession = null;
-        ClientSessionModel clientSession = null;
         if (TokenUtil.TOKEN_TYPE_OFFLINE.equals(oldToken.getType())) {
 
             UserSessionManager sessionManager = new UserSessionManager(session);
-            clientSession = sessionManager.findOfflineClientSession(realm, oldToken.getClientSession());
-            if (clientSession != null) {
-                userSession = clientSession.getUserSession();
-
-                if (userSession == null) {
-                    throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Offline user session not found", "Offline user session not found");
-                }
-
-                String userSessionId = oldToken.getSessionState();
-                if (!userSessionId.equals(userSession.getId())) {
-                    throw new ModelException("User session don't match. Offline client session " + clientSession.getId() + ", It's user session " + userSession.getId() +
-                            "  Wanted user session: " + userSessionId);
-                }
+            userSession = sessionManager.findOfflineUserSession(realm, oldToken.getSessionState());
+            if (userSession != null) {
 
                 // Revoke timeouted offline userSession
                 if (userSession.getLastSessionRefresh() < Time.currentTime() - realm.getOfflineSessionIdleTimeout()) {
                     sessionManager.revokeOfflineUserSession(userSession);
-                    throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Offline user session not active", "Offline user session session not active");
+                    throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Offline session not active", "Offline session not active");
                 }
+
             }
         } else {
             // Find userSession regularly for online tokens
@@ -160,20 +151,14 @@ public class TokenManager {
                 AuthenticationManager.backchannelLogout(session, realm, userSession, uriInfo, connection, headers, true);
                 throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Session not active", "Session not active");
             }
-
-            for (ClientSessionModel clientSessionModel : userSession.getClientSessions()) {
-                if (clientSessionModel.getId().equals(oldToken.getClientSession())) {
-                    clientSession = clientSessionModel;
-                    break;
-                }
-            }
         }
 
-        if (clientSession == null) {
-            throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Client session not active", "Client session not active");
+        if (userSession == null) {
+            throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Offline user session not found", "Offline user session not found");
         }
 
-        ClientModel client = clientSession.getClient();
+        ClientModel client = session.getContext().getClient();
+        ClientLoginSessionModel clientSession = userSession.getClientLoginSessions().get(client.getId());
 
         if (!client.getClientId().equals(oldToken.getIssuedFor())) {
             throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Unmatching clients", "Unmatching clients");
@@ -218,7 +203,12 @@ public class TokenManager {
             return false;
         }
 
-        ClientSessionModel clientSession = session.sessions().getClientSession(realm, token.getClientSession());
+        ClientModel client = realm.getClientByClientId(token.getIssuedFor());
+        if (client == null || !client.isEnabled()) {
+            return false;
+        }
+        ClientLoginSessionModel clientSession = userSession.getClientLoginSessions().get(client.getId());
+
         if (clientSession == null) {
             return false;
         }
@@ -343,7 +333,8 @@ public class TokenManager {
         }
     }
 
-    public AccessToken createClientAccessToken(KeycloakSession session, Set<RoleModel> requestedRoles, RealmModel realm, ClientModel client, UserModel user, UserSessionModel userSession, ClientSessionModel clientSession) {
+    public AccessToken createClientAccessToken(KeycloakSession session, Set<RoleModel> requestedRoles, RealmModel realm, ClientModel client, UserModel user, UserSessionModel userSession,
+                                               ClientLoginSessionModel clientSession) {
         AccessToken token = initToken(realm, client, user, userSession, clientSession, session.getContext().getUri());
         for (RoleModel role : requestedRoles) {
             addComposites(token, role);
@@ -579,9 +570,9 @@ public class TokenManager {
         }
     }
 
-    protected AccessToken initToken(RealmModel realm, ClientModel client, UserModel user, UserSessionModel session, ClientSessionModel clientSession, UriInfo uriInfo) {
+    protected AccessToken initToken(RealmModel realm, ClientModel client, UserModel user, UserSessionModel session, ClientLoginSessionModel clientSession, UriInfo uriInfo) {
         AccessToken token = new AccessToken();
-        if (clientSession != null) token.clientSession(clientSession.getId());
+        token.clientSession(clientSession.getId());
         token.id(KeycloakModelUtils.generateId());
         token.type(TokenUtil.TOKEN_TYPE_BEARER);
         token.subject(user.getId());
@@ -601,9 +592,9 @@ public class TokenManager {
             token.setAuthTime(Integer.parseInt(authTime));
         }
 
-        if (session != null) {
-            token.setSessionState(session.getId());
-        }
+
+        token.setSessionState(session.getId());
+
         int tokenLifespan = getTokenLifespan(realm, clientSession);
         if (tokenLifespan > 0) {
             token.expiration(Time.currentTime() + tokenLifespan);
@@ -615,7 +606,7 @@ public class TokenManager {
         return token;
     }
 
-    private int getTokenLifespan(RealmModel realm, ClientSessionModel clientSession) {
+    private int getTokenLifespan(RealmModel realm, ClientLoginSessionModel clientSession) {
         boolean implicitFlow = false;
         String responseType = clientSession.getNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
         if (responseType != null) {
@@ -657,7 +648,7 @@ public class TokenManager {
         return new JWSBuilder().type(JWT).kid(activeRsaKey.getKid()).jsonContent(token).sign(jwsAlgorithm, activeRsaKey.getPrivateKey());
     }
 
-    public AccessTokenResponseBuilder responseBuilder(RealmModel realm, ClientModel client, EventBuilder event, KeycloakSession session, UserSessionModel userSession, ClientSessionModel clientSession) {
+    public AccessTokenResponseBuilder responseBuilder(RealmModel realm, ClientModel client, EventBuilder event, KeycloakSession session, UserSessionModel userSession, ClientLoginSessionModel clientSession) {
         return new AccessTokenResponseBuilder(realm, client, event, session, userSession, clientSession);
     }
 
@@ -667,7 +658,7 @@ public class TokenManager {
         EventBuilder event;
         KeycloakSession session;
         UserSessionModel userSession;
-        ClientSessionModel clientSession;
+        ClientLoginSessionModel clientSession;
 
         AccessToken accessToken;
         RefreshToken refreshToken;
@@ -676,7 +667,7 @@ public class TokenManager {
         boolean generateAccessTokenHash = false;
         String codeHash;
 
-        public AccessTokenResponseBuilder(RealmModel realm, ClientModel client, EventBuilder event, KeycloakSession session, UserSessionModel userSession, ClientSessionModel clientSession) {
+        public AccessTokenResponseBuilder(RealmModel realm, ClientModel client, EventBuilder event, KeycloakSession session, UserSessionModel userSession, ClientLoginSessionModel clientSession) {
             this.realm = realm;
             this.client = client;
             this.event = event;

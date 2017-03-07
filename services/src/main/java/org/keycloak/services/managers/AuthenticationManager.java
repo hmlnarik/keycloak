@@ -35,6 +35,7 @@ import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.jose.jws.AlgorithmType;
 import org.keycloak.jose.jws.JWSBuilder;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeyManager;
@@ -464,7 +465,7 @@ public class AuthenticationManager {
 
     }
 
-    public static boolean isSSOAuthentication(ClientSessionModel clientSession) {
+    public static boolean isSSOAuthentication(ClientLoginSessionModel clientSession) {
         String ssoAuth = clientSession.getNote(SSO_AUTH);
         return Boolean.parseBoolean(ssoAuth);
     }

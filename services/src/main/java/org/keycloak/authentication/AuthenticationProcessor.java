@@ -50,6 +50,7 @@ import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.LoginActionsService;
 import org.keycloak.services.util.CacheControlUtil;
+import org.keycloak.sessions.LoginSessionModel;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -67,7 +68,7 @@ public class AuthenticationProcessor {
     protected static final Logger logger = Logger.getLogger(AuthenticationProcessor.class);
     protected RealmModel realm;
     protected UserSessionModel userSession;
-    protected ClientSessionModel clientSession;
+    protected LoginSessionModel loginSession;
     protected ClientConnection connection;
     protected UriInfo uriInfo;
     protected KeycloakSession session;
@@ -127,8 +128,8 @@ public class AuthenticationProcessor {
         return clientAuthAttributes;
     }
 
-    public ClientSessionModel getClientSession() {
-        return clientSession;
+    public LoginSessionModel getLoginSession() {
+        return loginSession;
     }
 
     public ClientConnection getConnection() {
@@ -152,8 +153,8 @@ public class AuthenticationProcessor {
         return this;
     }
 
-    public AuthenticationProcessor setClientSession(ClientSessionModel clientSession) {
-        this.clientSession = clientSession;
+    public AuthenticationProcessor setLoginSession(LoginSessionModel loginSession) {
+        this.loginSession = loginSession;
         return this;
     }
 
@@ -208,8 +209,8 @@ public class AuthenticationProcessor {
     }
 
     public String generateCode() {
-        ClientSessionCode accessCode = new ClientSessionCode(session, getRealm(), getClientSession());
-        clientSession.setTimestamp(Time.currentTime());
+        ClientSessionCode accessCode = new ClientSessionCode(session, getRealm(), getLoginSession());
+        loginSession.setTimestamp(Time.currentTime());
         return accessCode.getCode();
     }
 
@@ -227,15 +228,15 @@ public class AuthenticationProcessor {
     }
 
     public void setAutheticatedUser(UserModel user) {
-        UserModel previousUser = clientSession.getAuthenticatedUser();
+        UserModel previousUser = getLoginSession().getAuthenticatedUser();
         if (previousUser != null && !user.getId().equals(previousUser.getId()))
             throw new AuthenticationFlowException(AuthenticationFlowError.USER_CONFLICT);
         validateUser(user);
-        getClientSession().setAuthenticatedUser(user);
+        getLoginSession().setAuthenticatedUser(user);
     }
 
     public void clearAuthenticatedUser() {
-        getClientSession().setAuthenticatedUser(null);
+        getLoginSession().setAuthenticatedUser(null);
     }
 
     public class Result implements AuthenticationFlowContext, ClientAuthenticationFlowContext {
@@ -760,7 +761,7 @@ public class AuthenticationProcessor {
     }
 
     public void checkClientSession() {
-        ClientSessionCode code = new ClientSessionCode(session, realm, clientSession);
+        ClientSessionCode code = new ClientSessionCode(session, realm, loginSession);
         String action = ClientSessionModel.Action.AUTHENTICATE.name();
         if (!code.isValidAction(action)) {
             throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_CLIENT_SESSION);
@@ -768,25 +769,25 @@ public class AuthenticationProcessor {
         if (!code.isActionActive(ClientSessionCode.ActionType.LOGIN)) {
             throw new AuthenticationFlowException(AuthenticationFlowError.EXPIRED_CODE);
         }
-        clientSession.setTimestamp(Time.currentTime());
+        loginSession.setTimestamp(Time.currentTime());
     }
 
     public Response authenticateOnly() throws AuthenticationFlowException {
         logger.debug("AUTHENTICATE ONLY");
         checkClientSession();
-        event.client(clientSession.getClient().getClientId())
-                .detail(Details.REDIRECT_URI, clientSession.getRedirectUri())
-                .detail(Details.AUTH_METHOD, clientSession.getAuthMethod());
-        String authType = clientSession.getNote(Details.AUTH_TYPE);
+        event.client(loginSession.getClient().getClientId())
+                .detail(Details.REDIRECT_URI, loginSession.getRedirectUri())
+                .detail(Details.AUTH_METHOD, loginSession.getProtocol());
+        String authType = loginSession.getNote(Details.AUTH_TYPE);
         if (authType != null) {
             event.detail(Details.AUTH_TYPE, authType);
         }
-        UserModel authUser = clientSession.getAuthenticatedUser();
+        UserModel authUser = loginSession.getAuthenticatedUser();
         validateUser(authUser);
         AuthenticationFlow authenticationFlow = createFlowExecution(this.flowId, null);
         Response challenge = authenticationFlow.processFlow();
         if (challenge != null) return challenge;
-        if (clientSession.getAuthenticatedUser() == null) {
+        if (loginSession.getAuthenticatedUser() == null) {
             throw new AuthenticationFlowException(AuthenticationFlowError.UNKNOWN_USER);
         }
         return challenge;

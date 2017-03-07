@@ -51,6 +51,7 @@ import org.keycloak.services.managers.ClientManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.RealmManager;
 import org.keycloak.services.resources.Cors;
+import org.keycloak.sessions.LoginSessionModel;
 
 import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
@@ -202,19 +203,19 @@ public class TokenEndpoint {
         }
 
         ClientSessionCode.ParseResult parseResult = ClientSessionCode.parseResult(code, session, realm);
-        if (parseResult.isClientSessionNotFound() || parseResult.isIllegalHash()) {
+        if (parseResult.isLoginSessionNotFound() || parseResult.isIllegalHash()) {
             String[] parts = code.split("\\.");
             if (parts.length == 2) {
                 event.detail(Details.CODE_ID, parts[1]);
             }
             event.error(Errors.INVALID_CODE);
-            if (parseResult.getClientSession() != null) {
-                session.sessions().removeClientSession(realm, parseResult.getClientSession());
+            if (parseResult.getLoginSession() != null) {
+                session.loginSessions().removeLoginSession(realm, parseResult.getLoginSession());
             }
             throw new ErrorResponseException(OAuthErrorException.INVALID_GRANT, "Code not valid", Response.Status.BAD_REQUEST);
         }
 
-        ClientSessionModel clientSession = parseResult.getClientSession();
+        LoginSessionModel clientSession = parseResult.getLoginSession();
         event.detail(Details.CODE_ID, clientSession.getId());
 
         if (!parseResult.getCode().isValid(ClientSessionModel.Action.CODE_TO_TOKEN.name(), ClientSessionCode.ActionType.CLIENT)) {
@@ -224,6 +225,7 @@ public class TokenEndpoint {
 
         parseResult.getCode().setAction(null);
 
+        // TODO: Create userSession at this stage
         UserSessionModel userSession = clientSession.getUserSession();
 
         if (userSession == null) {
@@ -368,16 +370,16 @@ public class TokenEndpoint {
         String scope = formParams.getFirst(OAuth2Constants.SCOPE);
 
         UserSessionProvider sessions = session.sessions();
-        ClientSessionModel clientSession = sessions.createClientSession(realm, client);
-        clientSession.setAuthMethod(OIDCLoginProtocol.LOGIN_PROTOCOL);
-        clientSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
-        clientSession.setNote(OIDCLoginProtocol.ISSUER, Urls.realmIssuer(uriInfo.getBaseUri(), realm.getName()));
-        clientSession.setNote(OIDCLoginProtocol.SCOPE_PARAM, scope);
+        LoginSessionModel loginSession = session.loginSessions().createLoginSession(realm, client);
+        loginSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
+        loginSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
+        loginSession.setNote(OIDCLoginProtocol.ISSUER, Urls.realmIssuer(uriInfo.getBaseUri(), realm.getName()));
+        loginSession.setNote(OIDCLoginProtocol.SCOPE_PARAM, scope);
 
         AuthenticationFlowModel flow = realm.getDirectGrantFlow();
         String flowId = flow.getId();
         AuthenticationProcessor processor = new AuthenticationProcessor();
-        processor.setClientSession(clientSession)
+        processor.setLoginSession(loginSession)
                 .setFlowId(flowId)
                 .setConnection(clientConnection)
                 .setEventBuilder(event)
@@ -388,7 +390,7 @@ public class TokenEndpoint {
         Response challenge = processor.authenticateOnly();
         if (challenge != null) return challenge;
         processor.evaluateRequiredActionTriggers();
-        UserModel user = clientSession.getAuthenticatedUser();
+        UserModel user = loginSession.getAuthenticatedUser();
         if (user.getRequiredActions() != null && user.getRequiredActions().size() > 0) {
             event.error(Errors.RESOLVE_REQUIRED_ACTIONS);
             throw new ErrorResponseException(OAuthErrorException.INVALID_GRANT, "Account is not fully set up", Response.Status.BAD_REQUEST);
@@ -398,7 +400,7 @@ public class TokenEndpoint {
         UserSessionModel userSession = processor.getUserSession();
         updateUserSessionFromClientAuth(userSession);
 
-        AccessTokenResponse res = tokenManager.responseBuilder(realm, client, event, session, userSession, clientSession)
+        AccessTokenResponse res = tokenManager.responseBuilder(realm, client, event, session, userSession, loginSession)
                 .generateAccessToken()
                 .generateRefreshToken()
                 .generateIDToken()
