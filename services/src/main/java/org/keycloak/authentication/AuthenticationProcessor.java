@@ -828,6 +828,8 @@ public class AuthenticationProcessor {
         if (remember) {
             event.detail(Details.REMEMBER_ME, "true");
         }
+
+        // TODO: This is supposed to be called after requiredActions are processed
         TokenManager.attachClientSession(userSession, clientSession);
         event.user(userSession.getUser())
                 .detail(Details.USERNAME, username)

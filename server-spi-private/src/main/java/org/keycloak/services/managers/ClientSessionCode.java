@@ -26,6 +26,7 @@ import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
+import org.keycloak.sessions.CommonLoginSessionModel;
 import org.keycloak.sessions.LoginSessionModel;
 
 import java.security.MessageDigest;
@@ -46,7 +47,7 @@ public class ClientSessionCode {
 
     private KeycloakSession session;
     private final RealmModel realm;
-    private final LoginSessionModel loginSession;
+    private final CommonLoginSessionModel commonLoginSession;
 
     public enum ActionType {
         CLIENT,
@@ -54,10 +55,10 @@ public class ClientSessionCode {
         USER
     }
 
-    public ClientSessionCode(KeycloakSession session, RealmModel realm, LoginSessionModel loginSession) {
+    public ClientSessionCode(KeycloakSession session, RealmModel realm, CommonLoginSessionModel commonLoginSession) {
         this.session = session;
         this.realm = realm;
-        this.loginSession = loginSession;
+        this.commonLoginSession = commonLoginSession;
     }
 
     public static class ParseResult {
@@ -136,8 +137,8 @@ public class ClientSessionCode {
         }
     }
 
-    public LoginSessionModel getLoginSession() {
-        return loginSession;
+    public CommonLoginSessionModel getLoginSession() {
+        return commonLoginSession;
     }
 
     public boolean isValid(String requestedAction, ActionType actionType) {
@@ -146,7 +147,7 @@ public class ClientSessionCode {
     }
 
     public boolean isActionActive(ActionType actionType) {
-        int timestamp = loginSession.getTimestamp();
+        int timestamp = commonLoginSession.getTimestamp();
 
         int lifespan;
         switch (actionType) {
@@ -167,7 +168,7 @@ public class ClientSessionCode {
     }
 
     public boolean isValidAction(String requestedAction) {
-        String action = loginSession.getAction();
+        String action = commonLoginSession.getAction();
         if (action == null) {
             return false;
         }
@@ -180,7 +181,7 @@ public class ClientSessionCode {
 
     public Set<RoleModel> getRequestedRoles() {
         Set<RoleModel> requestedRoles = new HashSet<>();
-        for (String roleId : loginSession.getRoles()) {
+        for (String roleId : commonLoginSession.getRoles()) {
             RoleModel role = realm.getRoleById(roleId);
             if (role != null) {
                 requestedRoles.add(role);
@@ -190,9 +191,11 @@ public class ClientSessionCode {
     }
 
     public Set<ProtocolMapperModel> getRequestedProtocolMappers() {
+        return getRequestedProtocolMappers(commonLoginSession.getProtocolMappers(), commonLoginSession.getClient());
+    }
+
+    public static Set<ProtocolMapperModel> getRequestedProtocolMappers(Set<String> protocolMappers, ClientModel client) {
         Set<ProtocolMapperModel> requestedProtocolMappers = new HashSet<>();
-        Set<String> protocolMappers = loginSession.getProtocolMappers();
-        ClientModel client = loginSession.getClient();
         ClientTemplateModel template = client.getClientTemplate();
         if (protocolMappers != null) {
             for (String protocolMapperId : protocolMappers) {
@@ -209,22 +212,22 @@ public class ClientSessionCode {
     }
 
     public void setAction(String action) {
-        loginSession.setAction(action);
-        loginSession.setTimestamp(Time.currentTime());
+        commonLoginSession.setAction(action);
+        commonLoginSession.setTimestamp(Time.currentTime());
     }
 
     public String getCode() {
-        String nextCode = (String) session.getAttribute(NEXT_CODE + "." + loginSession.getId());
+        String nextCode = (String) session.getAttribute(NEXT_CODE + "." + commonLoginSession.getId());
         if (nextCode == null) {
-            nextCode = generateCode(loginSession);
-            session.setAttribute(NEXT_CODE + "." + loginSession.getId(), nextCode);
+            nextCode = generateCode(commonLoginSession);
+            session.setAttribute(NEXT_CODE + "." + commonLoginSession.getId(), nextCode);
         } else {
             logger.debug("Code already generated for session, using code from session attributes");
         }
         return nextCode;
     }
 
-    private static String generateCode(LoginSessionModel loginSession) {
+    private static String generateCode(CommonLoginSessionModel loginSession) {
         try {
             String actionId = KeycloakModelUtils.generateSecret();
 
@@ -243,7 +246,7 @@ public class ClientSessionCode {
         }
     }
 
-    private static boolean verifyCode(String code, LoginSessionModel loginSession) {
+    private static boolean verifyCode(String code, CommonLoginSessionModel loginSession) {
         try {
             String activeCode = loginSession.getNote(ACTIVE_CODE);
             if (activeCode == null) {

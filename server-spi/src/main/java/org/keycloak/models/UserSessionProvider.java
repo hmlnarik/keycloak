@@ -27,7 +27,7 @@ import java.util.List;
  */
 public interface UserSessionProvider extends Provider {
 
-    ClientSessionModel createClientSession(RealmModel realm, ClientModel client);
+    ClientLoginSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession);
     ClientSessionModel getClientSession(RealmModel realm, String id);
     ClientSessionModel getClientSession(String id);
 

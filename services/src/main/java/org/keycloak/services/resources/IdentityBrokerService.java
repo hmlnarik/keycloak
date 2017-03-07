@@ -770,6 +770,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         this.event.user(federatedUser);
         this.event.session(userSession);
 
+        // TODO: This is supposed to be called after requiredActions are processed
         TokenManager.attachClientSession(userSession, clientSession);
         context.getIdp().attachUserSession(userSession, clientSession, context);
         userSession.setNote(Details.IDENTITY_PROVIDER, providerId);

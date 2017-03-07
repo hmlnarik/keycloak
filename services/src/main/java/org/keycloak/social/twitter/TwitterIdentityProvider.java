@@ -161,29 +161,6 @@ public class TwitterIdentityProvider extends AbstractIdentityProvider<OAuth2Iden
             return ErrorPage.error(session, Messages.UNEXPECTED_ERROR_HANDLING_RESPONSE);
         }
 
-        private ClientSessionCode parseClientSessionCode(String code) {
-            ClientSessionCode clientCode = ClientSessionCode.parse(code, this.session, this.realm);
-
-            if (clientCode != null && clientCode.isValid(AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-                ClientSessionModel clientSession = clientCode.getClientSession();
-
-                if (clientSession != null) {
-                    ClientModel client = clientSession.getClient();
-
-                    if (client == null) {
-                        throw new IdentityBrokerException("Invalid client");
-                    }
-
-                    logger.debugf("Got authorization code from client [%s].", client.getClientId());
-                }
-
-                logger.debugf("Authorization code is valid.");
-
-                return clientCode;
-            }
-
-            throw new IdentityBrokerException("Invalid code, please login again through your application.");
-        }
 
     }
 
