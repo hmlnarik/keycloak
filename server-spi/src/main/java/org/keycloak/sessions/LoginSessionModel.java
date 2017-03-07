@@ -29,11 +29,8 @@ import org.keycloak.models.UserModel;
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface LoginSessionModel {
+public interface LoginSessionModel extends CommonLoginSessionModel {
 
-    public String getId();
-    public RealmModel getRealm();
-    public ClientModel getClient();
 //
 //    public UserSessionModel getUserSession();
 //    public void setUserSession(UserSessionModel userSession);
@@ -41,19 +38,6 @@ public interface LoginSessionModel {
     public String getRedirectUri();
     public void setRedirectUri(String uri);
 
-    public int getTimestamp();
-
-    public void setTimestamp(int timestamp);
-
-    public String getAction();
-
-    public void setAction(String action);
-
-    public Set<String> getRoles();
-    public void setRoles(Set<String> roles);
-
-    public Set<String> getProtocolMappers();
-    public void setProtocolMappers(Set<String> protocolMappers);
 
     public Map<String, ExecutionStatus> getExecutionStatus();
     public void setExecutionStatus(String authenticator, ExecutionStatus status);
@@ -63,11 +47,6 @@ public interface LoginSessionModel {
 
     public String getProtocol();
     public void setProtocol(String method);
-
-    public String getNote(String name);
-    public void setNote(String name, String value);
-    public void removeNote(String name);
-    public Map<String, String> getNotes();
 
     /**
      * Required actions that are attached to this client session.
