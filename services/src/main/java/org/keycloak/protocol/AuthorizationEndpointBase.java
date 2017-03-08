@@ -99,7 +99,7 @@ public abstract class AuthorizationEndpointBase {
             // We cancel login if any authentication action or required action is required
             try {
                 if (processor.authenticateOnly() == null) {
-                    processor.attachSession();
+                    // processor.attachSession();
                 } else {
                     Response response = protocol.sendError(loginSession, Error.PASSIVE_LOGIN_REQUIRED);
                     session.loginSessions().removeLoginSession(realm, loginSession);
@@ -109,8 +109,10 @@ public abstract class AuthorizationEndpointBase {
                     Response response = protocol.sendError(loginSession, Error.PASSIVE_INTERACTION_REQUIRED);
                     session.loginSessions().removeLoginSession(realm, loginSession);
                     return response;
-
                 }
+
+                // Attach session once no requiredActions or other things are required
+                processor.attachSession();
             } catch (Exception e) {
                 return processor.handleBrowserException(e);
             }

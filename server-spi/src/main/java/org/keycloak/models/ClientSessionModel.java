@@ -20,12 +20,12 @@ package org.keycloak.models;
 import java.util.Map;
 import java.util.Set;
 
-import org.keycloak.sessions.CommonLoginSessionModel;
+import org.keycloak.sessions.CommonClientSessionModel;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
-public interface ClientSessionModel extends CommonLoginSessionModel {
+public interface ClientSessionModel extends CommonClientSessionModel {
 
     public UserSessionModel getUserSession();
     public void setUserSession(UserSessionModel userSession);
@@ -82,28 +82,5 @@ public interface ClientSessionModel extends CommonLoginSessionModel {
 
     public void clearUserSessionNotes();
 
-    public static enum Action {
-        OAUTH_GRANT,
-        CODE_TO_TOKEN,
-        VERIFY_EMAIL,
-        UPDATE_PROFILE,
-        CONFIGURE_TOTP,
-        UPDATE_PASSWORD,
-        RECOVER_PASSWORD, // deprecated
-        AUTHENTICATE,
-        SOCIAL_CALLBACK,
-        LOGGED_OUT,
-        RESET_CREDENTIALS,
-        EXECUTE_ACTIONS,
-        REQUIRED_ACTIONS
-    }
 
-    public enum ExecutionStatus {
-        FAILED,
-        SUCCESS,
-        SETUP_REQUIRED,
-        ATTEMPTED,
-        SKIPPED,
-        CHALLENGED
-    }
 }

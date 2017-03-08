@@ -26,8 +26,7 @@ import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
-import org.keycloak.sessions.CommonLoginSessionModel;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.CommonClientSessionModel;
 
 import java.security.MessageDigest;
 import java.util.HashSet;
@@ -37,7 +36,7 @@ import java.util.Set;
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
  */
-public class ClientSessionCode {
+public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> {
 
     private static final String ACTIVE_CODE = "active_code";
 
@@ -47,7 +46,7 @@ public class ClientSessionCode {
 
     private KeycloakSession session;
     private final RealmModel realm;
-    private final CommonLoginSessionModel commonLoginSession;
+    private final CLIENT_SESSION commonLoginSession;
 
     public enum ActionType {
         CLIENT,
@@ -55,19 +54,19 @@ public class ClientSessionCode {
         USER
     }
 
-    public ClientSessionCode(KeycloakSession session, RealmModel realm, CommonLoginSessionModel commonLoginSession) {
+    public ClientSessionCode(KeycloakSession session, RealmModel realm, CLIENT_SESSION commonLoginSession) {
         this.session = session;
         this.realm = realm;
         this.commonLoginSession = commonLoginSession;
     }
 
-    public static class ParseResult {
-        ClientSessionCode code;
+    public static class ParseResult<CLIENT_SESSION extends CommonClientSessionModel> {
+        ClientSessionCode<CLIENT_SESSION> code;
         boolean loginSessionNotFound;
         boolean illegalHash;
-        LoginSessionModel loginSession;
+        CLIENT_SESSION clientSession;
 
-        public ClientSessionCode getCode() {
+        public ClientSessionCode<CLIENT_SESSION> getCode() {
             return code;
         }
 
@@ -79,30 +78,30 @@ public class ClientSessionCode {
             return illegalHash;
         }
 
-        public LoginSessionModel getLoginSession() {
-            return loginSession;
+        public CLIENT_SESSION getClientSession() {
+            return clientSession;
         }
     }
 
-    public static ParseResult parseResult(String code, KeycloakSession session, RealmModel realm) {
-        ParseResult result = new ParseResult();
+    public static <CLIENT_SESSION extends CommonClientSessionModel> ParseResult<CLIENT_SESSION> parseResult(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
+        ParseResult<CLIENT_SESSION> result = new ParseResult<>();
         if (code == null) {
             result.illegalHash = true;
             return result;
         }
         try {
-            result.loginSession = getLoginSession(code, session, realm);
-            if (result.loginSession == null) {
+            result.clientSession = getClientSession(code, session, realm, sessionClass);
+            if (result.clientSession == null) {
                 result.loginSessionNotFound = true;
                 return result;
             }
 
-            if (!verifyCode(code, result.loginSession)) {
+            if (!verifyCode(code, result.clientSession)) {
                 result.illegalHash = true;
                 return result;
             }
 
-            result.code = new ClientSessionCode(session, realm, result.loginSession);
+            result.code = new ClientSessionCode<CLIENT_SESSION>(session, realm, result.clientSession);
             return result;
         } catch (RuntimeException e) {
             result.illegalHash = true;
@@ -110,34 +109,28 @@ public class ClientSessionCode {
         }
     }
 
-    public static ClientSessionCode parse(String code, KeycloakSession session, RealmModel realm) {
+    public static <CLIENT_SESSION extends CommonClientSessionModel> ClientSessionCode<CLIENT_SESSION> parse(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
         try {
-            LoginSessionModel loginSession = getLoginSession(code, session, realm);
-            if (loginSession == null) {
+            CLIENT_SESSION clientSession = getClientSession(code, session, realm, sessionClass);
+            if (clientSession == null) {
                 return null;
             }
 
-            if (!verifyCode(code, loginSession)) {
+            if (!verifyCode(code, clientSession)) {
                 return null;
             }
 
-            return new ClientSessionCode(session, realm, loginSession);
+            return new ClientSessionCode<>(session, realm, clientSession);
         } catch (RuntimeException e) {
             return null;
         }
     }
 
-    public static LoginSessionModel getLoginSession(String code, KeycloakSession session, RealmModel realm) {
-        try {
-            String[] parts = code.split("\\.");
-            String id = parts[1];
-            return session.loginSessions().getLoginSession(realm, id);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            return null;
-        }
+    public static <CLIENT_SESSION extends CommonClientSessionModel> CLIENT_SESSION getClientSession(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
+        return CodeGenerateUtil.parseSession(code, session, realm, sessionClass);
     }
 
-    public CommonLoginSessionModel getLoginSession() {
+    public CLIENT_SESSION getClientSession() {
         return commonLoginSession;
     }
 
@@ -227,16 +220,11 @@ public class ClientSessionCode {
         return nextCode;
     }
 
-    private static String generateCode(CommonLoginSessionModel loginSession) {
+    private static String generateCode(CommonClientSessionModel loginSession) {
         try {
             String actionId = KeycloakModelUtils.generateSecret();
 
-            StringBuilder sb = new StringBuilder();
-            sb.append(actionId);
-            sb.append('.');
-            sb.append(loginSession.getId());
-
-            String code = sb.toString();
+            String code = CodeGenerateUtil.generateCode(loginSession, actionId);
 
             loginSession.setNote(ACTIVE_CODE, code);
 
@@ -246,7 +234,7 @@ public class ClientSessionCode {
         }
     }
 
-    private static boolean verifyCode(String code, CommonLoginSessionModel loginSession) {
+    private static boolean verifyCode(String code, CommonClientSessionModel loginSession) {
         try {
             String activeCode = loginSession.getNote(ACTIVE_CODE);
             if (activeCode == null) {

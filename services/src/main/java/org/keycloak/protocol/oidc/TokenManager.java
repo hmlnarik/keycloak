@@ -387,6 +387,9 @@ public class TokenManager {
 
         userSession.getClientLoginSessions().put(client.getId(), clientSession);
 
+        // Remove login session now
+        session.loginSessions().removeLoginSession(userSession.getRealm(), loginSession);
+
         return clientSession;
     }
 

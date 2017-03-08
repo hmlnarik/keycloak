@@ -31,6 +31,7 @@ import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -359,7 +360,7 @@ public class AuthenticationProcessor {
 
         @Override
         public UserModel getUser() {
-            return getClientSession().getAuthenticatedUser();
+            return getLoginSession().getAuthenticatedUser();
         }
 
         @Override
@@ -393,8 +394,8 @@ public class AuthenticationProcessor {
         }
 
         @Override
-        public ClientSessionModel getClientSession() {
-            return AuthenticationProcessor.this.getClientSession();
+        public LoginSessionModel getLoginSession() {
+            return AuthenticationProcessor.this.getLoginSession();
         }
 
         @Override
@@ -486,12 +487,12 @@ public class AuthenticationProcessor {
         @Override
         public void cancelLogin() {
             getEvent().error(Errors.REJECTED_BY_USER);
-            LoginProtocol protocol = getSession().getProvider(LoginProtocol.class, getClientSession().getAuthMethod());
+            LoginProtocol protocol = getSession().getProvider(LoginProtocol.class, getLoginSession().getProtocol());
             protocol.setRealm(getRealm())
                     .setHttpHeaders(getHttpRequest().getHttpHeaders())
                     .setUriInfo(getUriInfo())
                     .setEventBuilder(event);
-            Response response = protocol.sendError(getClientSession(), Error.CANCELLED_BY_USER);
+            Response response = protocol.sendError(getLoginSession(), Error.CANCELLED_BY_USER);
             forceChallenge(response);
         }
 
@@ -535,7 +536,7 @@ public class AuthenticationProcessor {
 
     public void logFailure() {
         if (realm.isBruteForceProtected()) {
-            String username = clientSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+            String username = loginSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
             // todo need to handle non form failures
             if (username == null) {
 
@@ -549,7 +550,7 @@ public class AuthenticationProcessor {
     }
 
     public boolean isSuccessful(AuthenticationExecutionModel model) {
-        ClientSessionModel.ExecutionStatus status = clientSession.getExecutionStatus().get(model.getId());
+        ClientSessionModel.ExecutionStatus status = loginSession.getExecutionStatus().get(model.getId());
         if (status == null) return false;
         return status == ClientSessionModel.ExecutionStatus.SUCCESS;
     }
@@ -582,10 +583,10 @@ public class AuthenticationProcessor {
 
             } else if (e.getError() == AuthenticationFlowError.FORK_FLOW) {
                 ForkFlowException reset = (ForkFlowException)e;
-                ClientSessionModel clone = clone(session, clientSession);
+                LoginSessionModel clone = clone(session, loginSession);
                 clone.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
                 AuthenticationProcessor processor = new AuthenticationProcessor();
-                processor.setClientSession(clone)
+                processor.setLoginSession(clone)
                         .setFlowPath(LoginActionsService.AUTHENTICATE_PATH)
                         .setFlowId(realm.getBrowserFlow().getId())
                         .setForwardedErrorMessage(reset.getErrorMessage())
@@ -687,12 +688,12 @@ public class AuthenticationProcessor {
 
     }
 
-    public static Response redirectToRequiredActions(KeycloakSession session, RealmModel realm, ClientSessionModel clientSession, UriInfo uriInfo) {
+    public static Response redirectToRequiredActions(KeycloakSession session, RealmModel realm, LoginSessionModel loginSession, UriInfo uriInfo) {
 
         // redirect to non-action url so browser refresh button works without reposting past data
-        ClientSessionCode accessCode = new ClientSessionCode(session, realm, clientSession);
+        ClientSessionCode<LoginSessionModel> accessCode = new ClientSessionCode<>(session, realm, loginSession);
         accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
-        clientSession.setTimestamp(Time.currentTime());
+        loginSession.setTimestamp(Time.currentTime());
 
         URI redirect = LoginActionsService.loginActionsBaseUrl(uriInfo)
                 .path(LoginActionsService.REQUIRED_ACTION)
@@ -701,22 +702,23 @@ public class AuthenticationProcessor {
 
     }
 
-    public static void resetFlow(ClientSessionModel clientSession) {
+    public static void resetFlow(LoginSessionModel loginSession) {
         logger.debug("RESET FLOW");
-        clientSession.setTimestamp(Time.currentTime());
-        clientSession.setAuthenticatedUser(null);
-        clientSession.clearExecutionStatus();
-        clientSession.clearUserSessionNotes();
-        clientSession.removeNote(CURRENT_AUTHENTICATION_EXECUTION);
+        loginSession.setTimestamp(Time.currentTime());
+        loginSession.setAuthenticatedUser(null);
+        loginSession.clearExecutionStatus();
+        loginSession.clearUserSessionNotes();
+        loginSession.removeNote(CURRENT_AUTHENTICATION_EXECUTION);
     }
 
-    public static ClientSessionModel clone(KeycloakSession session, ClientSessionModel clientSession) {
-        ClientSessionModel clone = session.sessions().createClientSession(clientSession.getRealm(), clientSession.getClient());
-        for (Map.Entry<String, String> entry : clientSession.getNotes().entrySet()) {
+    public static LoginSessionModel clone(KeycloakSession session, LoginSessionModel loginSession) {
+        // TODO: Doublecheck false...
+        LoginSessionModel clone = session.loginSessions().createLoginSession(loginSession.getRealm(), loginSession.getClient(), false);
+        for (Map.Entry<String, String> entry : loginSession.getNotes().entrySet()) {
             clone.setNote(entry.getKey(), entry.getValue());
         }
-        clone.setRedirectUri(clientSession.getRedirectUri());
-        clone.setAuthMethod(clientSession.getAuthMethod());
+        clone.setRedirectUri(loginSession.getRedirectUri());
+        clone.setProtocol(loginSession.getProtocol());
         clone.setTimestamp(Time.currentTime());
         clone.removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
         return clone;
@@ -727,26 +729,26 @@ public class AuthenticationProcessor {
     public Response authenticationAction(String execution) {
         logger.debug("authenticationAction");
         checkClientSession();
-        String current = clientSession.getNote(CURRENT_AUTHENTICATION_EXECUTION);
+        String current = loginSession.getNote(CURRENT_AUTHENTICATION_EXECUTION);
         if (!execution.equals(current)) {
             logger.debug("Current execution does not equal executed execution.  Might be a page refresh");
             //logFailure();
             //resetFlow(clientSession);
             return authenticate();
         }
-        UserModel authUser = clientSession.getAuthenticatedUser();
+        UserModel authUser = loginSession.getAuthenticatedUser();
         validateUser(authUser);
         AuthenticationExecutionModel model = realm.getAuthenticationExecutionById(execution);
         if (model == null) {
             logger.debug("Cannot find execution, reseting flow");
             logFailure();
-            resetFlow(clientSession);
+            resetFlow(loginSession);
             return authenticate();
         }
-        event.client(clientSession.getClient().getClientId())
-                .detail(Details.REDIRECT_URI, clientSession.getRedirectUri())
-                .detail(Details.AUTH_METHOD, clientSession.getAuthMethod());
-        String authType = clientSession.getNote(Details.AUTH_TYPE);
+        event.client(loginSession.getClient().getClientId())
+                .detail(Details.REDIRECT_URI, loginSession.getRedirectUri())
+                .detail(Details.AUTH_METHOD, loginSession.getProtocol());
+        String authType = loginSession.getNote(Details.AUTH_TYPE);
         if (authType != null) {
             event.detail(Details.AUTH_TYPE, authType);
         }
@@ -754,7 +756,7 @@ public class AuthenticationProcessor {
         AuthenticationFlow authenticationFlow = createFlowExecution(this.flowId, model);
         Response challenge = authenticationFlow.processAction(execution);
         if (challenge != null) return challenge;
-        if (clientSession.getAuthenticatedUser() == null) {
+        if (loginSession.getAuthenticatedUser() == null) {
             throw new AuthenticationFlowException(AuthenticationFlowError.UNKNOWN_USER);
         }
         return authenticationComplete();
@@ -815,25 +817,33 @@ public class AuthenticationProcessor {
         }
     }
 
-    public void attachSession() {
-        String username = clientSession.getAuthenticatedUser().getUsername();
-        String attemptedUsername = clientSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+    // May create userSession too
+    public ClientLoginSessionModel attachSession() {
+        return attachSession(loginSession, userSession, session, realm, connection, event);
+    }
+
+    // May create new userSession too (if userSession argument is null)
+    public static ClientLoginSessionModel attachSession(LoginSessionModel loginSession, UserSessionModel userSession, KeycloakSession session, RealmModel realm, ClientConnection connection, EventBuilder event) {
+        String username = loginSession.getAuthenticatedUser().getUsername();
+        String attemptedUsername = loginSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
         if (attemptedUsername != null) username = attemptedUsername;
-        String rememberMe = clientSession.getNote(Details.REMEMBER_ME);
+        String rememberMe = loginSession.getNote(Details.REMEMBER_ME);
         boolean remember = rememberMe != null && rememberMe.equalsIgnoreCase("true");
         if (userSession == null) { // if no authenticator attached a usersession
-            userSession = session.sessions().createUserSession(realm, clientSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), clientSession.getAuthMethod(), remember, null, null);
+            userSession = session.sessions().createUserSession(realm, loginSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), loginSession.getProtocol(), remember, null, null);
             userSession.setState(UserSessionModel.State.LOGGING_IN);
         }
         if (remember) {
             event.detail(Details.REMEMBER_ME, "true");
         }
 
-        // TODO: This is supposed to be called after requiredActions are processed
-        TokenManager.attachClientSession(userSession, clientSession);
+        ClientLoginSessionModel clientSession = TokenManager.attachLoginSession(session, userSession, loginSession);
+
         event.user(userSession.getUser())
                 .detail(Details.USERNAME, username)
                 .session(userSession);
+
+        return clientSession;
     }
 
     public void evaluateRequiredActionTriggers() {
@@ -842,8 +852,9 @@ public class AuthenticationProcessor {
 
     public Response finishAuthentication(LoginProtocol protocol) {
         event.success();
-        RealmModel realm = clientSession.getRealm();
-        return AuthenticationManager.redirectAfterSuccessfulFlow(session, realm, userSession, clientSession, request, uriInfo, connection, event, protocol);
+        RealmModel realm = loginSession.getRealm();
+        ClientLoginSessionModel clientSession = attachSession();
+        return AuthenticationManager.redirectAfterSuccessfulFlow(session, realm, userSession,clientSession, request, uriInfo, connection, event, protocol);
 
     }
 
@@ -858,17 +869,17 @@ public class AuthenticationProcessor {
     }
 
     protected Response authenticationComplete() {
-        attachSession();
+        // attachSession(); // Session will be attached after requiredActions + consents are finished.
         if (isActionRequired()) {
-            return redirectToRequiredActions(session, realm, clientSession, uriInfo);
+            return redirectToRequiredActions(session, realm, loginSession, uriInfo);
         } else {
-            event.detail(Details.CODE_ID, clientSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
-            return AuthenticationManager.finishedRequiredActions(session,  userSession, clientSession, connection, request, uriInfo, event);
+            event.detail(Details.CODE_ID, loginSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
+            return AuthenticationManager.finishedRequiredActions(session,  userSession, loginSession, connection, request, uriInfo, event);
         }
     }
 
     public boolean isActionRequired() {
-        return AuthenticationManager.isActionRequired(session, userSession, clientSession, connection, request, uriInfo, event);
+        return AuthenticationManager.isActionRequired(session, loginSession, connection, request, uriInfo, event);
     }
 
     public AuthenticationProcessor.Result createAuthenticatorContext(AuthenticationExecutionModel model, Authenticator authenticator, List<AuthenticationExecutionModel> executions) {
