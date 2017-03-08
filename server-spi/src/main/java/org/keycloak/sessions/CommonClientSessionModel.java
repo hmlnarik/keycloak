@@ -24,11 +24,13 @@ import org.keycloak.models.ClientModel;
 import org.keycloak.models.RealmModel;
 
 /**
- * Predecesor of LoginSessionModel and Action tickets. Not sure if it's even needed...
+ * Predecesor of LoginSessionModel, ClientLoginSessionModel and ClientSessionModel (then action tickets). Maybe we will remove it later...
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface CommonLoginSessionModel {
+public interface CommonClientSessionModel {
+
+
 
     public String getId();
     public RealmModel getRealm();
@@ -52,4 +54,29 @@ public interface CommonLoginSessionModel {
     public void setNote(String name, String value);
     public void removeNote(String name);
     public Map<String, String> getNotes();
+
+    public static enum Action {
+        OAUTH_GRANT,
+        CODE_TO_TOKEN,
+        VERIFY_EMAIL,
+        UPDATE_PROFILE,
+        CONFIGURE_TOTP,
+        UPDATE_PASSWORD,
+        RECOVER_PASSWORD, // deprecated
+        AUTHENTICATE,
+        SOCIAL_CALLBACK,
+        LOGGED_OUT,
+        RESET_CREDENTIALS,
+        EXECUTE_ACTIONS,
+        REQUIRED_ACTIONS
+    }
+
+    public enum ExecutionStatus {
+        FAILED,
+        SUCCESS,
+        SETUP_REQUIRED,
+        ATTEMPTED,
+        SKIPPED,
+        CHALLENGED
+    }
 }

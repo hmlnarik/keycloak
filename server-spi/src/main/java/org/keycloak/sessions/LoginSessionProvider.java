@@ -26,11 +26,11 @@ import org.keycloak.provider.Provider;
  */
 public interface LoginSessionProvider extends Provider {
 
-    LoginSessionModel createLoginSession(RealmModel realm, ClientModel client);
+    LoginSessionModel createLoginSession(RealmModel realm, ClientModel client, boolean browser);
+
+    LoginSessionModel getCurrentLoginSession(RealmModel realm);
 
     LoginSessionModel getLoginSession(RealmModel realm, String loginSessionId);
-
-    void updateLoginSession(LoginSessionModel model);
 
     void removeLoginSession(RealmModel realm, LoginSessionModel loginSession);
 

@@ -287,7 +287,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
     }
 
     private void createLoginSession() {
-        loginSession = session.loginSessions().createLoginSession(realm, client);
+        loginSession = session.loginSessions().createLoginSession(realm, client, true);
         loginSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
         loginSession.setRedirectUri(redirectUri);
         loginSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());

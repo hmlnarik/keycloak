@@ -823,6 +823,7 @@ public class LoginActionsService {
         return cookie != null ? cookie.getValue() : null;
     }
 
+    // TODO: Remove this method. We will be able to use login-session-cookie
     public static void createActionCookie(RealmModel realm, UriInfo uriInfo, ClientConnection clientConnection, String sessionId) {
         CookieHelper.addCookie(ACTION_COOKIE, sessionId, AuthenticationManager.getRealmCookiePath(realm, uriInfo), null, null, -1, realm.getSslRequired().isRequired(clientConnection), true);
     }

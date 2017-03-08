@@ -145,7 +145,8 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
                 page = LoginFormsPages.LOGIN_UPDATE_PASSWORD;
                 break;
             case VERIFY_EMAIL:
-                try {
+                // TODO: It should be also clientSession (actionTicket) involved here. Not just loginSession
+                /*try {
                     UriBuilder builder = Urls.loginActionEmailVerificationBuilder(uriInfo.getBaseUri());
                     builder.queryParam(OAuth2Constants.CODE, accessCode);
                     builder.queryParam(Constants.KEY, clientSession.getNote(Constants.VERIFY_EMAIL_KEY));
@@ -157,7 +158,7 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
                 } catch (EmailException e) {
                     logger.error("Failed to send verification email", e);
                     return setError(Messages.EMAIL_SENT_ERROR).createErrorPage();
-                }
+                }*/
 
                 actionMessage = Messages.VERIFY_EMAIL;
                 page = LoginFormsPages.LOGIN_VERIFY_EMAIL;
