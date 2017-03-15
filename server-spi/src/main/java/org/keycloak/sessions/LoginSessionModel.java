@@ -43,9 +43,6 @@ public interface LoginSessionModel extends CommonClientSessionModel {
     public UserModel getAuthenticatedUser();
     public void setAuthenticatedUser(UserModel user);
 
-    public String getProtocol();
-    public void setProtocol(String method);
-
     /**
      * Required actions that are attached to this client session.
      *
