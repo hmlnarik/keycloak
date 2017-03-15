@@ -25,5 +25,6 @@ import org.keycloak.sessions.CommonClientSessionModel;
  */
 public interface ClientLoginSessionModel extends CommonClientSessionModel {
 
+    void setUserSession(UserSessionModel userSession);
     UserSessionModel getUserSession();
 }

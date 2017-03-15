@@ -42,6 +42,9 @@ public interface CommonClientSessionModel {
     public String getAction();
     public void setAction(String action);
 
+    public String getProtocol();
+    public void setProtocol(String method);
+
     // TODO: Not needed here...?
     public Set<String> getRoles();
     public void setRoles(Set<String> roles);

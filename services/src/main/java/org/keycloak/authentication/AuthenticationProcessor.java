@@ -847,7 +847,7 @@ public class AuthenticationProcessor {
     }
 
     public void evaluateRequiredActionTriggers() {
-        AuthenticationManager.evaluateRequiredActionTriggers(session, userSession, clientSession, connection, request, uriInfo, event, realm, clientSession.getAuthenticatedUser());
+        AuthenticationManager.evaluateRequiredActionTriggers(session, loginSession, connection, request, uriInfo, event, realm, loginSession.getAuthenticatedUser());
     }
 
     public Response finishAuthentication(LoginProtocol protocol) {
@@ -874,7 +874,7 @@ public class AuthenticationProcessor {
             return redirectToRequiredActions(session, realm, loginSession, uriInfo);
         } else {
             event.detail(Details.CODE_ID, loginSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
-            return AuthenticationManager.finishedRequiredActions(session,  userSession, loginSession, connection, request, uriInfo, event);
+            return AuthenticationManager.finishedRequiredActions(session,  loginSession, connection, request, uriInfo, event);
         }
     }
 
