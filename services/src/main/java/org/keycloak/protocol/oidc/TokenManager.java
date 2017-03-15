@@ -394,7 +394,7 @@ public class TokenManager {
     }
 
 
-    public static void dettachClientSession(UserSessionProvider sessions, RealmModel realm, ClientSessionModel clientSession) {
+    public static void dettachClientSession(UserSessionProvider sessions, RealmModel realm, ClientLoginSessionModel clientSession) {
         UserSessionModel userSession = clientSession.getUserSession();
         if (userSession == null) {
             return;
