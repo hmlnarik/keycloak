@@ -35,6 +35,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.UserSessionProvider;
 import org.keycloak.models.session.UserSessionPersisterProvider;
 import org.keycloak.models.sessions.infinispan.entities.ClientInitialAccessEntity;
+import org.keycloak.models.sessions.infinispan.entities.ClientLoginSessionEntity;
 import org.keycloak.models.sessions.infinispan.entities.ClientSessionEntity;
 import org.keycloak.models.sessions.infinispan.entities.LoginFailureEntity;
 import org.keycloak.models.sessions.infinispan.entities.LoginFailureKey;
@@ -90,7 +91,8 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
         return offline ? offlineSessionCache : sessionCache;
     }
 
-    /*
+
+    // TODO:mposolda remove
     @Override
     public ClientSessionModel createClientSession(RealmModel realm, ClientModel client) {
         String id = KeycloakModelUtils.generateId();
@@ -106,12 +108,16 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
 
         ClientSessionAdapter wrap = wrap(realm, entity, false);
         return wrap;
-    }*/
+    }
 
-    // TODO:mposolda
     @Override
     public ClientLoginSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession) {
-        return null;
+        ClientLoginSessionEntity entity = new ClientLoginSessionEntity();
+        entity.setClient(client.getId());
+
+        ClientLoginSessionAdapter adapter = new ClientLoginSessionAdapter(entity, (UserSessionAdapter) userSession, this, sessionCache);
+        adapter.setUserSession(userSession);
+        return adapter;
     }
 
     @Override
