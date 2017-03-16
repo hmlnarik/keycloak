@@ -211,9 +211,7 @@ public class TokenEndpoint {
             // Attempt to use same code twice should invalidate existing clientSession
             ClientLoginSessionModel clientSession = parseResult.getClientSession();
             if (clientSession != null) {
-                UserSessionModel userSession = clientSession.getUserSession();
-                String clientUUID = clientSession.getClient().getId();
-                userSession.getClientLoginSessions().remove(clientUUID);
+                clientSession.setUserSession(null);
             }
 
             throw new ErrorResponseException(OAuthErrorException.INVALID_GRANT, "Code not valid", Response.Status.BAD_REQUEST);

@@ -50,6 +50,8 @@ public class UserSessionEntity extends SessionEntity {
 
     private Map<String, String> notes;
 
+    private Map<String, ClientLoginSessionEntity> clientLoginSessions;
+
     public String getUser() {
         return user;
     }
@@ -120,6 +122,14 @@ public class UserSessionEntity extends SessionEntity {
 
     public void setNotes(Map<String, String> notes) {
         this.notes = notes;
+    }
+
+    public Map<String, ClientLoginSessionEntity> getClientLoginSessions() {
+        return clientLoginSessions;
+    }
+
+    public void setClientLoginSessions(Map<String, ClientLoginSessionEntity> clientLoginSessions) {
+        this.clientLoginSessions = clientLoginSessions;
     }
 
     public UserSessionModel.State getState() {
