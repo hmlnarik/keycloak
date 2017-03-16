@@ -613,7 +613,7 @@ public class AuthenticationManager {
                 return session.getProvider(LoginFormsProvider.class)
                         .setClientSessionCode(accessCode.getCode())
                         .setAccessRequest(realmRoles, resourceRoles, protocolMappers)
-                        .createOAuthGrant(loginSession);
+                        .createOAuthGrant();
             } else {
                 String consentDetail = (grantedConsent != null) ? Details.CONSENT_VALUE_PERSISTED_CONSENT : Details.CONSENT_VALUE_NO_CONSENT_REQUIRED;
                 event.detail(Details.CONSENT, consentDetail);

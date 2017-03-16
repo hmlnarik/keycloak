@@ -315,10 +315,10 @@ public class SerializedBrokeredIdentityContext implements UpdateProfileContext {
     }
 
     // Save this context as note to clientSession
-    public void saveToClientSession(ClientSessionModel clientSession, String noteKey) {
+    public void saveToLoginSession(LoginSessionModel loginSession, String noteKey) {
         try {
             String asString = JsonSerialization.writeValueAsString(this);
-            clientSession.setNote(noteKey, asString);
+            loginSession.setNote(noteKey, asString);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }

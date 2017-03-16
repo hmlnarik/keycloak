@@ -126,10 +126,10 @@ public class RestartLoginCookie {
 
     public RestartLoginCookie() {
     }
-    public RestartLoginCookie(ClientSessionModel clientSession) {
+    public RestartLoginCookie(LoginSessionModel clientSession) {
         this.action = clientSession.getAction();
         this.clientId = clientSession.getClient().getClientId();
-        this.authMethod = clientSession.getAuthMethod();
+        this.authMethod = clientSession.getProtocol();
         this.redirectUri = clientSession.getRedirectUri();
         this.clientSession = clientSession.getId();
         for (Map.Entry<String, String> entry : clientSession.getNotes().entrySet()) {
@@ -151,6 +151,8 @@ public class RestartLoginCookie {
         CookieHelper.addCookie(KC_RESTART, "", path, null, null, 0, secureOnly, true);
     }
 
+    // TODO:mposolda
+    /*
     public static ClientSessionModel restartSession(KeycloakSession session, RealmModel realm, String code) throws Exception {
         Cookie cook = session.getContext().getRequestHeaders().getCookies().get(KC_RESTART);
         if (cook ==  null) {
@@ -184,5 +186,5 @@ public class RestartLoginCookie {
         }
 
         return clientSession;
-    }
+    }*/
 }
