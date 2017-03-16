@@ -29,8 +29,8 @@ import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.jose.jws.Algorithm;
 import org.keycloak.jose.jws.JWSBuilder;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -140,7 +140,6 @@ public class UserInfoEndpoint {
         }
 
         UserSessionModel userSession = session.sessions().getUserSession(realm, token.getSessionState());
-        ClientSessionModel clientSession = session.sessions().getClientSession(token.getClientSession());
 
         if (userSession == null) {
             event.error(Errors.USER_SESSION_NOT_FOUND);
@@ -159,7 +158,7 @@ public class UserInfoEndpoint {
                 .detail(Details.USERNAME, userModel.getUsername());
 
 
-        if (clientSession == null || !AuthenticationManager.isSessionValid(realm, userSession)) {
+        if (!AuthenticationManager.isSessionValid(realm, userSession)) {
             event.error(Errors.SESSION_EXPIRED);
             throw new ErrorResponseException(OAuthErrorException.INVALID_TOKEN, "Session expired", Response.Status.UNAUTHORIZED);
         }
@@ -176,6 +175,8 @@ public class UserInfoEndpoint {
             event.error(Errors.CLIENT_DISABLED);
             throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Client disabled", Response.Status.BAD_REQUEST);
         }
+
+        ClientLoginSessionModel clientSession = userSession.getClientLoginSessions().get(clientModel.getId());
 
         AccessToken userInfo = new AccessToken();
         tokenManager.transformUserInfoAccessToken(session, userInfo, realm, clientModel, userModel, userSession, clientSession);

@@ -33,9 +33,6 @@ public interface LoginSessionModel extends CommonClientSessionModel {
 //    public UserSessionModel getUserSession();
 //    public void setUserSession(UserSessionModel userSession);
 
-    public String getRedirectUri();
-    public void setRedirectUri(String uri);
-
 
     public Map<String, ExecutionStatus> getExecutionStatus();
     public void setExecutionStatus(String authenticator, ExecutionStatus status);

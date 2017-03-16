@@ -40,6 +40,8 @@ public interface UserSessionProvider extends Provider {
     UserSessionModel getUserSessionByBrokerSessionId(RealmModel realm, String brokerSessionId);
 
     long getActiveUserSessions(RealmModel realm, ClientModel client);
+
+    // This will remove attached ClientLoginSessionModels too
     void removeUserSession(RealmModel realm, UserSessionModel session);
     void removeUserSessions(RealmModel realm, UserModel user);
 

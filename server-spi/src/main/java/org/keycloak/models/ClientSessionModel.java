@@ -39,16 +39,6 @@ public interface ClientSessionModel extends CommonClientSessionModel {
     public UserModel getAuthenticatedUser();
     public void setAuthenticatedUser(UserModel user);
 
-
-
-    /**
-     * Authentication request type, i.e. OAUTH, SAML 2.0, SAML 1.1, etc.
-     *
-     * @return
-     */
-    public String getAuthMethod();
-    public void setAuthMethod(String method);
-
     /**
      * Required actions that are attached to this client session.
      *
