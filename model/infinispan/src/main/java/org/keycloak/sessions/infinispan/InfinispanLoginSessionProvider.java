@@ -28,7 +28,12 @@ import org.keycloak.sessions.LoginSessionProvider;
 public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
     @Override
-    public LoginSessionModel createLoginSession(RealmModel realm, ClientModel client) {
+    public LoginSessionModel createLoginSession(RealmModel realm, ClientModel client, boolean browser) {
+        return null;
+    }
+
+    @Override
+    public LoginSessionModel getCurrentLoginSession(RealmModel realm) {
         return null;
     }
 
@@ -38,12 +43,7 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
     }
 
     @Override
-    public void updateLoginSession(LoginSessionModel model) {
-
-    }
-
-    @Override
-    public void removeLoginSession(RealmModel realm, String loginSessionId) {
+    public void removeLoginSession(RealmModel realm, LoginSessionModel loginSession) {
 
     }
 

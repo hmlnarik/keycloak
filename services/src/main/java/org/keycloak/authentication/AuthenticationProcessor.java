@@ -871,7 +871,9 @@ public class AuthenticationProcessor {
     protected Response authenticationComplete() {
         // attachSession(); // Session will be attached after requiredActions + consents are finished.
         if (isActionRequired()) {
-            return redirectToRequiredActions(session, realm, loginSession, uriInfo);
+            // TODO:mposolda Changed this to avoid additional redirect. Doublecheck consequences...
+            //return redirectToRequiredActions(session, realm, loginSession, uriInfo);
+            return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, connection, request, uriInfo, event);
         } else {
             event.detail(Details.CODE_ID, loginSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
             return AuthenticationManager.finishedRequiredActions(session,  loginSession, connection, request, uriInfo, event);

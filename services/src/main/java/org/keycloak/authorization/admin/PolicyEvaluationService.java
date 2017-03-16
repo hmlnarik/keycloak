@@ -55,6 +55,7 @@ import org.keycloak.authorization.policy.evaluation.Result;
 import org.keycloak.authorization.store.ScopeStore;
 import org.keycloak.authorization.store.StoreFactory;
 import org.keycloak.authorization.util.Permissions;
+import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -217,14 +218,14 @@ public class PolicyEvaluationService {
 
                 if (clientId != null) {
                     ClientModel clientModel = realm.getClientById(clientId);
-                    ClientSessionModel clientSession = null;
+                    ClientLoginSessionModel clientSession = null;
                     UserSessionModel userSession = null;
                     try {
-                        clientSession = keycloakSession.sessions().createClientSession(realm, clientModel);
                         userSession = keycloakSession.sessions().createUserSession(realm, userModel, userModel.getUsername(), "127.0.0.1", "passwd", false, null, null);
+                        clientSession = keycloakSession.sessions().createClientSession(userSession.getRealm(), clientModel, userSession);
 
                         UserSessionModel finalUserSession = userSession;
-                        ClientSessionModel finalClientSession = clientSession;
+                        ClientLoginSessionModel finalClientSession = clientSession;
 
                         for (ProtocolMapperModel mapping : clientModel.getProtocolMappers()) {
                             KeycloakSessionFactory sessionFactory = keycloakSession.getKeycloakSessionFactory();
@@ -235,10 +236,6 @@ public class PolicyEvaluationService {
                             }
                         }
                     } finally {
-                        if (clientSession != null) {
-                            keycloakSession.sessions().removeClientSession(realm, clientSession);
-                        }
-
                         if (userSession != null) {
                             keycloakSession.sessions().removeUserSession(realm, userSession);
                         }
