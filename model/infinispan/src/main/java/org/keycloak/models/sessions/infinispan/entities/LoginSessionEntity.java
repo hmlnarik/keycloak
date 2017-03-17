@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.keycloak.sessions.infinispan;
+package org.keycloak.models.sessions.infinispan.entities;
 
 import java.util.Map;
 import java.util.Set;
