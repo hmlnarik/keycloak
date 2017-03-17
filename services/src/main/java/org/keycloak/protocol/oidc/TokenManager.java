@@ -346,7 +346,10 @@ public class TokenManager {
     public static ClientLoginSessionModel attachLoginSession(KeycloakSession session, UserSessionModel userSession, LoginSessionModel loginSession) {
         UserModel user = userSession.getUser();
         ClientModel client = loginSession.getClient();
+
         ClientLoginSessionModel clientSession = session.sessions().createClientSession(userSession.getRealm(), client, userSession);
+        clientSession.setRedirectUri(loginSession.getRedirectUri());
+        clientSession.setProtocol(loginSession.getProtocol());
 
         Set<String> requestedRoles = new HashSet<String>();
         // todo scope param protocol independent
