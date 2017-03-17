@@ -46,7 +46,7 @@ class CodeGenerateUtil {
         } else if (expectedClazz.equals(LoginSessionModel.class)) {
             try {
                 String[] parts = code.split("\\.");
-                String id = parts[2];
+                String id = parts[1];
                 result = session.loginSessions().getLoginSession(realm, id);
             } catch (ArrayIndexOutOfBoundsException e) {
                 return null;
@@ -54,8 +54,8 @@ class CodeGenerateUtil {
         } else if (expectedClazz.equals(ClientLoginSessionModel.class)) {
             try {
                 String[] parts = code.split("\\.");
-                String userSessionId = parts[1];
-                String clientUUID = parts[2];
+                String userSessionId = parts[2];
+                String clientUUID = parts[3];
 
                 UserSessionModel userSession = session.sessions().getUserSession(realm, userSessionId);
                 if (userSession == null) {
@@ -87,7 +87,7 @@ class CodeGenerateUtil {
             sb.append(actionId);
             sb.append('.');
             sb.append(clientSession.getId());
-            return actionId;
+            return sb.toString();
         } else if (clientSession instanceof ClientLoginSessionModel) {
             String userSessionId = ((ClientLoginSessionModel) clientSession).getUserSession().getId();
             String clientUUID = clientSession.getClient().getId();

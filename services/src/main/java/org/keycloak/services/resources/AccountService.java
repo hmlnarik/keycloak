@@ -165,11 +165,11 @@ public class AccountService extends AbstractSecuredLocalService {
         if (authResult != null) {
             UserSessionModel userSession = authResult.getSession();
             if (userSession != null) {
-                boolean associated = userSession.getClientLoginSessions().get(client.getId()) != null;
-                if (!associated) {
-                    ClientLoginSessionModel clientSession = session.sessions().createClientSession(userSession.getRealm(), client, userSession);
-                    auth.setClientSession(clientSession);
+                ClientLoginSessionModel clientSession = userSession.getClientLoginSessions().get(client.getId());
+                if (clientSession == null) {
+                    clientSession = session.sessions().createClientSession(userSession.getRealm(), client, userSession);
                 }
+                auth.setClientSession(clientSession);
             }
 
             account.setUser(auth.getUser());
