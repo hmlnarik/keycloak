@@ -34,7 +34,7 @@ public interface LoginSessionProvider extends Provider {
 
     void removeLoginSession(RealmModel realm, LoginSessionModel loginSession);
 
-
+    // TODO: test and add to scheduler
     void removeExpired(RealmModel realm);
     void onRealmRemoved(RealmModel realm);
     void onClientRemoved(RealmModel realm, ClientModel client);
