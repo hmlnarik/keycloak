@@ -231,6 +231,7 @@ public class LoginSessionAdapter implements LoginSessionModel {
 
     @Override
     public Map<String, LoginSessionModel.ExecutionStatus> getExecutionStatus() {
+
         return entity.getExecutionStatus();
     }
 

@@ -17,6 +17,8 @@
 
 package org.keycloak.models.sessions.infinispan.entities;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,11 +39,11 @@ public class LoginSessionEntity extends SessionEntity {
     private Set<String> roles;
     private Set<String> protocolMappers;
 
-    private Map<String, LoginSessionModel.ExecutionStatus> executionStatus;
+    private Map<String, LoginSessionModel.ExecutionStatus> executionStatus  = new HashMap<>();;
     private String protocol;
 
     private Map<String, String> notes;
-    private Set<String> requiredActions;
+    private Set<String> requiredActions  = new HashSet<>();
     private Map<String, String> userSessionNotes;
 
     public String getClientUuid() {

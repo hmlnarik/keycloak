@@ -425,7 +425,7 @@ public class AuthenticationManager {
                 .setHttpHeaders(request.getHttpHeaders())
                 .setUriInfo(uriInfo)
                 .setEventBuilder(event);
-        return redirectAfterSuccessfulFlow(session, realm, userSession, clientSession, request, uriInfo, clientConnection, event, protocol);
+        return redirectAfterSuccessfulFlow(session, realm, userSession, clientSession, request, uriInfo, clientConnection, event, protocolImpl);
 
     }
 
