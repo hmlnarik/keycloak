@@ -17,8 +17,10 @@
 
 package org.keycloak.services.managers;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.keycloak.models.ClientLoginSessionModel;
-import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -27,31 +29,118 @@ import org.keycloak.sessions.CommonClientSessionModel;
 import org.keycloak.sessions.LoginSessionModel;
 
 /**
- * TODO: More object oriented and rather add parsing/generating logic into the session implementations itself
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
 class CodeGenerateUtil {
 
-    static <CS extends CommonClientSessionModel> CS parseSession(String code, KeycloakSession session, RealmModel realm, Class<CS> expectedClazz) {
-        CommonClientSessionModel result = null;
-        if (expectedClazz.equals(ClientSessionModel.class)) {
+    private static final Map<Class<? extends CommonClientSessionModel>, ClientSessionParser<?>> PARSERS = new HashMap<>();
+
+    static {
+        PARSERS.put(ClientSessionModel.class, new ClientSessionModelParser());
+        PARSERS.put(LoginSessionModel.class, new LoginSessionModelParser());
+        PARSERS.put(ClientLoginSessionModel.class, new ClientLoginSessionModelParser());
+    }
+
+
+    public static <CS extends CommonClientSessionModel> CS parseSession(String code, KeycloakSession session, RealmModel realm, Class<CS> expectedClazz) {
+        ClientSessionParser<?> parser = PARSERS.get(expectedClazz);
+
+        CommonClientSessionModel result = parser.parseSession(code, session, realm);
+        return expectedClazz.cast(result);
+    }
+
+    public static String generateCode(CommonClientSessionModel clientSession, String actionId) {
+        ClientSessionParser parser = getParser(clientSession);
+        return parser.generateCode(clientSession, actionId);
+    }
+
+    public static void removeExpiredSession(KeycloakSession session, CommonClientSessionModel clientSession) {
+        ClientSessionParser parser = getParser(clientSession);
+        parser.removeExpiredSession(session, clientSession);
+    }
+
+    private static ClientSessionParser<?> getParser(CommonClientSessionModel clientSession) {
+        for (Class<?> c : PARSERS.keySet()) {
+            if (c.isAssignableFrom(clientSession.getClass())) {
+                return PARSERS.get(c);
+            }
+        }
+        return null;
+    }
+
+
+    private interface ClientSessionParser<CS extends CommonClientSessionModel> {
+
+        CS parseSession(String code, KeycloakSession session, RealmModel realm);
+
+        String generateCode(CS clientSession, String actionId);
+
+        void removeExpiredSession(KeycloakSession session, CS clientSession);
+
+    }
+
+
+    // IMPLEMENTATIONS
+
+
+    // TODO: remove
+    private static class ClientSessionModelParser implements ClientSessionParser<ClientSessionModel> {
+
+
+        @Override
+        public ClientSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
             try {
                 String[] parts = code.split("\\.");
                 String id = parts[2];
-                result = session.sessions().getClientSession(realm, id);
+                return session.sessions().getClientSession(realm, id);
             } catch (ArrayIndexOutOfBoundsException e) {
                 return null;
             }
-        } else if (expectedClazz.equals(LoginSessionModel.class)) {
-            try {
-                String[] parts = code.split("\\.");
-                String id = parts[1];
-                result = session.loginSessions().getLoginSession(realm, id);
-            } catch (ArrayIndexOutOfBoundsException e) {
-                return null;
-            }
-        } else if (expectedClazz.equals(ClientLoginSessionModel.class)) {
+        }
+
+        @Override
+        public String generateCode(ClientSessionModel clientSession, String actionId) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("cls.");
+            sb.append(actionId);
+            sb.append('.');
+            sb.append(clientSession.getId());
+
+            return sb.toString();
+        }
+
+        @Override
+        public void removeExpiredSession(KeycloakSession session, ClientSessionModel clientSession) {
+            session.sessions().removeClientSession(clientSession.getRealm(), clientSession);
+        }
+    }
+
+
+    private static class LoginSessionModelParser implements ClientSessionParser<LoginSessionModel> {
+
+        @Override
+        public LoginSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
+            // Read loginSessionID from cookie. Code is ignored for now
+            return session.loginSessions().getCurrentLoginSession(realm);
+        }
+
+        @Override
+        public String generateCode(LoginSessionModel clientSession, String actionId) {
+            return actionId;
+        }
+
+        @Override
+        public void removeExpiredSession(KeycloakSession session, LoginSessionModel clientSession) {
+            session.loginSessions().removeLoginSession(clientSession.getRealm(), clientSession);
+        }
+    }
+
+
+    private static class ClientLoginSessionModelParser implements ClientSessionParser<ClientLoginSessionModel> {
+
+        @Override
+        public ClientLoginSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
             try {
                 String[] parts = code.split("\\.");
                 String userSessionId = parts[2];
@@ -62,34 +151,15 @@ class CodeGenerateUtil {
                     return null;
                 }
 
-                result = userSession.getClientLoginSessions().get(clientUUID);
+                return userSession.getClientLoginSessions().get(clientUUID);
             } catch (ArrayIndexOutOfBoundsException e) {
                 return null;
             }
-        } else {
-            throw new IllegalArgumentException("Not known impl: " + expectedClazz.getName());
         }
 
-        return expectedClazz.cast(result);
-    }
-
-    static String generateCode(CommonClientSessionModel clientSession, String actionId) {
-        if (clientSession instanceof ClientSessionModel) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("cls.");
-            sb.append(actionId);
-            sb.append('.');
-            sb.append(clientSession.getId());
-
-            return sb.toString();
-        } else if (clientSession instanceof LoginSessionModel) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(actionId);
-            sb.append('.');
-            sb.append(clientSession.getId());
-            return sb.toString();
-        } else if (clientSession instanceof ClientLoginSessionModel) {
-            String userSessionId = ((ClientLoginSessionModel) clientSession).getUserSession().getId();
+        @Override
+        public String generateCode(ClientLoginSessionModel clientSession, String actionId) {
+            String userSessionId = clientSession.getUserSession().getId();
             String clientUUID = clientSession.getClient().getId();
             StringBuilder sb = new StringBuilder();
             sb.append("uss.");
@@ -99,9 +169,13 @@ class CodeGenerateUtil {
             sb.append('.');
             sb.append(clientUUID);
             return sb.toString();
-        } else {
-            throw new IllegalArgumentException("Not known impl: " + clientSession.getClass().getName());
         }
+
+        @Override
+        public void removeExpiredSession(KeycloakSession session, ClientLoginSessionModel clientSession) {
+            throw new IllegalStateException("Not yet implemented");
+        }
+
     }
 
 

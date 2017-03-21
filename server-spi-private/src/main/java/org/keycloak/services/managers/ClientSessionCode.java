@@ -109,23 +109,6 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         }
     }
 
-    public static <CLIENT_SESSION extends CommonClientSessionModel> ClientSessionCode<CLIENT_SESSION> parse(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
-        try {
-            CLIENT_SESSION clientSession = getClientSession(code, session, realm, sessionClass);
-            if (clientSession == null) {
-                return null;
-            }
-
-            if (!verifyCode(code, clientSession)) {
-                return null;
-            }
-
-            return new ClientSessionCode<>(session, realm, clientSession);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
     public static <CLIENT_SESSION extends CommonClientSessionModel> CLIENT_SESSION getClientSession(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
         return CodeGenerateUtil.parseSession(code, session, realm, sessionClass);
     }
@@ -169,6 +152,10 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
             return false;
         }
         return true;
+    }
+
+    public void removeExpiredClientSession() {
+        CodeGenerateUtil.removeExpiredSession(session, commonLoginSession);
     }
 
 

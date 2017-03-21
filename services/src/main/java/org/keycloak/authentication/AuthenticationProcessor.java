@@ -66,6 +66,8 @@ import java.util.Map;
  */
 public class AuthenticationProcessor {
     public static final String CURRENT_AUTHENTICATION_EXECUTION = "current.authentication.execution";
+    public static final String LAST_PROCESSED_EXECUTION = "last.processed.code";
+
     protected static final Logger logger = Logger.getLogger(AuthenticationProcessor.class);
     protected RealmModel realm;
     protected UserSessionModel userSession;
@@ -480,8 +482,11 @@ public class AuthenticationProcessor {
         }
 
         @Override
-        public URI getActionUrl() {
-            return getActionUrl(generateAccessCode());
+        public URI getRefreshExecutionUrl() {
+            return LoginActionsService.loginActionsBaseUrl(getUriInfo())
+                    .path(AuthenticationProcessor.this.flowPath)
+                    .queryParam("execution", getExecution().getId())
+                    .build(getRealm().getName());
         }
 
         @Override
@@ -678,12 +683,13 @@ public class AuthenticationProcessor {
     }
 
 
-    public Response redirectToFlow() {
-        String code = generateCode();
+    public Response redirectToFlow(String execution) {
+        logger.info("Redirecting to flow with execution: " + execution);
+        loginSession.setNote(LAST_PROCESSED_EXECUTION, execution);
 
         URI redirect = LoginActionsService.loginActionsBaseUrl(getUriInfo())
                 .path(flowPath)
-                .queryParam(OAuth2Constants.CODE, code).build(getRealm().getName());
+                .queryParam("execution", execution).build(getRealm().getName());
         return Response.status(302).location(redirect).build();
 
     }
@@ -731,10 +737,13 @@ public class AuthenticationProcessor {
         checkClientSession();
         String current = loginSession.getNote(CURRENT_AUTHENTICATION_EXECUTION);
         if (!execution.equals(current)) {
-            logger.debug("Current execution does not equal executed execution.  Might be a page refresh");
+            // TODO:mposolda debug
+            logger.info("Current execution does not equal executed execution.  Might be a page refresh");
             //logFailure();
             //resetFlow(clientSession);
-            return authenticate();
+            // Just redirect to latest execution now
+            return redirectToFlow(current);
+            //return authenticate();
         }
         UserModel authUser = loginSession.getAuthenticatedUser();
         validateUser(authUser);

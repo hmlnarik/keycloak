@@ -23,6 +23,7 @@ import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.services.ServicesLogger;
+import org.keycloak.services.resources.LoginActionsService;
 
 import javax.ws.rs.core.Response;
 import java.util.Iterator;
@@ -90,7 +91,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
                 AuthenticationProcessor.Result result = processor.createAuthenticatorContext(model, authenticator, executions);
                 logger.debugv("action: {0}", model.getAuthenticator());
                 authenticator.action(result);
-                Response response = processResult(result);
+                Response response = processResult(result, true);
                 if (response == null) {
                     processor.getLoginSession().removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
                     if (result.status == FlowStatus.SUCCESS) {
@@ -189,20 +190,27 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
             AuthenticationProcessor.Result context = processor.createAuthenticatorContext(model, authenticator, executions);
             logger.debug("invoke authenticator.authenticate");
             authenticator.authenticate(context);
-            Response response = processResult(context);
+            Response response = processResult(context, false);
             if (response != null) return response;
         }
         return null;
     }
 
 
-    public Response processResult(AuthenticationProcessor.Result result) {
+    public Response processResult(AuthenticationProcessor.Result result, boolean isAction) {
         AuthenticationExecutionModel execution = result.getExecution();
         FlowStatus status = result.getStatus();
         switch (status) {
             case SUCCESS:
                 logger.debugv("authenticator SUCCESS: {0}", execution.getAuthenticator());
                 processor.getLoginSession().setExecutionStatus(execution.getId(), ClientSessionModel.ExecutionStatus.SUCCESS);
+
+                // We just do another GET to ensure that page refresh will work
+                if (isAction) {
+                    processor.getLoginSession().removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+                    return processor.redirectToFlow(execution.getId());
+                }
+
                 if (execution.isAlternative()) alternativeSuccessful = true;
                 return null;
             case FAILED:
