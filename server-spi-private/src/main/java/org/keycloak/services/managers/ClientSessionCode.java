@@ -112,7 +112,14 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
     }
 
     public static <CLIENT_SESSION extends CommonClientSessionModel> CLIENT_SESSION getClientSession(String code, KeycloakSession session, RealmModel realm, Class<CLIENT_SESSION> sessionClass) {
-        return CodeGenerateUtil.parseSession(code, session, realm, sessionClass);
+        CLIENT_SESSION clientSession = CodeGenerateUtil.parseSession(code, session, realm, sessionClass);
+
+        // TODO:mposolda Move this to somewhere else? Maybe LoginActionsService.sessionCodeChecks should be somehow even for non-action URLs...
+        if (clientSession != null) {
+            session.getContext().setClient(clientSession.getClient());
+        }
+
+        return clientSession;
     }
 
     public CLIENT_SESSION getClientSession() {

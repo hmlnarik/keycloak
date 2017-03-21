@@ -343,38 +343,16 @@ public class TokenManager {
         return token;
     }
 
+
     public static ClientLoginSessionModel attachLoginSession(KeycloakSession session, UserSessionModel userSession, LoginSessionModel loginSession) {
-        UserModel user = userSession.getUser();
         ClientModel client = loginSession.getClient();
 
         ClientLoginSessionModel clientSession = session.sessions().createClientSession(userSession.getRealm(), client, userSession);
         clientSession.setRedirectUri(loginSession.getRedirectUri());
         clientSession.setProtocol(loginSession.getProtocol());
 
-        Set<String> requestedRoles = new HashSet<String>();
-        // todo scope param protocol independent
-        String scopeParam = loginSession.getNote(OAuth2Constants.SCOPE);
-        for (RoleModel r : TokenManager.getAccess(scopeParam, true, client, user)) {
-            requestedRoles.add(r.getId());
-        }
-        clientSession.setRoles(requestedRoles);
-
-        Set<String> requestedProtocolMappers = new HashSet<String>();
-        ClientTemplateModel clientTemplate = client.getClientTemplate();
-        if (clientTemplate != null && client.useTemplateMappers()) {
-            for (ProtocolMapperModel protocolMapper : clientTemplate.getProtocolMappers()) {
-                if (protocolMapper.getProtocol().equals(loginSession.getProtocol())) {
-                    requestedProtocolMappers.add(protocolMapper.getId());
-                }
-            }
-
-        }
-        for (ProtocolMapperModel protocolMapper : client.getProtocolMappers()) {
-            if (protocolMapper.getProtocol().equals(loginSession.getProtocol())) {
-                requestedProtocolMappers.add(protocolMapper.getId());
-            }
-        }
-        clientSession.setProtocolMappers(requestedProtocolMappers);
+        clientSession.setRoles(loginSession.getRoles());
+        clientSession.setProtocolMappers(loginSession.getProtocolMappers());
 
         Map<String, String> transferredNotes = loginSession.getNotes();
         for (Map.Entry<String, String> entry : transferredNotes.entrySet()) {
