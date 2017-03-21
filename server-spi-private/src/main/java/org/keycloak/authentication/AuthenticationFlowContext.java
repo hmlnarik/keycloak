@@ -81,11 +81,11 @@ public interface AuthenticationFlowContext extends AbstractAuthenticationFlowCon
     URI getActionUrl(String code);
 
     /**
-     * Get the action URL for the required action.  This auto-generates the access code.
+     * Get the refresh URL for the required action.
      *
      * @return
      */
-    URI getActionUrl();
+    URI getRefreshExecutionUrl();
 
     /**
      * End the flow and redirect browser based on protocol specific respones.  This should only be executed

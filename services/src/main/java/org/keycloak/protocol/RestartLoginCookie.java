@@ -23,9 +23,7 @@ import org.keycloak.common.ClientConnection;
 import org.keycloak.jose.jws.JWSBuilder;
 import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.jose.jws.crypto.HMACProvider;
-import org.keycloak.jose.jws.crypto.RSAProvider;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -36,7 +34,6 @@ import org.keycloak.sessions.LoginSessionModel;
 import javax.crypto.SecretKey;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.UriInfo;
-import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,7 +48,7 @@ public class RestartLoginCookie {
     private static final Logger logger = Logger.getLogger(RestartLoginCookie.class);
     public static final String KC_RESTART = "KC_RESTART";
     @JsonProperty("cs")
-    protected String clientSession;
+    protected String loginSession;
 
     @JsonProperty("cid")
     protected String clientId;
@@ -68,12 +65,12 @@ public class RestartLoginCookie {
     @JsonProperty("notes")
     protected Map<String, String> notes = new HashMap<>();
 
-    public String getClientSession() {
-        return clientSession;
+    public String getLoginSession() {
+        return loginSession;
     }
 
-    public void setClientSession(String clientSession) {
-        this.clientSession = clientSession;
+    public void setLoginSession(String loginSession) {
+        this.loginSession = loginSession;
     }
 
     public Map<String, String> getNotes() {
@@ -131,7 +128,7 @@ public class RestartLoginCookie {
         this.clientId = clientSession.getClient().getClientId();
         this.authMethod = clientSession.getProtocol();
         this.redirectUri = clientSession.getRedirectUri();
-        this.clientSession = clientSession.getId();
+        this.loginSession = clientSession.getId();
         for (Map.Entry<String, String> entry : clientSession.getNotes().entrySet()) {
             notes.put(entry.getKey(), entry.getValue());
         }
@@ -151,14 +148,12 @@ public class RestartLoginCookie {
         CookieHelper.addCookie(KC_RESTART, "", path, null, null, 0, secureOnly, true);
     }
 
-    // TODO:mposolda
-    /*
-    public static ClientSessionModel restartSession(KeycloakSession session, RealmModel realm, String code) throws Exception {
-        String[] parts = code.split("\\.");
-        return restartSessionByClientSession(session, realm, parts[1]);
+
+    public static LoginSessionModel restartSession(KeycloakSession session, RealmModel realm) throws Exception {
+        return restartSessionByClientSession(session, realm);
     }
 
-    public static ClientSessionModel restartSessionByClientSession(KeycloakSession session, RealmModel realm, String clientSessionId) throws Exception {
+    private static LoginSessionModel restartSessionByClientSession(KeycloakSession session, RealmModel realm) throws Exception {
         Cookie cook = session.getContext().getRequestHeaders().getCookies().get(KC_RESTART);
         if (cook ==  null) {
             logger.debug("KC_RESTART cookie doesn't exist");
@@ -172,22 +167,18 @@ public class RestartLoginCookie {
             return null;
         }
         RestartLoginCookie cookie = input.readJsonContent(RestartLoginCookie.class);
-        if (!clientSessionId.equals(cookie.getClientSession())) {
-            logger.debug("RestartLoginCookie clientSession does not match code's clientSession");
-            return null;
-        }
 
         ClientModel client = realm.getClientByClientId(cookie.getClientId());
         if (client == null) return null;
 
-        ClientSessionModel clientSession = session.sessions().createClientSession(realm, client);
-        clientSession.setAuthMethod(cookie.getAuthMethod());
-        clientSession.setRedirectUri(cookie.getRedirectUri());
-        clientSession.setAction(cookie.getAction());
+        LoginSessionModel loginSession = session.loginSessions().createLoginSession(realm, client, true);
+        loginSession.setProtocol(cookie.getAuthMethod());
+        loginSession.setRedirectUri(cookie.getRedirectUri());
+        loginSession.setAction(cookie.getAction());
         for (Map.Entry<String, String> entry : cookie.getNotes().entrySet()) {
-            clientSession.setNote(entry.getKey(), entry.getValue());
+            loginSession.setNote(entry.getKey(), entry.getValue());
         }
 
-        return clientSession;
-    }*/
+        return loginSession;
+    }
 }

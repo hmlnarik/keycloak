@@ -40,6 +40,7 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.LoginProtocol;
 import org.keycloak.protocol.ProtocolMapper;
+import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.protocol.saml.mappers.SAMLAttributeStatementMapper;
 import org.keycloak.protocol.saml.mappers.SAMLLoginResponseMapper;
 import org.keycloak.protocol.saml.mappers.SAMLRoleListMapper;
@@ -205,8 +206,7 @@ public class SamlProtocol implements LoginProtocol {
                 }
             }
         } finally {
-            // TODO:mposolda
-            //RestartLoginCookie.expireRestartCookie(realm, session.getContext().getConnection(), uriInfo);
+            RestartLoginCookie.expireRestartCookie(realm, session.getContext().getConnection(), uriInfo);
             session.loginSessions().removeLoginSession(realm, loginSession);
         }
     }

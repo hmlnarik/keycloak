@@ -464,6 +464,11 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
     }
 
     @Override
+    public Response createLoginExpiredPage() {
+        return createResponse(LoginFormsPages.LOGIN_PAGE_EXPIRED);
+    }
+
+    @Override
     public Response createIdpLinkEmailPage() {
         BrokeredIdentityContext brokerContext = (BrokeredIdentityContext) this.attributes.get(IDENTITY_PROVIDER_BROKER_CONTEXT);
         String idpAlias = brokerContext.getIdpConfig().getAlias();
