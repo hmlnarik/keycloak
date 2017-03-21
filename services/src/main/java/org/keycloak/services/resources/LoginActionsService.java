@@ -31,6 +31,7 @@ import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticato
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
+import org.keycloak.common.util.ObjectUtil;
 import org.keycloak.common.util.Time;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
@@ -102,7 +103,6 @@ public class LoginActionsService {
     public static final String REQUIRED_ACTION = "required-action";
     public static final String FIRST_BROKER_LOGIN_PATH = "first-broker-login";
     public static final String POST_BROKER_LOGIN_PATH = "post-broker-login";
-    public static final String LAST_PROCESSED_CODE = "last_processed_code";
 
     private RealmModel realm;
 
@@ -169,8 +169,8 @@ public class LoginActionsService {
         }
     }
 
-    private <C extends CommonClientSessionModel> SessionCodeChecks<C> checksForCode(String code, Class<C> expectedClazz) {
-        SessionCodeChecks<C> res = new SessionCodeChecks<>(code, expectedClazz);
+    private <C extends CommonClientSessionModel> SessionCodeChecks<C> checksForCode(String code, String execution, String flowPath, Class<C> expectedClazz) {
+        SessionCodeChecks<C> res = new SessionCodeChecks<>(code, execution, flowPath, expectedClazz);
         res.initialVerifyCode();
         return res;
     }
@@ -184,9 +184,13 @@ public class LoginActionsService {
         Class<C> expectedClazz;
 
         private final String code;
+        private final String execution;
+        private final String flowPath;
 
-        public SessionCodeChecks(String code, Class<C> expectedClazz) {
+        public SessionCodeChecks(String code, String execution, String flowPath, Class<C> expectedClazz) {
             this.code = code;
+            this.execution = execution;
+            this.flowPath = flowPath;
             this.expectedClazz = expectedClazz;
         }
 
@@ -211,6 +215,8 @@ public class LoginActionsService {
             if (!clientCode.isValidAction(requiredAction)) {
                 C clientSession = getClientSession();
                 if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(clientSession.getAction())) {
+                    // TODO:mposolda
+                    logger.info("Redirecting to requiredActions now. Do we really need to redirect here? Couldn't we just continue?");
                     response = redirectToRequiredActions(code);
                     return false;
                 } // TODO:mposolda
@@ -246,7 +252,7 @@ public class LoginActionsService {
                 if (getClientSession().getAction().equals(ClientSessionModel.Action.AUTHENTICATE.name())) {
                     LoginSessionModel loginSession = (LoginSessionModel) getClientSession();
                     AuthenticationProcessor.resetFlow(loginSession);
-                    response = processAuthentication(null, loginSession, Messages.LOGIN_TIMEOUT);
+                    response = processAuthentication(false, null, loginSession, Messages.LOGIN_TIMEOUT);
                     return false;
                 }
                 response = ErrorPage.error(session, Messages.EXPIRED_CODE);
@@ -270,44 +276,30 @@ public class LoginActionsService {
             clientCode = result.getCode();
             if (clientCode == null) {
                 if (result.isLoginSessionNotFound()) { // timeout or loginSession already logged
-                    // TODO:mposolda
-                    /*
-                    try {
-                        ClientSessionModel clientSession = RestartLoginCookie.restartSession(session, realm, code);
-                        if (clientSession != null) {
-                            event.clone().detail(Details.RESTART_AFTER_TIMEOUT, "true").error(Errors.EXPIRED_CODE);
-                            response = processFlow(null, clientSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), Messages.LOGIN_TIMEOUT, new AuthenticationProcessor());
-                            return false;
-                        }
-                    } catch (Exception e) {
-                        ServicesLogger.LOGGER.failedToParseRestartLoginCookie(e);
-                    }*/
+                    response = restartLoginSession(false);
+                    return false;
+                } else {
+                    logger.info("Showing 'page expired' page now");
+                    C clientSession = getClientSession();
+                    response = showPageExpired(flowPath, (LoginSessionModel) clientSession);
+                    return false;
                 }
-                event.error(Errors.INVALID_CODE);
-                response = ErrorPage.error(session, Messages.INVALID_CODE);
-                return false;
+
             }
 
             C clientSession = getClientSession();
-            if (clientSession == null) {
-                event.error(Errors.INVALID_CODE);
-                response = ErrorPage.error(session, Messages.INVALID_CODE);
-                return false;
-            }
             event.detail(Details.CODE_ID, clientSession.getId());
             ClientModel client = clientSession.getClient();
             if (client == null) {
                 event.error(Errors.CLIENT_NOT_FOUND);
                 response = ErrorPage.error(session, Messages.UNKNOWN_LOGIN_REQUESTER);
-                // TODO:mposolda
-                //session.sessions().removeClientSession(realm, clientSession);
+                clientCode.removeExpiredClientSession();
                 return false;
             }
             if (!client.isEnabled()) {
-                event.error(Errors.CLIENT_NOT_FOUND);
+                event.error(Errors.CLIENT_DISABLED);
                 response = ErrorPage.error(session, Messages.LOGIN_REQUESTER_NOT_ENABLED);
-                // TODO:mposolda
-                //session.sessions().removeClientSession(realm, clientSession);
+                clientCode.removeExpiredClientSession();
                 return false;
             }
             session.getContext().setClient(client);
@@ -341,6 +333,54 @@ public class LoginActionsService {
         }
     }
 
+
+    protected Response restartLoginSession(boolean managedRestart) {
+        logger.infof("Login restart requested or login session not found. Trying to restart from cookie. Managed restart: %s", managedRestart);
+        LoginSessionModel loginSession = null;
+        try {
+            loginSession = RestartLoginCookie.restartSession(session, realm);
+        } catch (Exception e) {
+            ServicesLogger.LOGGER.failedToParseRestartLoginCookie(e);
+        }
+
+        if (loginSession != null) {
+
+            event.clone();
+
+            String warningMessage = null;
+            if (managedRestart) {
+                event.detail(Details.RESTART_REQUESTED, "true");
+            } else {
+                event.detail(Details.RESTART_AFTER_TIMEOUT, "true");
+                warningMessage = Messages.LOGIN_TIMEOUT;
+            }
+
+            event.error(Errors.EXPIRED_CODE);
+            return processFlow(false, null, loginSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), warningMessage, new AuthenticationProcessor());
+        } else {
+            event.error(Errors.INVALID_CODE);
+            return ErrorPage.error(session, Messages.INVALID_CODE);
+        }
+    }
+
+
+    protected Response showPageExpired(String flowPath, LoginSessionModel loginSession) {
+        String executionId = loginSession==null ? null : loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+        logger.infof("Redirecting to 'page expired' now. Will use execution: %s", executionId);
+
+        UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)
+                .path(flowPath);
+
+        if (executionId != null) {
+            uriBuilder.queryParam("execution", executionId);
+        }
+        URI lastStepUrl = uriBuilder.build(realm.getName());
+
+        return session.getProvider(LoginFormsProvider.class)
+                .setActionUri(lastStepUrl)
+                .createLoginExpiredPage();
+    }
+
     /**
      * protocol independent login page entry point
      *
@@ -350,32 +390,48 @@ public class LoginActionsService {
     @Path(AUTHENTICATE_PATH)
     @GET
     public Response authenticate(@QueryParam("code") String code,
-                                 @QueryParam("execution") String execution) {
+                                 @QueryParam("execution") String execution,
+                                 @QueryParam("restart") String restart) {
         event.event(EventType.LOGIN);
 
         LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
-        if (loginSession != null && code.equals(loginSession.getNote(LAST_PROCESSED_CODE))) {
-            // Allow refresh of previous page
+        if (loginSession == null) {
+            return restartLoginSession(false);
+        }
+        if (Boolean.parseBoolean(restart)) {
+            return restartLoginSession(true);
+        }
+
+
+        boolean action = false;
+        if (code == null) {
+            String lastExecFromSession = loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+            if (ObjectUtil.isEqualOrBothNull(execution, lastExecFromSession)) {
+                // Allow refresh of previous page
+            } else {
+                logger.info("Redirecting to page expired page.");
+                return showPageExpired(AUTHENTICATE_PATH, loginSession);
+            }
         } else {
-            SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, LoginSessionModel.class);
+            SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, AUTHENTICATE_PATH, LoginSessionModel.class);
             if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
                 return checks.response;
             }
 
             ClientSessionCode<LoginSessionModel> clientSessionCode = checks.clientCode;
             loginSession = clientSessionCode.getClientSession();
+            action = true;
         }
 
         event.detail(Details.CODE_ID, code);
-        loginSession.setNote(LAST_PROCESSED_CODE, code);
-        return processAuthentication(execution, loginSession, null);
+        return processAuthentication(action, execution, loginSession, null);
     }
 
-    protected Response processAuthentication(String execution, LoginSessionModel loginSession, String errorMessage) {
-        return processFlow(execution, loginSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), errorMessage, new AuthenticationProcessor());
+    protected Response processAuthentication(boolean action, String execution, LoginSessionModel loginSession, String errorMessage) {
+        return processFlow(action, execution, loginSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), errorMessage, new AuthenticationProcessor());
     }
 
-    protected Response processFlow(String execution, LoginSessionModel loginSession, String flowPath, AuthenticationFlowModel flow, String errorMessage, AuthenticationProcessor processor) {
+    protected Response processFlow(boolean action, String execution, LoginSessionModel loginSession, String flowPath, AuthenticationFlowModel flow, String errorMessage, AuthenticationProcessor processor) {
         processor.setLoginSession(loginSession)
                 .setFlowPath(flowPath)
                 .setBrowserFlow(true)
@@ -389,7 +445,7 @@ public class LoginActionsService {
         if (errorMessage != null) processor.setForwardedErrorMessage(new FormMessage(null, errorMessage));
 
         try {
-            if (execution != null) {
+            if (action) {
                 return processor.authenticationAction(execution);
             } else {
                 return processor.authenticate();
@@ -409,6 +465,9 @@ public class LoginActionsService {
     @POST
     public Response authenticateForm(@QueryParam("code") String code,
                                      @QueryParam("execution") String execution) {
+        return authenticate(code, execution, null);
+        // TODO:mposolda can be just deleted?
+        /*
         event.event(EventType.LOGIN);
 
         LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
@@ -427,6 +486,7 @@ public class LoginActionsService {
         loginSession.setNote(LAST_PROCESSED_CODE, code);
 
         return processAuthentication(execution, loginSession, null);
+        */
     }
 
     @Path(RESET_CREDENTIALS_PATH)
@@ -566,7 +626,7 @@ public class LoginActionsService {
                     LoginSessionModel loginSession = (LoginSessionModel) t.getClientSession();
 
                     AuthenticationProcessor.resetFlow(loginSession);
-                    throw new LoginActionsServiceException(processAuthentication(null, loginSession, Messages.LOGIN_TIMEOUT));
+                    throw new LoginActionsServiceException(processAuthentication(false, null, loginSession, Messages.LOGIN_TIMEOUT));
                 }
 
                 throw new LoginActionsServiceException(ErrorPage.error(session, Messages.EXPIRED_CODE));
@@ -656,7 +716,7 @@ public class LoginActionsService {
      */
     protected Response resetCredentials(String code, String execution) {
         event.event(EventType.RESET_PASSWORD);
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, LoginSessionModel.class);
+        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, RESET_CREDENTIALS_PATH, LoginSessionModel.class);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.USER)) {
             return checks.response;
         }
@@ -748,7 +808,9 @@ public class LoginActionsService {
 
 
     protected Response processRegistration(String execution, LoginSessionModel loginSession, String errorMessage) {
-        return processFlow(execution, loginSession, REGISTRATION_PATH, realm.getRegistrationFlow(), errorMessage, new AuthenticationProcessor());
+        // TODO:mposolda
+        boolean action = execution != null;
+        return processFlow(action, execution, loginSession, REGISTRATION_PATH, realm.getRegistrationFlow(), errorMessage, new AuthenticationProcessor());
     }
 
 
@@ -768,7 +830,7 @@ public class LoginActionsService {
             return ErrorPage.error(session, Messages.REGISTRATION_NOT_ALLOWED);
         }
 
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, LoginSessionModel.class);
+        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, REGISTRATION_PATH, LoginSessionModel.class);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
             return checks.response;
         }
@@ -798,7 +860,7 @@ public class LoginActionsService {
             event.error(Errors.REGISTRATION_DISABLED);
             return ErrorPage.error(session, Messages.REGISTRATION_NOT_ALLOWED);
         }
-        SessionCodeChecks checks = checksForCode(code, LoginSessionModel.class);
+        SessionCodeChecks checks = checksForCode(code, execution, REGISTRATION_PATH, LoginSessionModel.class);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
             return checks.response;
         }
@@ -917,7 +979,7 @@ public class LoginActionsService {
     public Response processConsent(final MultivaluedMap<String, String> formData) {
         event.event(EventType.LOGIN);
         String code = formData.getFirst("code");
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, LoginSessionModel.class);
+        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, null, REQUIRED_ACTION, LoginSessionModel.class);
         if (!checks.verifyRequiredAction(ClientSessionModel.Action.OAUTH_GRANT.name())) {
             return checks.response;
         }
@@ -1172,6 +1234,7 @@ public class LoginActionsService {
         /*
         event.event(EventType.CUSTOM_REQUIRED_ACTION);
         event.detail(Details.CUSTOM_REQUIRED_ACTION, action);
+
         SessionCodeChecks checks = checksForCode(code);
         if (!checks.verifyRequiredAction(action)) {
             return checks.response;
@@ -1233,14 +1296,17 @@ public class LoginActionsService {
         }
 
         throw new RuntimeException("Unreachable");
-        */
+*/
         return null;
     }
 
-    private Response redirectToRequiredActions(String code) {
-        URI redirect = LoginActionsService.loginActionsBaseUrl(uriInfo)
-                .path(LoginActionsService.REQUIRED_ACTION)
-                .queryParam(OAuth2Constants.CODE, code).build(realm.getName());
+    private Response redirectToRequiredActions(String action) {
+        UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)
+                .path(LoginActionsService.REQUIRED_ACTION);
+        if (action == null) {
+            uriBuilder.queryParam("action", action);
+        }
+        URI redirect = uriBuilder.build(realm.getName());
         return Response.status(302).location(redirect).build();
     }
 

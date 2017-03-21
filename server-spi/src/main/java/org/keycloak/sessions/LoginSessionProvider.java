@@ -28,6 +28,8 @@ public interface LoginSessionProvider extends Provider {
 
     LoginSessionModel createLoginSession(RealmModel realm, ClientModel client, boolean browser);
 
+    String getCurrentLoginSessionId(RealmModel realm);
+
     LoginSessionModel getCurrentLoginSession(RealmModel realm);
 
     LoginSessionModel getLoginSession(RealmModel realm, String loginSessionId);

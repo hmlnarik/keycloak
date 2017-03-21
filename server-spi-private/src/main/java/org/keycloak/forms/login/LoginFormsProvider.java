@@ -68,6 +68,8 @@ public interface LoginFormsProvider extends Provider {
 
     public Response createIdpLinkEmailPage();
 
+    public Response createLoginExpiredPage();
+
     public Response createErrorPage();
 
     public Response createOAuthGrant();

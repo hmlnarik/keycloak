@@ -82,6 +82,11 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
     }
 
     @Override
+    public String getCurrentLoginSessionId(RealmModel realm) {
+        return getIdFromBrowserCookie();
+    }
+
+    @Override
     public LoginSessionModel getCurrentLoginSession(RealmModel realm) {
         String loginSessionId = getIdFromBrowserCookie();
         return loginSessionId==null ? null : getLoginSession(realm, loginSessionId);

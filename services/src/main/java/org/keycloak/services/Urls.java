@@ -201,6 +201,12 @@ public class Urls {
         return loginActionsBase(baseUri).path(LoginActionsService.class, "authenticate").build(realmId);
     }
 
+    public static URI realmLoginRestartPage(URI baseUri, String realmId) {
+        return loginActionsBase(baseUri).path(LoginActionsService.class, "authenticate")
+                .queryParam("restart", "true")
+                .build(realmId);
+    }
+
     private static UriBuilder realmLogout(URI baseUri) {
         return tokenBase(baseUri).path(OIDCLoginProtocolService.class, "logout");
     }
