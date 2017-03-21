@@ -66,7 +66,8 @@ import java.util.Map;
  */
 public class AuthenticationProcessor {
     public static final String CURRENT_AUTHENTICATION_EXECUTION = "current.authentication.execution";
-    public static final String LAST_PROCESSED_EXECUTION = "last.processed.code";
+    public static final String LAST_PROCESSED_EXECUTION = "last.processed.execution";
+    public static final String CURRENT_FLOW_PATH = "current.flow.path";
 
     protected static final Logger logger = Logger.getLogger(AuthenticationProcessor.class);
     protected RealmModel realm;
@@ -739,11 +740,7 @@ public class AuthenticationProcessor {
         if (!execution.equals(current)) {
             // TODO:mposolda debug
             logger.info("Current execution does not equal executed execution.  Might be a page refresh");
-            //logFailure();
-            //resetFlow(clientSession);
-            // Just redirect to latest execution now
             return redirectToFlow(current);
-            //return authenticate();
         }
         UserModel authUser = loginSession.getAuthenticatedUser();
         validateUser(authUser);
@@ -882,11 +879,14 @@ public class AuthenticationProcessor {
 
     protected Response authenticationComplete() {
         // attachSession(); // Session will be attached after requiredActions + consents are finished.
+        AuthenticationManager.setRolesAndMappersInSession(loginSession);
+
         if (isActionRequired()) {
-            // TODO:mposolda Changed this to avoid additional redirect. Doublecheck consequences...
+            // TODO:mposolda This was changed to avoid additional redirect. Doublecheck consequences...
             //return redirectToRequiredActions(session, realm, loginSession, uriInfo);
             ClientSessionCode<LoginSessionModel> accessCode = new ClientSessionCode<>(session, realm, loginSession);
             accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
+            loginSession.setNote(CURRENT_FLOW_PATH, LoginActionsService.REQUIRED_ACTION);
 
             return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, connection, request, uriInfo, event);
         } else {
