@@ -282,7 +282,8 @@ public class LoginActionsService {
 
                     // In case that is replayed action, but sent to the same FORM like actual FORM, we just re-render the page
                     if (ObjectUtil.isEqualOrBothNull(execution, clientSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION))) {
-                        URI redirectUri = getLastExecutionUrl(flowPath, execution);
+                        String latestFlowPath = clientSession.getNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+                        URI redirectUri = getLastExecutionUrl(latestFlowPath, execution);
                         logger.infof("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
                         response = Response.status(302).location(redirectUri).build();
                     } else {
@@ -366,8 +367,8 @@ public class LoginActionsService {
 
     protected Response showPageExpired(String flowPath, LoginSessionModel loginSession) {
         String executionId = loginSession==null ? null : loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-
-        URI lastStepUrl = getLastExecutionUrl(flowPath, executionId);
+        String latestFlowPath = loginSession==null ? flowPath : loginSession.getNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+        URI lastStepUrl = getLastExecutionUrl(latestFlowPath, executionId);
 
         logger.infof("Redirecting to 'page expired' now. Will use URL: %s", lastStepUrl);
 
@@ -1227,7 +1228,6 @@ public class LoginActionsService {
             if (ObjectUtil.isEqualOrBothNull(action, lastExecFromSession)) {
                 // Allow refresh of previous page
                 initLoginEvent(loginSession);
-                event.event(EventType.LOGIN);
                 return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, clientConnection, request, uriInfo, event);
             } else {
                 logger.info("Redirecting to page expired page.");

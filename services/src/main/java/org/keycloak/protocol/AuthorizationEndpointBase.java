@@ -76,6 +76,9 @@ public abstract class AuthorizationEndpointBase {
                 .setSession(session)
                 .setUriInfo(uriInfo)
                 .setRequest(request);
+
+        loginSession.setNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
+
         return processor;
     }
 
@@ -105,6 +108,9 @@ public abstract class AuthorizationEndpointBase {
                     session.loginSessions().removeLoginSession(realm, loginSession);
                     return response;
                 }
+
+                AuthenticationManager.setRolesAndMappersInSession(loginSession);
+
                 if (processor.isActionRequired()) {
                     Response response = protocol.sendError(loginSession, Error.PASSIVE_INTERACTION_REQUIRED);
                     session.loginSessions().removeLoginSession(realm, loginSession);

@@ -19,6 +19,7 @@ package org.keycloak.services.managers;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.specimpl.MultivaluedMapImpl;
 import org.jboss.resteasy.spi.HttpRequest;
+import org.keycloak.OAuth2Constants;
 import org.keycloak.TokenVerifier;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.RequiredActionContext;
@@ -39,6 +40,7 @@ import org.keycloak.jose.jws.JWSBuilder;
 import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
+import org.keycloak.models.ClientTemplateModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
@@ -72,6 +74,7 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.security.PublicKey;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -509,7 +512,7 @@ public class AuthenticationManager {
         RealmModel realm = loginSession.getRealm();
 
         ClientLoginSessionModel clientSession = AuthenticationProcessor.attachSession(loginSession, null, session, realm, clientConnection, event);
-        return redirectAfterSuccessfulFlow(session, realm , clientSession.getUserSession(), clientSession, request, uriInfo, clientConnection, event, loginSession.getProtocol());
+        return redirectAfterSuccessfulFlow(session, realm, clientSession.getUserSession(), clientSession, request, uriInfo, clientConnection, event, loginSession.getProtocol());
     }
 
     public static boolean isActionRequired(final KeycloakSession session, final LoginSessionModel loginSession,
@@ -627,6 +630,37 @@ public class AuthenticationManager {
         }
         return null;
 
+    }
+
+
+    public static void setRolesAndMappersInSession(LoginSessionModel loginSession) {
+        ClientModel client = loginSession.getClient();
+        UserModel user = loginSession.getAuthenticatedUser();
+
+        Set<String> requestedRoles = new HashSet<String>();
+        // todo scope param protocol independent
+        String scopeParam = loginSession.getNote(OAuth2Constants.SCOPE);
+        for (RoleModel r : TokenManager.getAccess(scopeParam, true, client, user)) {
+            requestedRoles.add(r.getId());
+        }
+        loginSession.setRoles(requestedRoles);
+
+        Set<String> requestedProtocolMappers = new HashSet<String>();
+        ClientTemplateModel clientTemplate = client.getClientTemplate();
+        if (clientTemplate != null && client.useTemplateMappers()) {
+            for (ProtocolMapperModel protocolMapper : clientTemplate.getProtocolMappers()) {
+                if (protocolMapper.getProtocol().equals(loginSession.getProtocol())) {
+                    requestedProtocolMappers.add(protocolMapper.getId());
+                }
+            }
+
+        }
+        for (ProtocolMapperModel protocolMapper : client.getProtocolMappers()) {
+            if (protocolMapper.getProtocol().equals(loginSession.getProtocol())) {
+                requestedProtocolMappers.add(protocolMapper.getId());
+            }
+        }
+        loginSession.setProtocolMappers(requestedProtocolMappers);
     }
 
     protected static Response executionActions(KeycloakSession session, LoginSessionModel loginSession,
