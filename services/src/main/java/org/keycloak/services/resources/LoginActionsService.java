@@ -27,7 +27,6 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.TokenVerifier;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.ResetCredentialsActionToken;
-import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticator;
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
@@ -64,7 +63,6 @@ import org.keycloak.services.Urls;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.ClientSessionCode.ActionType;
-import org.keycloak.services.managers.ClientSessionCode.ParseResult;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.services.util.CookieHelper;
@@ -217,7 +215,7 @@ public class LoginActionsService {
                 if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(clientSession.getAction())) {
                     // TODO:mposolda
                     logger.info("Redirecting to requiredActions now. Do we really need to redirect here? Couldn't we just continue?");
-                    response = redirectToRequiredActions(code);
+                    response = redirectToRequiredActions(null, (LoginSessionModel) clientSession);
                     return false;
                 } // TODO:mposolda
                 /*else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
@@ -280,8 +278,16 @@ public class LoginActionsService {
                     return false;
                 } else {
                     logger.info("Showing 'page expired' page now");
-                    C clientSession = getClientSession();
-                    response = showPageExpired(flowPath, (LoginSessionModel) clientSession);
+                    C clientSession = result.getClientSession();
+
+                    // In case that is replayed action, but sent to the same FORM like actual FORM, we just re-render the page
+                    if (ObjectUtil.isEqualOrBothNull(execution, clientSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION))) {
+                        URI redirectUri = getLastExecutionUrl(flowPath, execution);
+                        logger.infof("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
+                        response = Response.status(302).location(redirectUri).build();
+                    } else {
+                        response = showPageExpired(flowPath, (LoginSessionModel) clientSession);
+                    }
                     return false;
                 }
 
@@ -316,17 +322,11 @@ public class LoginActionsService {
 
             final LoginSessionModel  loginSession = (LoginSessionModel) getClientSession();
 
-            if (executedAction == null) { // do next required action only if user is already authenticated
-                initLoginEvent(loginSession);
-                event.event(EventType.LOGIN);
-                response = AuthenticationManager.nextActionAfterAuthentication(session, loginSession, clientConnection, request, uriInfo, event);
-                return false;
-            }
-
-            if (!executedAction.equals(loginSession.getNote(AuthenticationManager.CURRENT_REQUIRED_ACTION))) {
+            String currentRequiredAction = loginSession.getNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
+            if (!executedAction.equals(currentRequiredAction)) {
                 logger.debug("required action doesn't match current required action");
                 loginSession.removeNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
-                response = redirectToRequiredActions(code);
+                response = redirectToRequiredActions(currentRequiredAction, loginSession);
                 return false;
             }
             return true;
@@ -366,19 +366,25 @@ public class LoginActionsService {
 
     protected Response showPageExpired(String flowPath, LoginSessionModel loginSession) {
         String executionId = loginSession==null ? null : loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-        logger.infof("Redirecting to 'page expired' now. Will use execution: %s", executionId);
 
+        URI lastStepUrl = getLastExecutionUrl(flowPath, executionId);
+
+        logger.infof("Redirecting to 'page expired' now. Will use URL: %s", lastStepUrl);
+
+        return session.getProvider(LoginFormsProvider.class)
+                .setActionUri(lastStepUrl)
+                .createLoginExpiredPage();
+    }
+
+
+    protected URI getLastExecutionUrl(String flowPath, String executionId) {
         UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)
                 .path(flowPath);
 
         if (executionId != null) {
             uriBuilder.queryParam("execution", executionId);
         }
-        URI lastStepUrl = uriBuilder.build(realm.getName());
-
-        return session.getProvider(LoginFormsProvider.class)
-                .setActionUri(lastStepUrl)
-                .createLoginExpiredPage();
+        return uriBuilder.build(realm.getName());
     }
 
     /**
@@ -421,6 +427,8 @@ public class LoginActionsService {
             ClientSessionCode<LoginSessionModel> clientSessionCode = checks.clientCode;
             loginSession = clientSessionCode.getClientSession();
             action = true;
+
+            loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
         }
 
         event.detail(Details.CODE_ID, code);
@@ -594,7 +602,8 @@ public class LoginActionsService {
 // TODO: Once login tokens would be implemented, this would have to be rewritten
 //                    String code = clientSession.getNote(ClientSessionCode.ACTIVE_CODE) + "." + clientSession.getId();
                     String code = clientSession.getNote("active_code") + "." + clientSession.getId();
-                    throw new LoginActionsServiceException(redirectToRequiredActions(code));
+                    // TODO:mposolda uncomment!
+                    //throw new LoginActionsServiceException(redirectToRequiredActions(code));
                 } else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
                     throw new LoginActionsServiceException(
                       session.getProvider(LoginFormsProvider.class)
@@ -1154,34 +1163,6 @@ public class LoginActionsService {
         CookieHelper.addCookie(ACTION_COOKIE, sessionId, AuthenticationManager.getRealmCookiePath(realm, uriInfo), null, null, -1, realm.getSslRequired().isRequired(clientConnection), true);
     }
 
-    private void initEvent(ClientSessionModel clientSession) {
-        UserSessionModel userSession = clientSession.getUserSession();
-
-        String responseType = clientSession.getNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
-        if (responseType == null) {
-            responseType = "code";
-        }
-        String respMode = clientSession.getNote(OIDCLoginProtocol.RESPONSE_MODE_PARAM);
-        OIDCResponseMode responseMode = OIDCResponseMode.parse(respMode, OIDCResponseType.parse(responseType));
-
-        event.event(EventType.LOGIN).client(clientSession.getClient())
-                .user(userSession.getUser())
-                .session(userSession.getId())
-                .detail(Details.CODE_ID, clientSession.getId())
-                .detail(Details.REDIRECT_URI, clientSession.getRedirectUri())
-                .detail(Details.USERNAME, clientSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME))
-                .detail(Details.AUTH_METHOD, userSession.getAuthMethod())
-                .detail(Details.USERNAME, userSession.getLoginUsername())
-                .detail(Details.RESPONSE_TYPE, responseType)
-                .detail(Details.RESPONSE_MODE, responseMode.toString().toLowerCase())
-                .detail(Details.IDENTITY_PROVIDER, userSession.getNote(Details.IDENTITY_PROVIDER))
-                .detail(Details.IDENTITY_PROVIDER_USERNAME, userSession.getNote(Details.IDENTITY_PROVIDER_USERNAME));
-
-        if (userSession.isRememberMe()) {
-            event.detail(Details.REMEMBER_ME, "true");
-        }
-    }
-
     private void initLoginEvent(LoginSessionModel loginSession) {
         String responseType = loginSession.getNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
         if (responseType == null) {
@@ -1205,6 +1186,12 @@ public class LoginActionsService {
             event.detail(Details.USERNAME, loginSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME));
         }
 
+        String rememberMe = loginSession.getNote(Details.REMEMBER_ME);
+        if (rememberMe==null || !rememberMe.equalsIgnoreCase("true")) {
+            rememberMe = "false";
+        }
+        event.detail(Details.REMEMBER_ME, rememberMe);
+
         // TODO:mposolda Fix if this is called at firstBroker or postBroker login
         /*
                 .detail(Details.IDENTITY_PROVIDER, userSession.getNote(Details.IDENTITY_PROVIDER))
@@ -1215,33 +1202,43 @@ public class LoginActionsService {
     @Path(REQUIRED_ACTION)
     @POST
     public Response requiredActionPOST(@QueryParam("code") final String code,
-                                       @QueryParam("action") String action) {
+                                       @QueryParam("execution") String action) {
         return processRequireAction(code, action);
-
-
-
     }
 
     @Path(REQUIRED_ACTION)
     @GET
     public Response requiredActionGET(@QueryParam("code") final String code,
-                                       @QueryParam("action") String action) {
+                                       @QueryParam("execution") String action) {
         return processRequireAction(code, action);
     }
 
     private Response processRequireAction(final String code, String action) {
-        // TODO:mposolda
-        /*
+        LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
+        if (loginSession == null) {
+            return restartLoginSession(false);
+        }
+
         event.event(EventType.CUSTOM_REQUIRED_ACTION);
         event.detail(Details.CUSTOM_REQUIRED_ACTION, action);
 
-        SessionCodeChecks checks = checksForCode(code);
+        if (code == null) { // do next required action only if user is already authenticated
+            String lastExecFromSession = loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+            if (ObjectUtil.isEqualOrBothNull(action, lastExecFromSession)) {
+                // Allow refresh of previous page
+                initLoginEvent(loginSession);
+                event.event(EventType.LOGIN);
+                return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, clientConnection, request, uriInfo, event);
+            } else {
+                logger.info("Redirecting to page expired page.");
+                return showPageExpired(REQUIRED_ACTION, loginSession);
+            }
+        }
+
+        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, action, REQUIRED_ACTION, LoginSessionModel.class);
         if (!checks.verifyRequiredAction(action)) {
             return checks.response;
         }
-        final ClientSessionModel clientSession = checks.getClientSession();
-
-        final UserSessionModel userSession = clientSession.getUserSession();
 
         RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, action);
         if (factory == null) {
@@ -1251,11 +1248,12 @@ public class LoginActionsService {
         }
         RequiredActionProvider provider = factory.create(session);
 
-        initEvent(clientSession);
+        initLoginEvent(loginSession);
         event.event(EventType.CUSTOM_REQUIRED_ACTION);
 
+        loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
 
-        RequiredActionContextResult context = new RequiredActionContextResult(userSession, clientSession, realm, event, session, request, userSession.getUser(), factory) {
+        RequiredActionContextResult context = new RequiredActionContextResult(loginSession, realm, event, session, request, loginSession.getAuthenticatedUser(), factory) {
             @Override
             public void ignore() {
                 throw new RuntimeException("Cannot call ignore within processAction()");
@@ -1264,47 +1262,42 @@ public class LoginActionsService {
         provider.processAction(context);
         if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
             event.clone().success();
-            initEvent(clientSession);
+            initLoginEvent(loginSession);
             event.event(EventType.LOGIN);
-            clientSession.removeRequiredAction(factory.getId());
-            userSession.getUser().removeRequiredAction(factory.getId());
-            clientSession.removeNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
+            loginSession.removeRequiredAction(factory.getId());
+            loginSession.getAuthenticatedUser().removeRequiredAction(factory.getId());
+            loginSession.removeNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
 
-            if (AuthenticationManager.isActionRequired(session, userSession, clientSession, clientConnection, request, uriInfo, event)) {
-                // redirect to a generic code URI so that browser refresh will work
-                return redirectToRequiredActions(checks.clientCode.getCode());
-            } else {
-                return AuthenticationManager.finishedRequiredActions(session, userSession, clientSession, clientConnection, request, uriInfo, event);
-
-            }
+            return redirectToRequiredActions(action, loginSession);
         }
         if (context.getStatus() == RequiredActionContext.Status.CHALLENGE) {
             return context.getChallenge();
         }
         if (context.getStatus() == RequiredActionContext.Status.FAILURE) {
-            LoginProtocol protocol = context.getSession().getProvider(LoginProtocol.class, context.getClientSession().getAuthMethod());
+            LoginProtocol protocol = context.getSession().getProvider(LoginProtocol.class, loginSession.getProtocol());
             protocol.setRealm(context.getRealm())
                     .setHttpHeaders(context.getHttpRequest().getHttpHeaders())
                     .setUriInfo(context.getUriInfo())
                     .setEventBuilder(event);
 
             event.detail(Details.CUSTOM_REQUIRED_ACTION, action);
-            Response response = protocol.sendError(context.getClientSession(), Error.CONSENT_DENIED);
+            Response response = protocol.sendError(loginSession, Error.CONSENT_DENIED);
             event.error(Errors.REJECTED_BY_USER);
             return response;
 
         }
 
         throw new RuntimeException("Unreachable");
-*/
-        return null;
     }
 
-    private Response redirectToRequiredActions(String action) {
+    private Response redirectToRequiredActions(String action, LoginSessionModel loginSession) {
+        loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
+
         UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)
                 .path(LoginActionsService.REQUIRED_ACTION);
-        if (action == null) {
-            uriBuilder.queryParam("action", action);
+
+        if (action != null) {
+            uriBuilder.queryParam("execution", action);
         }
         URI redirect = uriBuilder.build(realm.getName());
         return Response.status(302).location(redirect).build();

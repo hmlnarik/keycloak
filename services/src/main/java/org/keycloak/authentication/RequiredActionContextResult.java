@@ -134,7 +134,7 @@ public class RequiredActionContextResult implements RequiredActionContext {
     public URI getActionUrl(String code) {
         return LoginActionsService.requiredActionProcessor(getUriInfo())
                 .queryParam(OAuth2Constants.CODE, code)
-                .queryParam("action", factory.getId())
+                .queryParam("execution", factory.getId())
                 .build(getRealm().getName());
     }
 

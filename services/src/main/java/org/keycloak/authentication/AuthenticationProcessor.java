@@ -734,7 +734,7 @@ public class AuthenticationProcessor {
 
     public Response authenticationAction(String execution) {
         logger.debug("authenticationAction");
-        checkClientSession();
+        checkClientSession(true);
         String current = loginSession.getNote(CURRENT_AUTHENTICATION_EXECUTION);
         if (!execution.equals(current)) {
             // TODO:mposolda debug
@@ -771,11 +771,14 @@ public class AuthenticationProcessor {
         return authenticationComplete();
     }
 
-    public void checkClientSession() {
+    private void checkClientSession(boolean checkAction) {
         ClientSessionCode code = new ClientSessionCode(session, realm, loginSession);
-        String action = ClientSessionModel.Action.AUTHENTICATE.name();
-        if (!code.isValidAction(action)) {
-            throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_CLIENT_SESSION);
+
+        if (checkAction) {
+            String action = ClientSessionModel.Action.AUTHENTICATE.name();
+            if (!code.isValidAction(action)) {
+                throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_CLIENT_SESSION);
+            }
         }
         if (!code.isActionActive(ClientSessionCode.ActionType.LOGIN)) {
             throw new AuthenticationFlowException(AuthenticationFlowError.EXPIRED_CODE);
@@ -785,7 +788,7 @@ public class AuthenticationProcessor {
 
     public Response authenticateOnly() throws AuthenticationFlowException {
         logger.debug("AUTHENTICATE ONLY");
-        checkClientSession();
+        checkClientSession(false);
         event.client(loginSession.getClient().getClientId())
                 .detail(Details.REDIRECT_URI, loginSession.getRedirectUri())
                 .detail(Details.AUTH_METHOD, loginSession.getProtocol());
@@ -882,6 +885,9 @@ public class AuthenticationProcessor {
         if (isActionRequired()) {
             // TODO:mposolda Changed this to avoid additional redirect. Doublecheck consequences...
             //return redirectToRequiredActions(session, realm, loginSession, uriInfo);
+            ClientSessionCode<LoginSessionModel> accessCode = new ClientSessionCode<>(session, realm, loginSession);
+            accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
+
             return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, connection, request, uriInfo, event);
         } else {
             event.detail(Details.CODE_ID, loginSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
