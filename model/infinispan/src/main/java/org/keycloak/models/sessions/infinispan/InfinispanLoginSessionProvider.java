@@ -170,11 +170,12 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
     protected String getIdFromBrowserCookie() {
         String cookieVal = CookieHelper.getCookieValue(LOGIN_SESSION_ID);
 
-        // TODO trace with isTraceEnabled
-        if (cookieVal != null) {
-            log.infof("Found LOGIN_SESSION_ID cookie with value %s", cookieVal);
-        } else {
-            log.infof("Not found LOGIN_SESSION_ID cookie");
+        if (log.isTraceEnabled()) {
+            if (cookieVal != null) {
+                log.tracef("Found LOGIN_SESSION_ID cookie with value %s", cookieVal);
+            } else {
+                log.tracef("Not found LOGIN_SESSION_ID cookie");
+            }
         }
 
         return cookieVal;

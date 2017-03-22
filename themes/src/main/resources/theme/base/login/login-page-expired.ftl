@@ -6,7 +6,7 @@
         ${msg("pageExpiredPage")}
     <#elseif section = "form">
         <p id="instruction1" class="instruction">
-            Page is expired. To restart login <a href="${url.loginRestartFlowUrl}">${msg("doClickHere")}</a> . To continue with latest step <a href="${url.loginAction}">${msg("doClickHere")}</a>.
+            Page is expired. To restart login <a href="${url.loginRestartFlowUrl}">${msg("doClickHere")}</a> . To continue with last step <a href="${url.loginAction}">${msg("doClickHere")}</a>.
         </p>
     </#if>
 </@layout.registrationLayout>
