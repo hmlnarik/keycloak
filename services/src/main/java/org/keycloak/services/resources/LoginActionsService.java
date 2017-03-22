@@ -167,32 +167,33 @@ public class LoginActionsService {
         }
     }
 
-    private <C extends CommonClientSessionModel> SessionCodeChecks<C> checksForCode(String code, String execution, String flowPath, Class<C> expectedClazz) {
-        SessionCodeChecks<C> res = new SessionCodeChecks<>(code, execution, flowPath, expectedClazz);
+    private SessionCodeChecks checksForCode(String code, String execution, String flowPath, boolean wantsRestartSession) {
+        SessionCodeChecks res = new SessionCodeChecks(code, execution, flowPath, wantsRestartSession);
         res.initialVerifyCode();
         return res;
     }
 
 
 
-    private class SessionCodeChecks<C extends CommonClientSessionModel> {
-        ClientSessionCode<C> clientCode;
+    private class SessionCodeChecks {
+        ClientSessionCode<LoginSessionModel> clientCode;
         Response response;
-        ClientSessionCode.ParseResult<C> result;
-        Class<C> expectedClazz;
+        ClientSessionCode.ParseResult<LoginSessionModel> result;
+        private boolean actionRequest;
 
         private final String code;
         private final String execution;
         private final String flowPath;
+        private final boolean wantsRestartSession;
 
-        public SessionCodeChecks(String code, String execution, String flowPath, Class<C> expectedClazz) {
+        public SessionCodeChecks(String code, String execution, String flowPath, boolean wantsRestartSession) {
             this.code = code;
             this.execution = execution;
             this.flowPath = flowPath;
-            this.expectedClazz = expectedClazz;
+            this.wantsRestartSession = wantsRestartSession;
         }
 
-        public C getClientSession() {
+        public LoginSessionModel getClientSession() {
             return clientCode == null ? null : clientCode.getClientSession();
         }
 
@@ -211,11 +212,11 @@ public class LoginActionsService {
             }
 
             if (!clientCode.isValidAction(requiredAction)) {
-                C clientSession = getClientSession();
-                if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(clientSession.getAction())) {
+                LoginSessionModel loginSession = getClientSession();
+                if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(loginSession.getAction())) {
                     // TODO:mposolda
                     logger.info("Redirecting to requiredActions now. Do we really need to redirect here? Couldn't we just continue?");
-                    response = redirectToRequiredActions(null, (LoginSessionModel) clientSession);
+                    response = redirectToRequiredActions(null, loginSession);
                     return false;
                 } // TODO:mposolda
                 /*else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
@@ -260,6 +261,7 @@ public class LoginActionsService {
         }
 
         private boolean initialVerifyCode() {
+            // Basic realm checks
             if (!checkSsl()) {
                 event.error(Errors.SSL_REQUIRED);
                 response = ErrorPage.error(session, Messages.HTTPS_REQUIRED);
@@ -270,33 +272,21 @@ public class LoginActionsService {
                 response = ErrorPage.error(session, Messages.REALM_NOT_ENABLED);
                 return false;
             }
-            result = ClientSessionCode.parseResult(code, session, realm, expectedClazz);
-            clientCode = result.getCode();
-            if (clientCode == null) {
-                if (result.isLoginSessionNotFound()) { // timeout or loginSession already logged
-                    response = restartLoginSession(false);
-                    return false;
-                } else {
-                    logger.info("Showing 'page expired' page now");
-                    C clientSession = result.getClientSession();
 
-                    // In case that is replayed action, but sent to the same FORM like actual FORM, we just re-render the page
-                    if (ObjectUtil.isEqualOrBothNull(execution, clientSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION))) {
-                        String latestFlowPath = clientSession.getNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
-                        URI redirectUri = getLastExecutionUrl(latestFlowPath, execution);
-                        logger.infof("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
-                        response = Response.status(302).location(redirectUri).build();
-                    } else {
-                        response = showPageExpired(flowPath, (LoginSessionModel) clientSession);
-                    }
-                    return false;
-                }
-
+            // loginSession retrieve and check if we need session restart
+            LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
+            if (loginSession == null) {
+                response = restartLoginSession(false);
+                return false;
+            }
+            if (wantsRestartSession) {
+                response = restartLoginSession(true);
+                return false;
             }
 
-            C clientSession = getClientSession();
-            event.detail(Details.CODE_ID, clientSession.getId());
-            ClientModel client = clientSession.getClient();
+            // Client checks
+            event.detail(Details.CODE_ID, loginSession.getId());
+            ClientModel client = loginSession.getClient();
             if (client == null) {
                 event.error(Errors.CLIENT_NOT_FOUND);
                 response = ErrorPage.error(session, Messages.UNKNOWN_LOGIN_REQUESTER);
@@ -310,7 +300,68 @@ public class LoginActionsService {
                 return false;
             }
             session.getContext().setClient(client);
-            return true;
+
+
+            // Check if it's action or not
+            if (code == null) {
+                String lastExecFromSession = loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+                String lastFlow = loginSession.getNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+
+                // Check if we transitted between flows (eg. clicking "register" on login screen)
+                if (execution==null && !flowPath.equals(lastFlow)) {
+                    logger.infof("Transition between flows! Current flow: %s, Previous flow: %s", flowPath, lastFlow);
+
+                    if (isFlowTransitionAllowed(lastFlow)) {
+                        loginSession.setNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
+                        loginSession.removeNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+                        lastExecFromSession = null;
+                    }
+                }
+
+                if (ObjectUtil.isEqualOrBothNull(execution, lastExecFromSession)) {
+                    // Allow refresh of previous page
+                    clientCode = new ClientSessionCode<>(session, realm, loginSession);
+                    actionRequest = false;
+                    return true;
+                } else {
+                    logger.info("Redirecting to page expired page.");
+                    response = showPageExpired(flowPath, loginSession);
+                    return false;
+                }
+            } else {
+                result = ClientSessionCode.parseResult(code, session, realm, LoginSessionModel.class);
+                clientCode = result.getCode();
+                if (clientCode == null) {
+
+                    // In case that is replayed action, but sent to the same FORM like actual FORM, we just re-render the page
+                    if (ObjectUtil.isEqualOrBothNull(execution, loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION))) {
+                        String latestFlowPath = loginSession.getNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+                        URI redirectUri = getLastExecutionUrl(latestFlowPath, execution);
+                        logger.infof("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
+                        response = Response.status(Response.Status.FOUND).location(redirectUri).build();
+                    } else {
+                        response = showPageExpired(flowPath, loginSession);
+                    }
+                    return false;
+                }
+
+
+                actionRequest = true;
+                loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
+                return true;
+            }
+        }
+
+        private boolean isFlowTransitionAllowed(String lastFlow) {
+            if (flowPath.equals(AUTHENTICATE_PATH) && (lastFlow.equals(REGISTRATION_PATH))) {
+                return true;
+            }
+
+            if (flowPath.equals(REGISTRATION_PATH) && (lastFlow.equals(AUTHENTICATE_PATH))) {
+                return true;
+            }
+
+            return false;
         }
 
         public boolean verifyRequiredAction(String executedAction) {
@@ -321,14 +372,16 @@ public class LoginActionsService {
             if (!isValidAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name())) return false;
             if (!isActionActive(ClientSessionCode.ActionType.USER)) return false;
 
-            final LoginSessionModel  loginSession = (LoginSessionModel) getClientSession();
+            final LoginSessionModel  loginSession = getClientSession();
 
-            String currentRequiredAction = loginSession.getNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
-            if (!executedAction.equals(currentRequiredAction)) {
-                logger.debug("required action doesn't match current required action");
-                loginSession.removeNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
-                response = redirectToRequiredActions(currentRequiredAction, loginSession);
-                return false;
+            if (actionRequest) {
+                String currentRequiredAction = loginSession.getNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
+                if (executedAction == null || !executedAction.equals(currentRequiredAction)) {
+                    logger.debug("required action doesn't match current required action");
+                    loginSession.removeNote(AuthenticationManager.CURRENT_REQUIRED_ACTION);
+                    response = redirectToRequiredActions(currentRequiredAction, loginSession);
+                    return false;
+                }
             }
             return true;
         }
@@ -401,39 +454,17 @@ public class LoginActionsService {
                                  @QueryParam("restart") String restart) {
         event.event(EventType.LOGIN);
 
-        LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
-        if (loginSession == null) {
-            return restartLoginSession(false);
-        }
-        if (Boolean.parseBoolean(restart)) {
-            return restartLoginSession(true);
-        }
+        boolean wantsSessionRestart = Boolean.parseBoolean(restart);
 
-
-        boolean action = false;
-        if (code == null) {
-            String lastExecFromSession = loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-            if (ObjectUtil.isEqualOrBothNull(execution, lastExecFromSession)) {
-                // Allow refresh of previous page
-            } else {
-                logger.info("Redirecting to page expired page.");
-                return showPageExpired(AUTHENTICATE_PATH, loginSession);
-            }
-        } else {
-            SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, AUTHENTICATE_PATH, LoginSessionModel.class);
-            if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-                return checks.response;
-            }
-
-            ClientSessionCode<LoginSessionModel> clientSessionCode = checks.clientCode;
-            loginSession = clientSessionCode.getClientSession();
-            action = true;
-
-            loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
+        SessionCodeChecks checks = checksForCode(code, execution, AUTHENTICATE_PATH, wantsSessionRestart);
+        if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
+            return checks.response;
         }
 
-        event.detail(Details.CODE_ID, code);
-        return processAuthentication(action, execution, loginSession, null);
+        LoginSessionModel loginSession = checks.getClientSession();
+        boolean actionRequest = checks.actionRequest;
+
+        return processAuthentication(actionRequest, execution, loginSession, null);
     }
 
     protected Response processAuthentication(boolean action, String execution, LoginSessionModel loginSession, String errorMessage) {
@@ -475,27 +506,6 @@ public class LoginActionsService {
     public Response authenticateForm(@QueryParam("code") String code,
                                      @QueryParam("execution") String execution) {
         return authenticate(code, execution, null);
-        // TODO:mposolda can be just deleted?
-        /*
-        event.event(EventType.LOGIN);
-
-        LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
-        if (loginSession != null && code.equals(loginSession.getNote(LAST_PROCESSED_CODE))) {
-            // Post already processed (refresh) - ignore form post and return next form
-            request.getFormParameters().clear();
-            return authenticate(code, null);
-        }
-
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, LoginSessionModel.class);
-        if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-            return checks.response;
-        }
-        final ClientSessionCode<LoginSessionModel> clientCode = checks.clientCode;
-        loginSession = clientCode.getClientSession();
-        loginSession.setNote(LAST_PROCESSED_CODE, code);
-
-        return processAuthentication(execution, loginSession, null);
-        */
     }
 
     @Path(RESET_CREDENTIALS_PATH)
@@ -726,7 +736,7 @@ public class LoginActionsService {
      */
     protected Response resetCredentials(String code, String execution) {
         event.event(EventType.RESET_PASSWORD);
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, RESET_CREDENTIALS_PATH, LoginSessionModel.class);
+        SessionCodeChecks checks = checksForCode(code, execution, RESET_CREDENTIALS_PATH, false);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.USER)) {
             return checks.response;
         }
@@ -817,9 +827,7 @@ public class LoginActionsService {
     }
 
 
-    protected Response processRegistration(String execution, LoginSessionModel loginSession, String errorMessage) {
-        // TODO:mposolda
-        boolean action = execution != null;
+    protected Response processRegistration(boolean action, String execution, LoginSessionModel loginSession, String errorMessage) {
         return processFlow(action, execution, loginSession, REGISTRATION_PATH, realm.getRegistrationFlow(), errorMessage, new AuthenticationProcessor());
     }
 
@@ -834,24 +842,7 @@ public class LoginActionsService {
     @GET
     public Response registerPage(@QueryParam("code") String code,
                                  @QueryParam("execution") String execution) {
-        event.event(EventType.REGISTER);
-        if (!realm.isRegistrationAllowed()) {
-            event.error(Errors.REGISTRATION_DISABLED);
-            return ErrorPage.error(session, Messages.REGISTRATION_NOT_ALLOWED);
-        }
-
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, execution, REGISTRATION_PATH, LoginSessionModel.class);
-        if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-            return checks.response;
-        }
-        event.detail(Details.CODE_ID, code);
-        ClientSessionCode<LoginSessionModel> clientSessionCode = checks.clientCode;
-        LoginSessionModel clientSession = clientSessionCode.getClientSession();
-
-
-        AuthenticationManager.expireIdentityCookie(realm, uriInfo, clientConnection);
-
-        return processRegistration(execution, clientSession, null);
+        return registerRequest(code, execution, false);
     }
 
 
@@ -865,20 +856,31 @@ public class LoginActionsService {
     @POST
     public Response processRegister(@QueryParam("code") String code,
                                     @QueryParam("execution") String execution) {
+        return registerRequest(code, execution, true);
+    }
+
+
+    private Response registerRequest(String code, String execution, boolean isPostRequest) {
         event.event(EventType.REGISTER);
         if (!realm.isRegistrationAllowed()) {
             event.error(Errors.REGISTRATION_DISABLED);
             return ErrorPage.error(session, Messages.REGISTRATION_NOT_ALLOWED);
         }
-        SessionCodeChecks checks = checksForCode(code, execution, REGISTRATION_PATH, LoginSessionModel.class);
+
+        SessionCodeChecks checks = checksForCode(code, execution, REGISTRATION_PATH, false);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
             return checks.response;
         }
 
+        ClientSessionCode<LoginSessionModel> clientSessionCode = checks.clientCode;
+        LoginSessionModel clientSession = clientSessionCode.getClientSession();
 
-        ClientSessionCode<LoginSessionModel> clientCode = checks.clientCode;
-        LoginSessionModel loginSession = clientCode.getClientSession();
-        return processRegistration(execution, loginSession, null);
+        // TODO:mposolda any consequences to do this for POST request too?
+        if (!isPostRequest) {
+            AuthenticationManager.expireIdentityCookie(realm, uriInfo, clientConnection);
+        }
+
+        return processRegistration(checks.actionRequest, execution, clientSession, null);
     }
 
     // TODO:mposolda broker login
@@ -989,7 +991,7 @@ public class LoginActionsService {
     public Response processConsent(final MultivaluedMap<String, String> formData) {
         event.event(EventType.LOGIN);
         String code = formData.getFirst("code");
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, null, REQUIRED_ACTION, LoginSessionModel.class);
+        SessionCodeChecks checks = checksForCode(code, null, REQUIRED_ACTION, false);
         if (!checks.verifyRequiredAction(ClientSessionModel.Action.OAUTH_GRANT.name())) {
             return checks.response;
         }
@@ -1215,30 +1217,21 @@ public class LoginActionsService {
     }
 
     private Response processRequireAction(final String code, String action) {
-        LoginSessionModel loginSession = ClientSessionCode.getClientSession(code, session, realm, LoginSessionModel.class);
-        if (loginSession == null) {
-            return restartLoginSession(false);
-        }
-
-        event.event(EventType.CUSTOM_REQUIRED_ACTION);
-        event.detail(Details.CUSTOM_REQUIRED_ACTION, action);
-
-        if (code == null) { // do next required action only if user is already authenticated
-            String lastExecFromSession = loginSession.getNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-            if (ObjectUtil.isEqualOrBothNull(action, lastExecFromSession)) {
-                // Allow refresh of previous page
-                initLoginEvent(loginSession);
-                return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, clientConnection, request, uriInfo, event);
-            } else {
-                logger.info("Redirecting to page expired page.");
-                return showPageExpired(REQUIRED_ACTION, loginSession);
-            }
-        }
-
-        SessionCodeChecks<LoginSessionModel> checks = checksForCode(code, action, REQUIRED_ACTION, LoginSessionModel.class);
+        SessionCodeChecks checks = checksForCode(code, action, REQUIRED_ACTION, false);
         if (!checks.verifyRequiredAction(action)) {
             return checks.response;
         }
+
+        LoginSessionModel loginSession = checks.getClientSession();
+        if (!checks.actionRequest) {
+            initLoginEvent(loginSession);
+            event.event(EventType.CUSTOM_REQUIRED_ACTION);
+            return AuthenticationManager.nextActionAfterAuthentication(session, loginSession, clientConnection, request, uriInfo, event);
+        }
+
+        initLoginEvent(loginSession);
+        event.event(EventType.CUSTOM_REQUIRED_ACTION);
+        event.detail(Details.CUSTOM_REQUIRED_ACTION, action);
 
         RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, action);
         if (factory == null) {
@@ -1247,11 +1240,6 @@ public class LoginActionsService {
             throw new WebApplicationException(ErrorPage.error(session, Messages.INVALID_CODE));
         }
         RequiredActionProvider provider = factory.create(session);
-
-        initLoginEvent(loginSession);
-        event.event(EventType.CUSTOM_REQUIRED_ACTION);
-
-        loginSession.setNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
 
         RequiredActionContextResult context = new RequiredActionContextResult(loginSession, realm, event, session, request, loginSession.getAuthenticatedUser(), factory) {
             @Override
