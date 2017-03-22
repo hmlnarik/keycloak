@@ -187,10 +187,6 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
             uriBuilder.replaceQueryParam(k, objects);
         }
 
-        if (accessCode != null) {
-            uriBuilder.replaceQueryParam(OAuth2Constants.CODE, accessCode);
-        }
-
         ThemeProvider themeProvider = session.getProvider(ThemeProvider.class, "extending");
         Theme theme;
         try {
