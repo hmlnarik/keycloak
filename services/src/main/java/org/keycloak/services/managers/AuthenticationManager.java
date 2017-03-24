@@ -508,10 +508,13 @@ public class AuthenticationManager {
             return response;
 
         }
-        event.success();
         RealmModel realm = loginSession.getRealm();
 
         ClientLoginSessionModel clientSession = AuthenticationProcessor.attachSession(loginSession, null, session, realm, clientConnection, event);
+
+        event.event(EventType.LOGIN);
+        event.session(clientSession.getUserSession());
+        event.success();
         return redirectAfterSuccessfulFlow(session, realm, clientSession.getUserSession(), clientSession, request, uriInfo, clientConnection, event, loginSession.getProtocol());
     }
 

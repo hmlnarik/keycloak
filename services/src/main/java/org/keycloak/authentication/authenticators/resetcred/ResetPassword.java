@@ -22,6 +22,7 @@ import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.resources.LoginActionsService;
+import org.keycloak.sessions.LoginSessionModel;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -33,11 +34,6 @@ public class ResetPassword extends AbstractSetRequiredActionAuthenticator {
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-        String actionCookie = LoginActionsService.getActionCookie(context.getSession().getContext().getRequestHeaders(), context.getRealm(), context.getUriInfo(), context.getConnection());
-        if (actionCookie == null || !actionCookie.equals(context.getLoginSession().getId())) {
-            context.getLoginSession().setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
-        }
-
         if (context.getExecution().isRequired() ||
                 (context.getExecution().isOptional() &&
                         configuredFor(context))) {

@@ -1,12 +1,12 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout; section>
     <#if section = "title">
-        ${msg("pageExpiredPage")}
+        ${msg("pageExpiredTitle")}
     <#elseif section = "header">
-        ${msg("pageExpiredPage")}
+        ${msg("pageExpiredTitle")}
     <#elseif section = "form">
         <p id="instruction1" class="instruction">
-            Page is expired. To restart login <a href="${url.loginRestartFlowUrl}">${msg("doClickHere")}</a> . To continue with last step <a href="${url.loginAction}">${msg("doClickHere")}</a>.
+            ${msg("pageExpiredMsg1")} <a href="${url.loginRestartFlowUrl}">${msg("doClickHere")}</a> . ${msg("pageExpiredMsg2")} <a href="${url.loginAction}">${msg("doClickHere")}</a> .
         </p>
     </#if>
 </@layout.registrationLayout>
