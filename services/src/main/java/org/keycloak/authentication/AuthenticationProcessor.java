@@ -68,6 +68,7 @@ public class AuthenticationProcessor {
     public static final String CURRENT_AUTHENTICATION_EXECUTION = "current.authentication.execution";
     public static final String LAST_PROCESSED_EXECUTION = "last.processed.execution";
     public static final String CURRENT_FLOW_PATH = "current.flow.path";
+    public static final String FORKED_FROM = "forked.from";
 
     protected static final Logger logger = Logger.getLogger(AuthenticationProcessor.class);
     protected RealmModel realm;
@@ -542,7 +543,7 @@ public class AuthenticationProcessor {
 
     public void logFailure() {
         if (realm.isBruteForceProtected()) {
-            String username = authenticationSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+            String username = authenticationSession.getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
             // todo need to handle non form failures
             if (username == null) {
 
@@ -686,7 +687,7 @@ public class AuthenticationProcessor {
 
     public Response redirectToFlow(String execution) {
         logger.info("Redirecting to flow with execution: " + execution);
-        authenticationSession.setNote(LAST_PROCESSED_EXECUTION, execution);
+        authenticationSession.setAuthNote(LAST_PROCESSED_EXECUTION, execution);
 
         URI redirect = LoginActionsService.loginActionsBaseUrl(getUriInfo())
                 .path(flowPath)
@@ -715,19 +716,24 @@ public class AuthenticationProcessor {
         authSession.setAuthenticatedUser(null);
         authSession.clearExecutionStatus();
         authSession.clearUserSessionNotes();
-        authSession.removeNote(CURRENT_AUTHENTICATION_EXECUTION);
+        authSession.clearAuthNotes();
     }
 
     public static AuthenticationSessionModel clone(KeycloakSession session, AuthenticationSessionModel authSession) {
-        // TODO:mposolda Doublecheck false... It's used from forkFlow
-        AuthenticationSessionModel clone = session.authenticationSessions().createAuthenticationSession(authSession.getRealm(), authSession.getClient(), false);
+        AuthenticationSessionModel clone = session.authenticationSessions().createAuthenticationSession(authSession.getRealm(), authSession.getClient(), true);
+
+        // Transfer just the client "notes", but not "authNotes"
         for (Map.Entry<String, String> entry : authSession.getNotes().entrySet()) {
             clone.setNote(entry.getKey(), entry.getValue());
         }
+
         clone.setRedirectUri(authSession.getRedirectUri());
         clone.setProtocol(authSession.getProtocol());
         clone.setTimestamp(Time.currentTime());
-        clone.removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+
+        clone.setAuthNote(FORKED_FROM, authSession.getId());
+        logger.infof("Forked authSession %s from authSession %s", clone.getId(), authSession.getId());
+
         return clone;
 
     }
@@ -736,7 +742,7 @@ public class AuthenticationProcessor {
     public Response authenticationAction(String execution) {
         logger.debug("authenticationAction");
         checkClientSession(true);
-        String current = authenticationSession.getNote(CURRENT_AUTHENTICATION_EXECUTION);
+        String current = authenticationSession.getAuthNote(CURRENT_AUTHENTICATION_EXECUTION);
         if (!execution.equals(current)) {
             // TODO:mposolda debug
             logger.info("Current execution does not equal executed execution.  Might be a page refresh");
@@ -754,7 +760,7 @@ public class AuthenticationProcessor {
         event.client(authenticationSession.getClient().getClientId())
                 .detail(Details.REDIRECT_URI, authenticationSession.getRedirectUri())
                 .detail(Details.AUTH_METHOD, authenticationSession.getProtocol());
-        String authType = authenticationSession.getNote(Details.AUTH_TYPE);
+        String authType = authenticationSession.getAuthNote(Details.AUTH_TYPE);
         if (authType != null) {
             event.detail(Details.AUTH_TYPE, authType);
         }
@@ -789,7 +795,7 @@ public class AuthenticationProcessor {
         event.client(authenticationSession.getClient().getClientId())
                 .detail(Details.REDIRECT_URI, authenticationSession.getRedirectUri())
                 .detail(Details.AUTH_METHOD, authenticationSession.getProtocol());
-        String authType = authenticationSession.getNote(Details.AUTH_TYPE);
+        String authType = authenticationSession.getAuthNote(Details.AUTH_TYPE);
         if (authType != null) {
             event.detail(Details.AUTH_TYPE, authType);
         }
@@ -840,9 +846,9 @@ public class AuthenticationProcessor {
     // May create new userSession too (if userSession argument is null)
     public static ClientLoginSessionModel attachSession(AuthenticationSessionModel authSession, UserSessionModel userSession, KeycloakSession session, RealmModel realm, ClientConnection connection, EventBuilder event) {
         String username = authSession.getAuthenticatedUser().getUsername();
-        String attemptedUsername = authSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+        String attemptedUsername = authSession.getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
         if (attemptedUsername != null) username = attemptedUsername;
-        String rememberMe = authSession.getNote(Details.REMEMBER_ME);
+        String rememberMe = authSession.getAuthNote(Details.REMEMBER_ME);
         boolean remember = rememberMe != null && rememberMe.equalsIgnoreCase("true");
         if (userSession == null) { // if no authenticator attached a usersession
             userSession = session.sessions().createUserSession(realm, authSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), authSession.getProtocol(), remember, null, null);
@@ -892,7 +898,7 @@ public class AuthenticationProcessor {
             //return redirectToRequiredActions(session, realm, authenticationSession, uriInfo);
             ClientSessionCode<AuthenticationSessionModel> accessCode = new ClientSessionCode<>(session, realm, authenticationSession);
             accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
-            authenticationSession.setNote(CURRENT_FLOW_PATH, LoginActionsService.REQUIRED_ACTION);
+            authenticationSession.setAuthNote(CURRENT_FLOW_PATH, LoginActionsService.REQUIRED_ACTION);
 
             return AuthenticationManager.nextActionAfterAuthentication(session, authenticationSession, connection, request, uriInfo, event);
         } else {

@@ -75,7 +75,7 @@ public abstract class AuthorizationEndpointBase {
                 .setUriInfo(uriInfo)
                 .setRequest(request);
 
-        authSession.setNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
+        authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
 
         return processor;
     }

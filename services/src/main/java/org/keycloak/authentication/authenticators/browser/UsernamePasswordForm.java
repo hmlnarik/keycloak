@@ -72,7 +72,7 @@ public class UsernamePasswordForm extends AbstractUsernameFormAuthenticator impl
             }
         }
         Response challengeResponse = challenge(context, formData);
-        context.getAuthenticationSession().setNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, context.getExecution().getId());
+        context.getAuthenticationSession().setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, context.getExecution().getId());
         context.challenge(challengeResponse);
     }
 

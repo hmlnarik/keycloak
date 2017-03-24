@@ -73,4 +73,9 @@ public interface AuthenticationSessionModel extends CommonClientSessionModel {
 
     public void clearUserSessionNotes();
 
+    public String getAuthNote(String name);
+    public void setAuthNote(String name, String value);
+    public void removeAuthNote(String name);
+    public void clearAuthNotes();
+
 }

@@ -491,10 +491,10 @@ public class AuthenticationManager {
 
     public static Response finishedRequiredActions(KeycloakSession session, AuthenticationSessionModel authSession,
                                                    ClientConnection clientConnection, HttpRequest request, UriInfo uriInfo, EventBuilder event) {
-        if (authSession.getNote(END_AFTER_REQUIRED_ACTIONS) != null) {
+        if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null) {
             LoginFormsProvider infoPage = session.getProvider(LoginFormsProvider.class)
                     .setSuccess(Messages.ACCOUNT_UPDATED);
-            if (authSession.getNote(SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS) != null) {
+            if (authSession.getAuthNote(SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS) != null) {
                 if (authSession.getRedirectUri() != null) {
                     infoPage.setAttribute("pageRedirectUri", authSession.getRedirectUri());
                 }
@@ -617,7 +617,7 @@ public class AuthenticationManager {
                 accessCode.
 
                         setAction(ClientLoginSessionModel.Action.REQUIRED_ACTIONS.name());
-                authSession.setNote(CURRENT_REQUIRED_ACTION, ClientLoginSessionModel.Action.OAUTH_GRANT.name());
+                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, ClientLoginSessionModel.Action.OAUTH_GRANT.name());
 
                 return session.getProvider(LoginFormsProvider.class)
                         .setClientSessionCode(accessCode.getCode())
@@ -697,7 +697,7 @@ public class AuthenticationManager {
                 return response;
             }
             else if (context.getStatus() == RequiredActionContext.Status.CHALLENGE) {
-                authSession.setNote(CURRENT_REQUIRED_ACTION, model.getProviderId());
+                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, model.getProviderId());
                 return context.getChallenge();
             }
             else if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
