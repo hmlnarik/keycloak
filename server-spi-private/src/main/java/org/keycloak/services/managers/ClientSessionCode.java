@@ -248,7 +248,7 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         }
     }
 
-    private static boolean verifyCode(String code, CommonClientSessionModel loginSession) {
+    public static boolean verifyCode(String code, CommonClientSessionModel loginSession) {
         try {
             String activeCode = loginSession.getNote(ACTIVE_CODE);
             if (activeCode == null) {

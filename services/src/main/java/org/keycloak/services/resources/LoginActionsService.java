@@ -27,6 +27,7 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.TokenVerifier;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.ResetCredentialsActionToken;
+import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticator;
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
@@ -66,7 +67,6 @@ import org.keycloak.services.managers.ClientSessionCode.ActionType;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.services.util.CookieHelper;
-import org.keycloak.sessions.CommonClientSessionModel;
 import org.keycloak.sessions.LoginSessionModel;
 
 import javax.ws.rs.Consumes;
@@ -353,11 +353,15 @@ public class LoginActionsService {
         }
 
         private boolean isFlowTransitionAllowed(String lastFlow) {
-            if (flowPath.equals(AUTHENTICATE_PATH) && (lastFlow.equals(REGISTRATION_PATH))) {
+            if (flowPath.equals(AUTHENTICATE_PATH) && (lastFlow.equals(REGISTRATION_PATH) || lastFlow.equals(RESET_CREDENTIALS_PATH))) {
                 return true;
             }
 
             if (flowPath.equals(REGISTRATION_PATH) && (lastFlow.equals(AUTHENTICATE_PATH))) {
+                return true;
+            }
+
+            if (flowPath.equals(RESET_CREDENTIALS_PATH) && (lastFlow.equals(AUTHENTICATE_PATH))) {
                 return true;
             }
 
@@ -512,9 +516,7 @@ public class LoginActionsService {
     @POST
     public Response resetCredentialsPOST(@QueryParam("code") String code,
                                          @QueryParam("execution") String execution) {
-        // TODO:mposolda
-        //return resetCredentials(code, execution);
-        return null;
+        return resetCredentials(code, execution);
     }
 
     private boolean isSslUsed(JsonWebToken t) throws VerificationException {
@@ -535,7 +537,7 @@ public class LoginActionsService {
 
     private boolean isResetCredentialsAllowed(ResetCredentialsActionToken t) throws VerificationException {
         if (!realm.isResetPasswordAllowed()) {
-            event.client(t.getClientSession().getClient());
+            event.client(t.getLoginSession().getClient());
             event.error(Errors.NOT_ALLOWED);
             throw new LoginActionsServiceException(ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED));
         }
@@ -543,52 +545,59 @@ public class LoginActionsService {
     }
 
     private boolean canResolveClientSession(ResetCredentialsActionToken t) throws VerificationException {
-        // TODO:mposolda
-        /*
-        String clientSessionId = t == null ? null : t.getNote(ResetCredentialsActionToken.NOTE_CLIENT_SESSION_ID);
+        String loginSessionId = t == null ? null : t.getNote(ResetCredentialsActionToken.NOTE_CLIENT_SESSION_ID);
 
-        if (t == null || clientSessionId == null) {
+        if (t == null || loginSessionId == null) {
             event.error(Errors.INVALID_CODE);
             throw new LoginActionsServiceException(ErrorPage.error(session, Messages.INVALID_CODE));
         }
 
-        ClientSessionModel clientSession = session.sessions().getClientSession(clientSessionId);
-        t.setClientSession(clientSession);
+        LoginSessionModel loginSession = session.loginSessions().getLoginSession(realm, loginSessionId);
+        t.setLoginSession(loginSession);
 
-        if (clientSession == null) { // timeout
+        if (loginSession == null) { // timeout or logged-already
             try {
-                clientSession = RestartLoginCookie.restartSessionByClientSession(session, realm, clientSessionId);
+                // Check if we are logged-already (it means userSession with same ID already exists). If yes, just showing the INFO or ERROR that user is already authenticated
+                // TODO:mposolda
+
+                // If not, try to restart loginSession from the cookie
+                LoginSessionModel restartedLoginSession = RestartLoginCookie.restartSession(session, realm);
+
+                // IDs must match with the ID from cookie
+                if (restartedLoginSession!=null && restartedLoginSession.getId().equals(loginSessionId)) {
+                    loginSession = restartedLoginSession;
+                }
             } catch (Exception e) {
                 ServicesLogger.LOGGER.failedToParseRestartLoginCookie(e);
             }
 
-            if (clientSession != null) {
+            if (loginSession != null) {
                 event.clone().detail(Details.RESTART_AFTER_TIMEOUT, "true").error(Errors.EXPIRED_CODE);
-                throw new LoginActionsServiceException(processFlow(null, clientSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), Messages.LOGIN_TIMEOUT, new AuthenticationProcessor()));
+                throw new LoginActionsServiceException(processFlow(false, null, loginSession, AUTHENTICATE_PATH, realm.getBrowserFlow(), Messages.LOGIN_TIMEOUT, new AuthenticationProcessor()));
             }
         }
 
-        if (clientSession == null) {
+        if (loginSession == null) {
             event.error(Errors.INVALID_CODE);
             throw new LoginActionsServiceException(ErrorPage.error(session, Messages.INVALID_CODE));
         }
 
-        event.detail(Details.CODE_ID, clientSession.getId());*/
+        event.detail(Details.CODE_ID, loginSession.getId());
 
         return true;
     }
 
     private boolean canResolveClient(ResetCredentialsActionToken t) throws VerificationException {
-        ClientModel client = t.getClientSession().getClient();
+        ClientModel client = t.getLoginSession().getClient();
         if (client == null) {
             event.error(Errors.CLIENT_NOT_FOUND);
-            session.sessions().removeClientSession(realm, t.getClientSession());
+            session.loginSessions().removeLoginSession(realm, t.getLoginSession());
             throw new LoginActionsServiceException(ErrorPage.error(session, Messages.UNKNOWN_LOGIN_REQUESTER));
         }
 
         if (! client.isEnabled()) {
             event.error(Errors.CLIENT_NOT_FOUND);
-            session.sessions().removeClientSession(realm, t.getClientSession());
+            session.loginSessions().removeLoginSession(realm, t.getLoginSession());
             throw new LoginActionsServiceException(ErrorPage.error(session, Messages.LOGIN_REQUESTER_NOT_ENABLED));
         }
         session.getContext().setClient(client);
@@ -606,21 +615,22 @@ public class LoginActionsService {
         
         @Override
         public boolean test(ResetCredentialsActionToken t) throws VerificationException {
-            ClientSessionModel clientSession = t.getClientSession();
-            if (! Objects.equals(clientSession.getAction(), this.requiredAction)) {
+            LoginSessionModel loginSession = t.getLoginSession();
+            if (! Objects.equals(loginSession.getAction(), this.requiredAction)) {
 
-                if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(clientSession.getAction())) {
+                if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(loginSession.getAction())) {
 // TODO: Once login tokens would be implemented, this would have to be rewritten
 //                    String code = clientSession.getNote(ClientSessionCode.ACTIVE_CODE) + "." + clientSession.getId();
-                    String code = clientSession.getNote("active_code") + "." + clientSession.getId();
-                    // TODO:mposolda uncomment!
-                    //throw new LoginActionsServiceException(redirectToRequiredActions(code));
-                } else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
+                    //String code = clientSession.getNote("active_code") + "." + clientSession.getId();
+                    throw new LoginActionsServiceException(redirectToRequiredActions(null, loginSession));
+                }
+                // TODO:mposolda Similar stuff is in SessionCodeChecks as well. The case when loginSession is already logged should be handled similarly
+                /*else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
                     throw new LoginActionsServiceException(
                       session.getProvider(LoginFormsProvider.class)
                             .setSuccess(Messages.ALREADY_LOGGED_IN)
                             .createInfoPage());
-                 }
+                }*/
             }
 
             return true;
@@ -636,14 +646,13 @@ public class LoginActionsService {
 
         @Override
         public boolean test(ResetCredentialsActionToken t) throws VerificationException {
-            int timestamp = t.getClientSession().getTimestamp();
+            int timestamp = t.getLoginSession().getTimestamp();
             if (! isActionActive(actionType, timestamp)) {
-                event.client(t.getClientSession().getClient());
+                event.client(t.getLoginSession().getClient());
                 event.clone().error(Errors.EXPIRED_CODE);
 
-                if (t.getClientSession().getAction().equals(ClientSessionModel.Action.AUTHENTICATE.name())) {
-                    // TODO:mposolda incompatible types
-                    LoginSessionModel loginSession = (LoginSessionModel) t.getClientSession();
+                if (t.getLoginSession().getAction().equals(ClientSessionModel.Action.AUTHENTICATE.name())) {
+                    LoginSessionModel loginSession = t.getLoginSession();
 
                     AuthenticationProcessor.resetFlow(loginSession);
                     throw new LoginActionsServiceException(processAuthentication(false, null, loginSession, Messages.LOGIN_TIMEOUT));
@@ -688,8 +697,15 @@ public class LoginActionsService {
     public Response resetCredentialsGET(@QueryParam("code") String code,
                                         @QueryParam("execution") String execution,
                                         @QueryParam("key") String key) {
+        if (code != null && key != null) {
+            // TODO:mposolda better handling of error
+            throw new IllegalStateException("Illegal state");
+        }
+
+        LoginSessionModel loginSession = session.loginSessions().getCurrentLoginSession(realm);
+
         // we allow applications to link to reset credentials without going through OAuth or SAML handshakes
-        if (code == null && key == null) {
+        if (loginSession == null && key == null) {
             if (!realm.isResetPasswordAllowed()) {
                 event.event(EventType.RESET_PASSWORD);
                 event.error(Errors.NOT_ALLOWED);
@@ -698,24 +714,25 @@ public class LoginActionsService {
             }
             // set up the account service as the endpoint to call.
             ClientModel client = realm.getClientByClientId(Constants.ACCOUNT_MANAGEMENT_CLIENT_ID);
-            ClientSessionModel clientSession = session.sessions().createClientSession(realm, client);
-            clientSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
-            //clientSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
-            clientSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
+            loginSession = session.loginSessions().createLoginSession(realm, client, true);
+            loginSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
+            //loginSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
+            loginSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
             String redirectUri = Urls.accountBase(uriInfo.getBaseUri()).path("/").build(realm.getName()).toString();
-            clientSession.setRedirectUri(redirectUri);
-            clientSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
-            clientSession.setNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM, OAuth2Constants.CODE);
-            clientSession.setNote(OIDCLoginProtocol.REDIRECT_URI_PARAM, redirectUri);
-            clientSession.setNote(OIDCLoginProtocol.ISSUER, Urls.realmIssuer(uriInfo.getBaseUri(), realm.getName()));
-            return processResetCredentials(null, clientSession, null);
+            loginSession.setRedirectUri(redirectUri);
+            loginSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
+            loginSession.setNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM, OAuth2Constants.CODE);
+            loginSession.setNote(OIDCLoginProtocol.REDIRECT_URI_PARAM, redirectUri);
+            loginSession.setNote(OIDCLoginProtocol.ISSUER, Urls.realmIssuer(uriInfo.getBaseUri(), realm.getName()));
+            return processResetCredentials(false, null, loginSession, null);
         }
 
         if (key != null) {
             try {
                 ResetCredentialsActionToken token = ResetCredentialsActionToken.deserialize(
                   session, realm, session.getContext().getUri(), key);
-                return resetCredentials(code, token, execution);
+
+                return resetCredentials(token, execution);
             } catch (VerificationException ex) {
                 event.event(EventType.RESET_PASSWORD)
                   .detail(Details.REASON, ex.getMessage())
@@ -729,7 +746,7 @@ public class LoginActionsService {
 
 
     /**
-     * @deprecated In favor of {@link #resetCredentials(String, org.keycloak.authentication.ResetCredentialsActionToken, java.lang.String)}
+     * @deprecated In favor of {@link #resetCredentials(org.keycloak.authentication.ResetCredentialsActionToken, java.lang.String)}
      * @param code
      * @param execution
      * @return
@@ -740,21 +757,19 @@ public class LoginActionsService {
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.USER)) {
             return checks.response;
         }
-        final LoginSessionModel clientSession = checks.getClientSession();
+        final LoginSessionModel loginSession = checks.getClientSession();
 
         if (!realm.isResetPasswordAllowed()) {
-            event.client(clientSession.getClient());
+            event.client(loginSession.getClient());
             event.error(Errors.NOT_ALLOWED);
             return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
 
         }
 
-        // TODO:mposolda
-        //return processResetCredentials(execution, clientSession, null);
-        return null;
+        return processResetCredentials(checks.actionRequest, execution, loginSession, null);
     }
 
-    protected Response resetCredentials(String code, ResetCredentialsActionToken token, String execution) {
+    protected Response resetCredentials(ResetCredentialsActionToken token, String execution) {
         event.event(EventType.RESET_PASSWORD);
 
         if (token == null) {
@@ -792,38 +807,50 @@ public class LoginActionsService {
             return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
         }
 
-        final ClientSessionModel clientSession = token.getClientSession();
+        final LoginSessionModel loginSession = token.getLoginSession();
 
-        return processResetCredentials(execution, clientSession, null);
+        // Verify if action is processed in same browser.
+        String cookieSessionId = session.loginSessions().getCurrentLoginSessionId(realm);
+        if (!loginSession.getId().equals(cookieSessionId)) {
+            logger.infof("Action request processed in different browser!");
+
+            // TODO:mposolda improve this. The code should be merged with the InfinispanLoginSessionProvider code and rather extrated from the infinispan provider
+            String cookiePath = CookieHelper.getRealmCookiePath(realm);
+            boolean sslRequired = realm.getSslRequired().isRequired(session.getContext().getConnection());
+            CookieHelper.addCookie("LOGIN_SESSION_ID", loginSession.getId(), cookiePath, null, null, -1, sslRequired, true);
+
+            loginSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
+        }
+
+        // TODO:mposolda ok to always use false here?
+        return processResetCredentials(true, execution, loginSession, null);
     }
 
-    protected Response processResetCredentials(String execution, ClientSessionModel clientSession, String errorMessage) {
-        // TODO:mposolda
-        /*
+    protected Response processResetCredentials(boolean actionRequest, String execution, LoginSessionModel loginSession, String errorMessage) {
         AuthenticationProcessor authProcessor = new AuthenticationProcessor() {
 
             @Override
             protected Response authenticationComplete() {
-                boolean firstBrokerLoginInProgress = (clientSession.getNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) != null);
+                boolean firstBrokerLoginInProgress = (loginSession.getNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) != null);
                 if (firstBrokerLoginInProgress) {
 
-                    UserModel linkingUser = AbstractIdpAuthenticator.getExistingUser(session, realm, clientSession);
-                    if (!linkingUser.getId().equals(clientSession.getAuthenticatedUser().getId())) {
-                        return ErrorPage.error(session, Messages.IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE, clientSession.getAuthenticatedUser().getUsername(), linkingUser.getUsername());
+                    UserModel linkingUser = AbstractIdpAuthenticator.getExistingUser(session, realm, loginSession);
+                    if (!linkingUser.getId().equals(loginSession.getAuthenticatedUser().getId())) {
+                        return ErrorPage.error(session, Messages.IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE, loginSession.getAuthenticatedUser().getUsername(), linkingUser.getUsername());
                     }
 
                     logger.debugf("Forget-password flow finished when authenticated user '%s' after first broker login.", linkingUser.getUsername());
 
-                    return redirectToAfterBrokerLoginEndpoint(clientSession, true);
+                    // TODO:mposolda Isn't this a bug that we redirect to 'afterBrokerLoginEndpoint' without rather continue with firstBrokerLogin and other authenticators like OTP?
+                    //return redirectToAfterBrokerLoginEndpoint(loginSession, true);
+                    return null;
                 } else {
                     return super.authenticationComplete();
                 }
             }
         };
 
-        return processFlow(execution, clientSession, RESET_CREDENTIALS_PATH, realm.getResetCredentialsFlow(), errorMessage, authProcessor);
-        */
-        return null;
+        return processFlow(actionRequest, execution, loginSession, RESET_CREDENTIALS_PATH, realm.getResetCredentialsFlow(), errorMessage, authProcessor);
     }
 
 
@@ -1114,7 +1141,7 @@ public class LoginActionsService {
 
             return session.getProvider(LoginFormsProvider.class)
                     .setClientSessionCode(accessCode.getCode())
-                    .setClientSession(clientSession)
+                    .setLoginSession(clientSession)
                     .setUser(userSession.getUser())
                     .createResponse(RequiredAction.VERIFY_EMAIL);
         }*/
@@ -1185,8 +1212,11 @@ public class LoginActionsService {
         if (authenticatedUser != null) {
             event.user(authenticatedUser)
                     .detail(Details.USERNAME, authenticatedUser.getUsername());
-        } else {
-            event.detail(Details.USERNAME, loginSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME));
+        }
+
+        String attemptedUsername = loginSession.getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+        if (attemptedUsername != null) {
+            event.detail(Details.USERNAME, attemptedUsername);
         }
 
         String rememberMe = loginSession.getNote(Details.REMEMBER_ME);

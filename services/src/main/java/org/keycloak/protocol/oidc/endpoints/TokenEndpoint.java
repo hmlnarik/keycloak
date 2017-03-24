@@ -174,6 +174,8 @@ public class TokenEndpoint {
         if (client.isBearerOnly()) {
             throw new ErrorResponseException(OAuthErrorException.INVALID_CLIENT, "Bearer-only not allowed", Response.Status.BAD_REQUEST);
         }
+
+
     }
 
     private void checkGrantType() {

@@ -735,7 +735,7 @@ public class AuthenticationProcessor {
     }
 
     public static LoginSessionModel clone(KeycloakSession session, LoginSessionModel loginSession) {
-        // TODO: Doublecheck false...
+        // TODO:mposolda Doublecheck false... It's used from forkFlow
         LoginSessionModel clone = session.loginSessions().createLoginSession(loginSession.getRealm(), loginSession.getClient(), false);
         for (Map.Entry<String, String> entry : loginSession.getNotes().entrySet()) {
             clone.setNote(entry.getKey(), entry.getValue());
@@ -844,7 +844,13 @@ public class AuthenticationProcessor {
 
     // May create userSession too
     public ClientLoginSessionModel attachSession() {
-        return attachSession(loginSession, userSession, session, realm, connection, event);
+        ClientLoginSessionModel clientSession = attachSession(loginSession, userSession, session, realm, connection, event);
+
+        if (userSession == null) {
+            userSession = clientSession.getUserSession();
+        }
+
+        return clientSession;
     }
 
     // May create new userSession too (if userSession argument is null)
