@@ -46,7 +46,7 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.services.Urls;
 import org.keycloak.services.messages.Messages;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.BrowserSecurityHeaderSetup;
 import org.keycloak.theme.FreeMarkerException;
 import org.keycloak.theme.FreeMarkerUtil;
@@ -102,7 +102,7 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
 
     private UserModel user;
 
-    private LoginSessionModel loginSession;
+    private AuthenticationSessionModel authenticationSession;
     private final Map<String, Object> attributes = new HashMap<String, Object>();
 
     public FreeMarkerLoginFormsProvider(KeycloakSession session, FreeMarkerUtil freeMarker) {
@@ -141,11 +141,11 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
                 page = LoginFormsPages.LOGIN_UPDATE_PASSWORD;
                 break;
             case VERIFY_EMAIL:
-                // TODO:mposolda It should be also clientSession (actionTicket) involved here. Not just loginSession
+                // TODO:mposolda It should be also clientSession (actionTicket) involved here. Not just authSession
                 /*try {
                     UriBuilder builder = Urls.loginActionEmailVerificationBuilder(uriInfo.getBaseUri());
                     builder.queryParam(OAuth2Constants.CODE, accessCode);
-                    builder.queryParam(Constants.KEY, loginSession.getNote(Constants.VERIFY_EMAIL_KEY));
+                    builder.queryParam(Constants.KEY, authSession.getNote(Constants.VERIFY_EMAIL_KEY));
 
                     String link = builder.build(realm.getName()).toString();
                     long expiration = TimeUnit.SECONDS.toMinutes(realm.getAccessCodeLifespanUserAction());
@@ -590,8 +590,8 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
     }
 
     @Override
-    public LoginFormsProvider setLoginSession(LoginSessionModel loginSession) {
-        this.loginSession = loginSession;
+    public LoginFormsProvider setAuthenticationSession(AuthenticationSessionModel authSession) {
+        this.authenticationSession = authSession;
         return this;
     }
 

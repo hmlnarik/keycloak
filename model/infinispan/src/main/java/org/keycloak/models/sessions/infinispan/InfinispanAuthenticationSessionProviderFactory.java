@@ -22,14 +22,14 @@ import org.keycloak.Config;
 import org.keycloak.connections.infinispan.InfinispanConnectionProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.models.sessions.infinispan.entities.LoginSessionEntity;
-import org.keycloak.sessions.LoginSessionProvider;
-import org.keycloak.sessions.LoginSessionProviderFactory;
+import org.keycloak.models.sessions.infinispan.entities.AuthenticationSessionEntity;
+import org.keycloak.sessions.AuthenticationSessionProvider;
+import org.keycloak.sessions.AuthenticationSessionProviderFactory;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class InfinispanLoginSessionProviderFactory implements LoginSessionProviderFactory {
+public class InfinispanAuthenticationSessionProviderFactory implements AuthenticationSessionProviderFactory {
 
 
     @Override
@@ -38,11 +38,11 @@ public class InfinispanLoginSessionProviderFactory implements LoginSessionProvid
     }
 
     @Override
-    public LoginSessionProvider create(KeycloakSession session) {
+    public AuthenticationSessionProvider create(KeycloakSession session) {
         InfinispanConnectionProvider connections = session.getProvider(InfinispanConnectionProvider.class);
-        Cache<String, LoginSessionEntity> loginSessionsCache = connections.getCache(InfinispanConnectionProvider.LOGIN_SESSIONS_CACHE_NAME);
+        Cache<String, AuthenticationSessionEntity> authSessionsCache = connections.getCache(InfinispanConnectionProvider.AUTHENTICATION_SESSIONS_CACHE_NAME);
 
-        return new InfinispanLoginSessionProvider(session, loginSessionsCache);
+        return new InfinispanAuthenticationSessionProvider(session, authSessionsCache);
     }
 
     @Override

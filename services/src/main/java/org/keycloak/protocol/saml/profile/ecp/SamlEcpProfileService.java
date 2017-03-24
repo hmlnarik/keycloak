@@ -35,7 +35,7 @@ import org.keycloak.saml.common.constants.JBossSAMLConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.core.Response;
@@ -86,8 +86,8 @@ public class SamlEcpProfileService extends SamlService {
     }
 
     @Override
-    protected Response newBrowserAuthentication(LoginSessionModel loginSession, boolean isPassive, boolean redirectToAuthentication, SamlProtocol samlProtocol) {
-        return super.newBrowserAuthentication(loginSession, isPassive, redirectToAuthentication, createEcpSamlProtocol());
+    protected Response newBrowserAuthentication(AuthenticationSessionModel authSession, boolean isPassive, boolean redirectToAuthentication, SamlProtocol samlProtocol) {
+        return super.newBrowserAuthentication(authSession, isPassive, redirectToAuthentication, createEcpSamlProtocol());
     }
 
     private SamlProtocol createEcpSamlProtocol() {
@@ -134,7 +134,7 @@ public class SamlEcpProfileService extends SamlService {
             }
 
             @Override
-            protected Response buildErrorResponse(LoginSessionModel clientSession, JaxrsSAML2BindingBuilder binding, Document document) throws ConfigurationException, ProcessingException, IOException {
+            protected Response buildErrorResponse(AuthenticationSessionModel authSession, JaxrsSAML2BindingBuilder binding, Document document) throws ConfigurationException, ProcessingException, IOException {
                 return Soap.createMessage().addToBody(document).build();
             }
 

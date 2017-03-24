@@ -27,28 +27,28 @@ import org.keycloak.common.util.Time;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.sessions.infinispan.entities.LoginSessionEntity;
-import org.keycloak.models.sessions.infinispan.stream.LoginSessionPredicate;
+import org.keycloak.models.sessions.infinispan.entities.AuthenticationSessionEntity;
+import org.keycloak.models.sessions.infinispan.stream.AuthenticationSessionPredicate;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.RealmInfoUtil;
 import org.keycloak.services.util.CookieHelper;
-import org.keycloak.sessions.LoginSessionModel;
-import org.keycloak.sessions.LoginSessionProvider;
+import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.sessions.AuthenticationSessionProvider;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class InfinispanLoginSessionProvider implements LoginSessionProvider {
+public class InfinispanAuthenticationSessionProvider implements AuthenticationSessionProvider {
 
-    private static final Logger log = Logger.getLogger(InfinispanLoginSessionProvider.class);
+    private static final Logger log = Logger.getLogger(InfinispanAuthenticationSessionProvider.class);
 
     private final KeycloakSession session;
-    private final Cache<String, LoginSessionEntity> cache;
+    private final Cache<String, AuthenticationSessionEntity> cache;
     protected final InfinispanKeycloakTransaction tx;
 
-    public static final String LOGIN_SESSION_ID = "LOGIN_SESSION_ID";
+    public static final String AUTH_SESSION_ID = "AUTH_SESSION_ID";
 
-    public InfinispanLoginSessionProvider(KeycloakSession session, Cache<String, LoginSessionEntity> cache) {
+    public InfinispanAuthenticationSessionProvider(KeycloakSession session, Cache<String, AuthenticationSessionEntity> cache) {
         this.session = session;
         this.cache = cache;
 
@@ -58,10 +58,10 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
 
     @Override
-    public LoginSessionModel createLoginSession(RealmModel realm, ClientModel client, boolean browser) {
+    public AuthenticationSessionModel createAuthenticationSession(RealmModel realm, ClientModel client, boolean browser) {
         String id = KeycloakModelUtils.generateId();
 
-        LoginSessionEntity entity = new LoginSessionEntity();
+        AuthenticationSessionEntity entity = new AuthenticationSessionEntity();
         entity.setId(id);
         entity.setRealm(realm.getId());
         entity.setTimestamp(Time.currentTime());
@@ -73,45 +73,45 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
             setBrowserCookie(id, realm);
         }
 
-        LoginSessionAdapter wrap = wrap(realm, entity);
+        AuthenticationSessionAdapter wrap = wrap(realm, entity);
         return wrap;
     }
 
-    private LoginSessionAdapter wrap(RealmModel realm, LoginSessionEntity entity) {
-        return entity==null ? null : new LoginSessionAdapter(session, this, cache, realm, entity);
+    private AuthenticationSessionAdapter wrap(RealmModel realm, AuthenticationSessionEntity entity) {
+        return entity==null ? null : new AuthenticationSessionAdapter(session, this, cache, realm, entity);
     }
 
     @Override
-    public String getCurrentLoginSessionId(RealmModel realm) {
+    public String getCurrentAuthenticationSessionId(RealmModel realm) {
         return getIdFromBrowserCookie();
     }
 
     @Override
-    public LoginSessionModel getCurrentLoginSession(RealmModel realm) {
-        String loginSessionId = getIdFromBrowserCookie();
-        return loginSessionId==null ? null : getLoginSession(realm, loginSessionId);
+    public AuthenticationSessionModel getCurrentAuthenticationSession(RealmModel realm) {
+        String authSessionId = getIdFromBrowserCookie();
+        return authSessionId==null ? null : getAuthenticationSession(realm, authSessionId);
     }
 
     @Override
-    public LoginSessionModel getLoginSession(RealmModel realm, String loginSessionId) {
-        LoginSessionEntity entity = getLoginSessionEntity(realm, loginSessionId);
+    public AuthenticationSessionModel getAuthenticationSession(RealmModel realm, String authenticationSessionId) {
+        AuthenticationSessionEntity entity = getAuthenticationSessionEntity(realm, authenticationSessionId);
         return wrap(realm, entity);
     }
 
-    private LoginSessionEntity getLoginSessionEntity(RealmModel realm, String loginSessionId) {
-        LoginSessionEntity entity = cache.get(loginSessionId);
+    private AuthenticationSessionEntity getAuthenticationSessionEntity(RealmModel realm, String authSessionId) {
+        AuthenticationSessionEntity entity = cache.get(authSessionId);
 
-        // Chance created in this transaction TODO: should it be opposite and rather look locally first? Check performance...
+        // Chance created in this transaction TODO:mposolda should it be opposite and rather look locally first? Check performance...
         if (entity == null) {
-            entity = tx.get(cache, loginSessionId);
+            entity = tx.get(cache, authSessionId);
         }
 
         return entity;
     }
 
     @Override
-    public void removeLoginSession(RealmModel realm, LoginSessionModel loginSession) {
-        tx.remove(cache, loginSession.getId());
+    public void removeAuthenticationSession(RealmModel realm, AuthenticationSessionModel authenticationSession) {
+        tx.remove(cache, authenticationSession.getId());
     }
 
     @Override
@@ -122,13 +122,13 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
 
         // Each cluster node cleanups just local sessions, which are those owned by himself (+ few more taking l1 cache into account)
-        Iterator<Map.Entry<String, LoginSessionEntity>> itr = cache.getAdvancedCache().withFlags(Flag.CACHE_MODE_LOCAL)
-                .entrySet().stream().filter(LoginSessionPredicate.create(realm.getId()).expired(expired)).iterator();
+        Iterator<Map.Entry<String, AuthenticationSessionEntity>> itr = cache.getAdvancedCache().withFlags(Flag.CACHE_MODE_LOCAL)
+                .entrySet().stream().filter(AuthenticationSessionPredicate.create(realm.getId()).expired(expired)).iterator();
 
         int counter = 0;
         while (itr.hasNext()) {
             counter++;
-            LoginSessionEntity entity = itr.next().getValue();
+            AuthenticationSessionEntity entity = itr.next().getValue();
             tx.remove(cache, entity.getId());
         }
 
@@ -137,7 +137,7 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
     @Override
     public void onRealmRemoved(RealmModel realm) {
-        Iterator<Map.Entry<String, LoginSessionEntity>> itr = cache.entrySet().stream().filter(LoginSessionPredicate.create(realm.getId())).iterator();
+        Iterator<Map.Entry<String, AuthenticationSessionEntity>> itr = cache.entrySet().stream().filter(AuthenticationSessionPredicate.create(realm.getId())).iterator();
         while (itr.hasNext()) {
             cache.remove(itr.next().getKey());
         }
@@ -145,7 +145,7 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
     @Override
     public void onClientRemoved(RealmModel realm, ClientModel client) {
-        Iterator<Map.Entry<String, LoginSessionEntity>> itr = cache.entrySet().stream().filter(LoginSessionPredicate.create(realm.getId()).client(client.getId())).iterator();
+        Iterator<Map.Entry<String, AuthenticationSessionEntity>> itr = cache.entrySet().stream().filter(AuthenticationSessionPredicate.create(realm.getId()).client(client.getId())).iterator();
         while (itr.hasNext()) {
             cache.remove(itr.next().getKey());
         }
@@ -158,23 +158,23 @@ public class InfinispanLoginSessionProvider implements LoginSessionProvider {
 
     // COOKIE STUFF
 
-    protected void setBrowserCookie(String loginSessionId, RealmModel realm) {
+    protected void setBrowserCookie(String authSessionId, RealmModel realm) {
         String cookiePath = CookieHelper.getRealmCookiePath(realm);
         boolean sslRequired = realm.getSslRequired().isRequired(session.getContext().getConnection());
-        CookieHelper.addCookie(LOGIN_SESSION_ID, loginSessionId, cookiePath, null, null, -1, sslRequired, true);
+        CookieHelper.addCookie(AUTH_SESSION_ID, authSessionId, cookiePath, null, null, -1, sslRequired, true);
 
         // TODO trace with isTraceEnabled
-        log.infof("Set LOGIN_SESSION_ID cookie with value %s", loginSessionId);
+        log.infof("Set AUTH_SESSION_ID cookie with value %s", authSessionId);
     }
 
     protected String getIdFromBrowserCookie() {
-        String cookieVal = CookieHelper.getCookieValue(LOGIN_SESSION_ID);
+        String cookieVal = CookieHelper.getCookieValue(AUTH_SESSION_ID);
 
         if (log.isTraceEnabled()) {
             if (cookieVal != null) {
-                log.tracef("Found LOGIN_SESSION_ID cookie with value %s", cookieVal);
+                log.tracef("Found AUTH_SESSION_ID cookie with value %s", cookieVal);
             } else {
-                log.tracef("Not found LOGIN_SESSION_ID cookie");
+                log.tracef("Not found AUTH_SESSION_ID cookie");
             }
         }
 

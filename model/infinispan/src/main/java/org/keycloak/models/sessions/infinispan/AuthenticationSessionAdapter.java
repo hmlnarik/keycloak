@@ -28,24 +28,24 @@ import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.models.sessions.infinispan.entities.LoginSessionEntity;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.models.sessions.infinispan.entities.AuthenticationSessionEntity;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 /**
  * NOTE: Calling setter doesn't automatically enlist for update
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class LoginSessionAdapter implements LoginSessionModel {
+public class AuthenticationSessionAdapter implements AuthenticationSessionModel {
 
     private KeycloakSession session;
-    private InfinispanLoginSessionProvider provider;
-    private Cache<String, LoginSessionEntity> cache;
+    private InfinispanAuthenticationSessionProvider provider;
+    private Cache<String, AuthenticationSessionEntity> cache;
     private RealmModel realm;
-    private LoginSessionEntity entity;
+    private AuthenticationSessionEntity entity;
 
-    public LoginSessionAdapter(KeycloakSession session, InfinispanLoginSessionProvider provider, Cache<String, LoginSessionEntity> cache, RealmModel realm,
-                                LoginSessionEntity entity) {
+    public AuthenticationSessionAdapter(KeycloakSession session, InfinispanAuthenticationSessionProvider provider, Cache<String, AuthenticationSessionEntity> cache, RealmModel realm,
+                                        AuthenticationSessionEntity entity) {
         this.session = session;
         this.provider = provider;
         this.cache = cache;
@@ -230,13 +230,13 @@ public class LoginSessionAdapter implements LoginSessionModel {
     }
 
     @Override
-    public Map<String, LoginSessionModel.ExecutionStatus> getExecutionStatus() {
+    public Map<String, AuthenticationSessionModel.ExecutionStatus> getExecutionStatus() {
 
         return entity.getExecutionStatus();
     }
 
     @Override
-    public void setExecutionStatus(String authenticator, LoginSessionModel.ExecutionStatus status) {
+    public void setExecutionStatus(String authenticator, AuthenticationSessionModel.ExecutionStatus status) {
         entity.getExecutionStatus().put(authenticator, status);
         update();
 

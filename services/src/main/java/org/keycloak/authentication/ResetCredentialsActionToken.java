@@ -23,7 +23,7 @@ import org.keycloak.common.util.Time;
 import org.keycloak.jose.jws.*;
 import org.keycloak.models.*;
 import org.keycloak.services.Urls;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
@@ -43,47 +43,47 @@ public class ResetCredentialsActionToken extends DefaultActionToken {
     private static final Logger LOG = Logger.getLogger(ResetCredentialsActionToken.class);
 
     private static final String RESET_CREDENTIALS_ACTION = "reset-credentials";
-    public static final String NOTE_LOGIN_SESSION_ID = "clientSessionId";
-    private static final String JSON_FIELD_LOGIN_SESSION_ID = "lsid";
+    public static final String NOTE_AUTHENTICATION_SESSION_ID = "clientSessionId";
+    private static final String JSON_FIELD_AUTHENTICATION_SESSION_ID = "asid";
     private static final String JSON_FIELD_LAST_CHANGE_PASSWORD_TIMESTAMP = "lcpt";
 
     @JsonIgnore
-    private LoginSessionModel loginSession;
+    private AuthenticationSessionModel authenticationSession;
 
     @JsonProperty(value = JSON_FIELD_LAST_CHANGE_PASSWORD_TIMESTAMP)
     private Long lastChangedPasswordTimestamp;
 
-    public ResetCredentialsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, Long lastChangedPasswordTimestamp, String loginSessionId) {
+    public ResetCredentialsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, Long lastChangedPasswordTimestamp, String authenticationSessionId) {
         super(userId, RESET_CREDENTIALS_ACTION, absoluteExpirationInSecs, actionVerificationNonce);
-        setNote(NOTE_LOGIN_SESSION_ID, loginSessionId);
+        setNote(NOTE_AUTHENTICATION_SESSION_ID, authenticationSessionId);
         this.lastChangedPasswordTimestamp = lastChangedPasswordTimestamp;
     }
 
-    public ResetCredentialsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, Long lastChangedPasswordTimestamp, LoginSessionModel loginSession) {
-        this(userId, absoluteExpirationInSecs, actionVerificationNonce, lastChangedPasswordTimestamp, loginSession == null ? null : loginSession.getId());
-        this.loginSession = loginSession;
+    public ResetCredentialsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, Long lastChangedPasswordTimestamp, AuthenticationSessionModel authenticationSession) {
+        this(userId, absoluteExpirationInSecs, actionVerificationNonce, lastChangedPasswordTimestamp, authenticationSession == null ? null : authenticationSession.getId());
+        this.authenticationSession = authenticationSession;
     }
 
     private ResetCredentialsActionToken() {
         super(null, null, -1, null);
     }
 
-    public LoginSessionModel getLoginSession() {
-        return this.loginSession;
+    public AuthenticationSessionModel getAuthenticationSession() {
+        return this.authenticationSession;
     }
 
-    public void setLoginSession(LoginSessionModel loginSession) {
-        this.loginSession = loginSession;
-        setLoginSessionId(loginSession == null ? null : loginSession.getId());
+    public void setAuthenticationSession(AuthenticationSessionModel authenticationSession) {
+        this.authenticationSession = authenticationSession;
+        setAuthenticationSessionId(authenticationSession == null ? null : authenticationSession.getId());
     }
 
-    @JsonProperty(value = JSON_FIELD_LOGIN_SESSION_ID)
-    public String getLoginSessionId() {
-        return getNote(NOTE_LOGIN_SESSION_ID);
+    @JsonProperty(value = JSON_FIELD_AUTHENTICATION_SESSION_ID)
+    public String getAuthenticationSessionId() {
+        return getNote(NOTE_AUTHENTICATION_SESSION_ID);
     }
 
-    public void setLoginSessionId(String loginSessionId) {
-        setNote(NOTE_LOGIN_SESSION_ID, loginSessionId);
+    public void setAuthenticationSessionId(String authenticationSessionId) {
+        setNote(NOTE_AUTHENTICATION_SESSION_ID, authenticationSessionId);
     }
 
     public Long getLastChangedPasswordTimestamp() {
@@ -98,8 +98,8 @@ public class ResetCredentialsActionToken extends DefaultActionToken {
     @JsonIgnore
     public Map<String, String> getNotes() {
         Map<String, String> res = super.getNotes();
-        if (this.loginSession != null) {
-            res.put(NOTE_LOGIN_SESSION_ID, getNote(NOTE_LOGIN_SESSION_ID));
+        if (this.authenticationSession != null) {
+            res.put(NOTE_AUTHENTICATION_SESSION_ID, getNote(NOTE_AUTHENTICATION_SESSION_ID));
         }
         return res;
     }

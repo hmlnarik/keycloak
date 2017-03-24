@@ -62,7 +62,7 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
 
     public static class ParseResult<CLIENT_SESSION extends CommonClientSessionModel> {
         ClientSessionCode<CLIENT_SESSION> code;
-        boolean loginSessionNotFound;
+        boolean authSessionNotFound;
         boolean illegalHash;
         CLIENT_SESSION clientSession;
 
@@ -70,8 +70,8 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
             return code;
         }
 
-        public boolean isLoginSessionNotFound() {
-            return loginSessionNotFound;
+        public boolean isAuthSessionNotFound() {
+            return authSessionNotFound;
         }
 
         public boolean isIllegalHash() {
@@ -92,7 +92,7 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         try {
             result.clientSession = getClientSession(code, session, realm, sessionClass);
             if (result.clientSession == null) {
-                result.loginSessionNotFound = true;
+                result.authSessionNotFound = true;
                 return result;
             }
 
@@ -214,13 +214,13 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         return nextCode;
     }
 
-    private static String generateCode(CommonClientSessionModel loginSession) {
+    private static String generateCode(CommonClientSessionModel authSession) {
         try {
             String actionId = KeycloakModelUtils.generateSecret();
 
-            String code = CodeGenerateUtil.generateCode(loginSession, actionId);
+            String code = CodeGenerateUtil.generateCode(authSession, actionId);
 
-            loginSession.setNote(ACTIVE_CODE, code);
+            authSession.setNote(ACTIVE_CODE, code);
 
             return code;
         } catch (Exception e) {
@@ -228,15 +228,15 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         }
     }
 
-    public static boolean verifyCode(String code, CommonClientSessionModel loginSession) {
+    public static boolean verifyCode(String code, CommonClientSessionModel authSession) {
         try {
-            String activeCode = loginSession.getNote(ACTIVE_CODE);
+            String activeCode = authSession.getNote(ACTIVE_CODE);
             if (activeCode == null) {
                 logger.debug("Active code not found in client session");
                 return false;
             }
 
-            loginSession.removeNote(ACTIVE_CODE);
+            authSession.removeNote(ACTIVE_CODE);
 
             return MessageDigest.isEqual(code.getBytes(), activeCode.getBytes());
         } catch (Exception e) {

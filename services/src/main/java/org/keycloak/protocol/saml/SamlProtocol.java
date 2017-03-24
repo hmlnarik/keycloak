@@ -62,7 +62,7 @@ import org.keycloak.services.managers.ResourceAdminManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.sessions.CommonClientSessionModel;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -158,9 +158,9 @@ public class SamlProtocol implements LoginProtocol {
     }
 
     @Override
-    public Response sendError(LoginSessionModel loginSession, Error error) {
+    public Response sendError(AuthenticationSessionModel authSession, Error error) {
         try {
-            ClientModel client = loginSession.getClient();
+            ClientModel client = authSession.getClient();
 
             if ("true".equals(client.getAttribute(SAML_IDP_INITIATED_LOGIN))) {
                 if (error == Error.CANCELLED_BY_USER) {
@@ -175,9 +175,9 @@ public class SamlProtocol implements LoginProtocol {
                     return ErrorPage.error(session, translateErrorToIdpInitiatedErrorMessage(error));
                 }
             } else {
-                SAML2ErrorResponseBuilder builder = new SAML2ErrorResponseBuilder().destination(loginSession.getRedirectUri()).issuer(getResponseIssuer(realm)).status(translateErrorToSAMLStatus(error).get());
+                SAML2ErrorResponseBuilder builder = new SAML2ErrorResponseBuilder().destination(authSession.getRedirectUri()).issuer(getResponseIssuer(realm)).status(translateErrorToSAMLStatus(error).get());
                 try {
-                    JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder().relayState(loginSession.getNote(GeneralConstants.RELAY_STATE));
+                    JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder().relayState(authSession.getNote(GeneralConstants.RELAY_STATE));
                     SamlClient samlClient = new SamlClient(client);
                     KeyManager keyManager = session.keys();
                     if (samlClient.requiresRealmSignature()) {
@@ -200,22 +200,22 @@ public class SamlProtocol implements LoginProtocol {
                         binding.encrypt(publicKey);
                     }
                     Document document = builder.buildDocument();
-                    return buildErrorResponse(loginSession, binding, document);
+                    return buildErrorResponse(authSession, binding, document);
                 } catch (Exception e) {
                     return ErrorPage.error(session, Messages.FAILED_TO_PROCESS_RESPONSE);
                 }
             }
         } finally {
             RestartLoginCookie.expireRestartCookie(realm, session.getContext().getConnection(), uriInfo);
-            session.loginSessions().removeLoginSession(realm, loginSession);
+            session.authenticationSessions().removeAuthenticationSession(realm, authSession);
         }
     }
 
-    protected Response buildErrorResponse(LoginSessionModel loginSession, JaxrsSAML2BindingBuilder binding, Document document) throws ConfigurationException, ProcessingException, IOException {
-        if (isPostBinding(loginSession)) {
-            return binding.postBinding(document).response(loginSession.getRedirectUri());
+    protected Response buildErrorResponse(AuthenticationSessionModel authSession, JaxrsSAML2BindingBuilder binding, Document document) throws ConfigurationException, ProcessingException, IOException {
+        if (isPostBinding(authSession)) {
+            return binding.postBinding(document).response(authSession.getRedirectUri());
         } else {
-            return binding.redirectBinding(document).response(loginSession.getRedirectUri());
+            return binding.redirectBinding(document).response(authSession.getRedirectUri());
         }
     }
 
@@ -250,10 +250,10 @@ public class SamlProtocol implements LoginProtocol {
         return RealmsResource.realmBaseUrl(uriInfo).build(realm.getName()).toString();
     }
 
-    protected boolean isPostBinding(CommonClientSessionModel loginSession) {
-        ClientModel client = loginSession.getClient();
+    protected boolean isPostBinding(CommonClientSessionModel authSession) {
+        ClientModel client = authSession.getClient();
         SamlClient samlClient = new SamlClient(client);
-        return SamlProtocol.SAML_POST_BINDING.equals(loginSession.getNote(SamlProtocol.SAML_BINDING)) || samlClient.forcePostBinding();
+        return SamlProtocol.SAML_POST_BINDING.equals(authSession.getNote(SamlProtocol.SAML_BINDING)) || samlClient.forcePostBinding();
     }
 
     public static boolean isLogoutPostBindingForInitiator(UserSessionModel session) {
@@ -682,7 +682,7 @@ public class SamlProtocol implements LoginProtocol {
     }
 
     @Override
-    public boolean requireReauthentication(UserSessionModel userSession, LoginSessionModel clientSession) {
+    public boolean requireReauthentication(UserSessionModel userSession, AuthenticationSessionModel authSession) {
         // Not yet supported
         return false;
     }
