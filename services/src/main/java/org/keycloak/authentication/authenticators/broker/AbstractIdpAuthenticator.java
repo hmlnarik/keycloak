@@ -113,7 +113,7 @@ public abstract class AbstractIdpAuthenticator implements Authenticator {
     }
 
     public static UserModel getExistingUser(KeycloakSession session, RealmModel realm, AuthenticationSessionModel authSession) {
-        String existingUserId = authSession.getNote(EXISTING_USER_INFO);
+        String existingUserId = authSession.getAuthNote(EXISTING_USER_INFO);
         if (existingUserId == null) {
             throw new AuthenticationFlowException("Unexpected state. There is no existing duplicated user identified in ClientSession",
                     AuthenticationFlowError.INTERNAL_ERROR);

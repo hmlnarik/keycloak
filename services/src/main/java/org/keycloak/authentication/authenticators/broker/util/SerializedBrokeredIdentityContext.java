@@ -317,14 +317,14 @@ public class SerializedBrokeredIdentityContext implements UpdateProfileContext {
     public void saveToLoginSession(AuthenticationSessionModel authSession, String noteKey) {
         try {
             String asString = JsonSerialization.writeValueAsString(this);
-            authSession.setNote(noteKey, asString);
+            authSession.setAuthNote(noteKey, asString);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
     }
 
     public static SerializedBrokeredIdentityContext readFromLoginSession(AuthenticationSessionModel authSession, String noteKey) {
-        String asString = authSession.getNote(noteKey);
+        String asString = authSession.getAuthNote(noteKey);
         if (asString == null) {
             return null;
         } else {

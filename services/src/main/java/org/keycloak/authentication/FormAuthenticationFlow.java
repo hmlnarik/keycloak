@@ -243,7 +243,7 @@ public class FormAuthenticationFlow implements AuthenticationFlow {
 
         }
         processor.getAuthenticationSession().setExecutionStatus(actionExecution, ClientSessionModel.ExecutionStatus.SUCCESS);
-        processor.getAuthenticationSession().removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+        processor.getAuthenticationSession().removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
         processor.setActionSuccessful();
         return null;
     }
@@ -263,7 +263,7 @@ public class FormAuthenticationFlow implements AuthenticationFlow {
 
     public Response renderForm(MultivaluedMap<String, String> formData, List<FormMessage> errors) {
         String executionId = formExecution.getId();
-        processor.getAuthenticationSession().setNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, executionId);
+        processor.getAuthenticationSession().setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, executionId);
         String code = processor.generateCode();
         URI actionUrl = getActionUrl(executionId, code);
         LoginFormsProvider form = processor.getSession().getProvider(LoginFormsProvider.class)

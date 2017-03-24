@@ -54,7 +54,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
     @Override
     public void authenticate(AuthenticationFlowContext context) {
         UserModel user = context.getUser();
-        String username = context.getAuthenticationSession().getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+        String username = context.getAuthenticationSession().getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
 
         // we don't want people guessing usernames, so if there was a problem obtaining the user, the user will be null.
         // just reset login for with a success message
@@ -146,7 +146,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
         Long lastCreatedPasswordFromStore = password == null ? null : password.getCreatedDate();
 
         String authenticationSessionId = tokenFromMail.getAuthenticationSessionId();
-        AuthenticationSessionModel authenticationSession = authenticationSessionId == null ? null : keycloakSession.sessions().getAuthenticationSession(context.getRealm(), authenticationSessionId);
+        AuthenticationSessionModel authenticationSession = authenticationSessionId == null ? null : keycloakSession.authenticationSessions().getAuthenticationSession(context.getRealm(), authenticationSessionId);
 
         if (authenticationSession == null
           || ! Objects.equals(lastCreatedPasswordMail, lastCreatedPasswordFromStore)

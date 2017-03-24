@@ -60,7 +60,7 @@ public class PassThroughRegistration implements Authenticator, AuthenticatorFact
         context.getEvent().client(context.getAuthenticationSession().getClient().getClientId())
                 .detail(Details.REDIRECT_URI, context.getAuthenticationSession().getRedirectUri())
                 .detail(Details.AUTH_METHOD, context.getAuthenticationSession().getProtocol());
-        String authType = context.getAuthenticationSession().getNote(Details.AUTH_TYPE);
+        String authType = context.getAuthenticationSession().getAuthNote(Details.AUTH_TYPE);
         if (authType != null) {
             context.getEvent().detail(Details.AUTH_TYPE, authType);
         }

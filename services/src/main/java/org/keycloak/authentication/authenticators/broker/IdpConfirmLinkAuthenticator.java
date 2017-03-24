@@ -43,7 +43,7 @@ public class IdpConfirmLinkAuthenticator extends AbstractIdpAuthenticator {
     protected void authenticateImpl(AuthenticationFlowContext context, SerializedBrokeredIdentityContext serializedCtx, BrokeredIdentityContext brokerContext) {
         AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
-        String existingUserInfo = authSession.getNote(EXISTING_USER_INFO);
+        String existingUserInfo = authSession.getAuthNote(EXISTING_USER_INFO);
         if (existingUserInfo == null) {
             ServicesLogger.LOGGER.noDuplicationDetected();
             context.attempted();
@@ -65,8 +65,8 @@ public class IdpConfirmLinkAuthenticator extends AbstractIdpAuthenticator {
 
         String action = formData.getFirst("submitAction");
         if (action != null && action.equals("updateProfile")) {
-            context.getAuthenticationSession().setNote(ENFORCE_UPDATE_PROFILE, "true");
-            context.getAuthenticationSession().removeNote(EXISTING_USER_INFO);
+            context.getAuthenticationSession().setAuthNote(ENFORCE_UPDATE_PROFILE, "true");
+            context.getAuthenticationSession().removeAuthNote(EXISTING_USER_INFO);
             context.resetFlow();
         } else if (action != null && action.equals("linkAccount")) {
             context.success();
