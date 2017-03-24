@@ -22,13 +22,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.keycloak.models.sessions.infinispan.entities.SessionEntity;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class LoginSessionEntity extends SessionEntity {
+public class AuthenticationSessionEntity extends SessionEntity {
 
     private String clientUuid;
     private String authUserId;
@@ -39,7 +38,7 @@ public class LoginSessionEntity extends SessionEntity {
     private Set<String> roles;
     private Set<String> protocolMappers;
 
-    private Map<String, LoginSessionModel.ExecutionStatus> executionStatus  = new HashMap<>();;
+    private Map<String, AuthenticationSessionModel.ExecutionStatus> executionStatus  = new HashMap<>();;
     private String protocol;
 
     private Map<String, String> notes;
@@ -102,11 +101,11 @@ public class LoginSessionEntity extends SessionEntity {
         this.protocolMappers = protocolMappers;
     }
 
-    public Map<String, LoginSessionModel.ExecutionStatus> getExecutionStatus() {
+    public Map<String, AuthenticationSessionModel.ExecutionStatus> getExecutionStatus() {
         return executionStatus;
     }
 
-    public void setExecutionStatus(Map<String, LoginSessionModel.ExecutionStatus> executionStatus) {
+    public void setExecutionStatus(Map<String, AuthenticationSessionModel.ExecutionStatus> executionStatus) {
         this.executionStatus = executionStatus;
     }
 

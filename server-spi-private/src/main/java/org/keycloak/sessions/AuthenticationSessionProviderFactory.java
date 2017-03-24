@@ -17,33 +17,10 @@
 
 package org.keycloak.sessions;
 
-import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
-import org.keycloak.provider.Spi;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class LoginSessionSpi implements Spi {
-
-    @Override
-    public boolean isInternal() {
-        return true;
-    }
-
-    @Override
-    public String getName() {
-        return "loginSessions";
-    }
-
-    @Override
-    public Class<? extends Provider> getProviderClass() {
-        return LoginSessionProvider.class;
-    }
-
-    @Override
-    public Class<? extends ProviderFactory> getProviderFactoryClass() {
-        return LoginSessionProviderFactory.class;
-    }
-
+public interface AuthenticationSessionProviderFactory extends ProviderFactory<AuthenticationSessionProvider> {
 }

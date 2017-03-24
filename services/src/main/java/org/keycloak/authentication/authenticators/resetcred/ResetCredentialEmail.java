@@ -36,7 +36,7 @@ import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.LoginActionsService;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 import java.util.*;
 import javax.ws.rs.core.Response;
@@ -54,7 +54,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
     @Override
     public void authenticate(AuthenticationFlowContext context) {
         UserModel user = context.getUser();
-        String username = context.getLoginSession().getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+        String username = context.getAuthenticationSession().getNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
 
         // we don't want people guessing usernames, so if there was a problem obtaining the user, the user will be null.
         // just reset login for with a success message
@@ -83,7 +83,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
         Long lastCreatedPassword = password == null ? null : password.getCreatedDate();
 
         // We send the secret in the email in a link as a query param.
-        ResetCredentialsActionToken token = new ResetCredentialsActionToken(user.getId(), absoluteExpirationInSecs, null, lastCreatedPassword, context.getLoginSession());
+        ResetCredentialsActionToken token = new ResetCredentialsActionToken(user.getId(), absoluteExpirationInSecs, null, lastCreatedPassword, context.getAuthenticationSession());
         KeycloakSession keycloakSession = context.getSession();
         String link = UriBuilder
           .fromUri(context.getRefreshExecutionUrl())
@@ -97,7 +97,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
             event.clone().event(EventType.SEND_RESET_PASSWORD)
                          .user(user)
                          .detail(Details.USERNAME, username)
-                         .detail(Details.EMAIL, user.getEmail()).detail(Details.CODE_ID, context.getLoginSession().getId()).success();
+                         .detail(Details.EMAIL, user.getEmail()).detail(Details.CODE_ID, context.getAuthenticationSession().getId()).success();
             context.forkWithSuccessMessage(new FormMessage(Messages.EMAIL_SENT));
         } catch (EmailException e) {
             event.clone().event(EventType.SEND_RESET_PASSWORD)
@@ -145,10 +145,10 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
         Long lastCreatedPasswordMail = tokenFromMail.getLastChangedPasswordTimestamp();
         Long lastCreatedPasswordFromStore = password == null ? null : password.getCreatedDate();
 
-        String loginSessionId = tokenFromMail.getLoginSessionId();
-        LoginSessionModel loginSession = loginSessionId == null ? null : keycloakSession.sessions().getLoginSession(context.getRealm(), loginSessionId);
+        String authenticationSessionId = tokenFromMail.getAuthenticationSessionId();
+        AuthenticationSessionModel authenticationSession = authenticationSessionId == null ? null : keycloakSession.sessions().getAuthenticationSession(context.getRealm(), authenticationSessionId);
 
-        if (loginSession == null
+        if (authenticationSession == null
           || ! Objects.equals(lastCreatedPasswordMail, lastCreatedPasswordFromStore)
           || ! Objects.equals(userId, context.getUser().getId())) {
             context.getEvent()
