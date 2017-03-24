@@ -21,12 +21,12 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import org.keycloak.models.sessions.infinispan.entities.LoginSessionEntity;
+import org.keycloak.models.sessions.infinispan.entities.AuthenticationSessionEntity;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class LoginSessionPredicate implements Predicate<Map.Entry<String, LoginSessionEntity>>, Serializable {
+public class AuthenticationSessionPredicate implements Predicate<Map.Entry<String, AuthenticationSessionEntity>>, Serializable {
 
     private String realm;
 
@@ -39,25 +39,25 @@ public class LoginSessionPredicate implements Predicate<Map.Entry<String, LoginS
     //private String brokerSessionId;
     //private String brokerUserId;
 
-    private  LoginSessionPredicate(String realm) {
+    private AuthenticationSessionPredicate(String realm) {
         this.realm = realm;
     }
 
-    public static  LoginSessionPredicate create(String realm) {
-        return new  LoginSessionPredicate(realm);
+    public static AuthenticationSessionPredicate create(String realm) {
+        return new AuthenticationSessionPredicate(realm);
     }
 
-    public  LoginSessionPredicate user(String user) {
+    public AuthenticationSessionPredicate user(String user) {
         this.user = user;
         return this;
     }
 
-    public LoginSessionPredicate client(String client) {
+    public AuthenticationSessionPredicate client(String client) {
         this.client = client;
         return this;
     }
 
-    public  LoginSessionPredicate expired(Integer expired) {
+    public AuthenticationSessionPredicate expired(Integer expired) {
         this.expired = expired;
         return this;
     }
@@ -73,8 +73,8 @@ public class LoginSessionPredicate implements Predicate<Map.Entry<String, LoginS
 //    }
 
     @Override
-    public boolean test(Map.Entry<String, LoginSessionEntity> entry) {
-        LoginSessionEntity entity = entry.getValue();
+    public boolean test(Map.Entry<String, AuthenticationSessionEntity> entry) {
+        AuthenticationSessionEntity entity = entry.getValue();
 
         if (!realm.equals(entity.getRealm())) {
             return false;

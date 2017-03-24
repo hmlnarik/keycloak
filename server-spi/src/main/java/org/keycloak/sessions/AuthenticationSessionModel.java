@@ -27,7 +27,7 @@ import org.keycloak.models.UserModel;
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface LoginSessionModel extends CommonClientSessionModel {
+public interface AuthenticationSessionModel extends CommonClientSessionModel {
 
 //
 //    public UserSessionModel getUserSession();

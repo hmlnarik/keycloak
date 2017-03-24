@@ -36,7 +36,7 @@ public interface InfinispanConnectionProvider extends Provider {
     String SESSION_CACHE_NAME = "sessions";
     String OFFLINE_SESSION_CACHE_NAME = "offlineSessions";
     String LOGIN_FAILURE_CACHE_NAME = "loginFailures";
-    String LOGIN_SESSIONS_CACHE_NAME = "loginSessions";
+    String AUTHENTICATION_SESSIONS_CACHE_NAME = "authenticationSessions";
     String WORK_CACHE_NAME = "work";
     String AUTHORIZATION_CACHE_NAME = "authorization";
 

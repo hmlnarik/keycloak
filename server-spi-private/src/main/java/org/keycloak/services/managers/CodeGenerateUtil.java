@@ -26,7 +26,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.sessions.CommonClientSessionModel;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 /**
  *
@@ -38,7 +38,7 @@ class CodeGenerateUtil {
 
     static {
         PARSERS.put(ClientSessionModel.class, new ClientSessionModelParser());
-        PARSERS.put(LoginSessionModel.class, new LoginSessionModelParser());
+        PARSERS.put(AuthenticationSessionModel.class, new AuthenticationSessionModelParser());
         PARSERS.put(ClientLoginSessionModel.class, new ClientLoginSessionModelParser());
     }
 
@@ -117,22 +117,22 @@ class CodeGenerateUtil {
     }
 
 
-    private static class LoginSessionModelParser implements ClientSessionParser<LoginSessionModel> {
+    private static class AuthenticationSessionModelParser implements ClientSessionParser<AuthenticationSessionModel> {
 
         @Override
-        public LoginSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
-            // Read loginSessionID from cookie. Code is ignored for now
-            return session.loginSessions().getCurrentLoginSession(realm);
+        public AuthenticationSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
+            // Read authSessionID from cookie. Code is ignored for now
+            return session.authenticationSessions().getCurrentAuthenticationSession(realm);
         }
 
         @Override
-        public String generateCode(LoginSessionModel clientSession, String actionId) {
+        public String generateCode(AuthenticationSessionModel clientSession, String actionId) {
             return actionId;
         }
 
         @Override
-        public void removeExpiredSession(KeycloakSession session, LoginSessionModel clientSession) {
-            session.loginSessions().removeLoginSession(clientSession.getRealm(), clientSession);
+        public void removeExpiredSession(KeycloakSession session, AuthenticationSessionModel clientSession) {
+            session.authenticationSessions().removeAuthenticationSession(clientSession.getRealm(), clientSession);
         }
     }
 

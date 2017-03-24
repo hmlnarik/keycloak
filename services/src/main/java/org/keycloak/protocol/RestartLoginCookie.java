@@ -29,7 +29,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.util.CookieHelper;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.crypto.SecretKey;
 import javax.ws.rs.core.Cookie;
@@ -48,7 +48,7 @@ public class RestartLoginCookie {
     private static final Logger logger = Logger.getLogger(RestartLoginCookie.class);
     public static final String KC_RESTART = "KC_RESTART";
     @JsonProperty("cs")
-    protected String loginSession;
+    protected String authenticationSession;
 
     @JsonProperty("cid")
     protected String clientId;
@@ -65,12 +65,12 @@ public class RestartLoginCookie {
     @JsonProperty("notes")
     protected Map<String, String> notes = new HashMap<>();
 
-    public String getLoginSession() {
-        return loginSession;
+    public String getAuthenticationSession() {
+        return authenticationSession;
     }
 
-    public void setLoginSession(String loginSession) {
-        this.loginSession = loginSession;
+    public void setAuthenticationSession(String authenticationSession) {
+        this.authenticationSession = authenticationSession;
     }
 
     public Map<String, String> getNotes() {
@@ -123,19 +123,19 @@ public class RestartLoginCookie {
 
     public RestartLoginCookie() {
     }
-    public RestartLoginCookie(LoginSessionModel clientSession) {
+    public RestartLoginCookie(AuthenticationSessionModel clientSession) {
         this.action = clientSession.getAction();
         this.clientId = clientSession.getClient().getClientId();
         this.authMethod = clientSession.getProtocol();
         this.redirectUri = clientSession.getRedirectUri();
-        this.loginSession = clientSession.getId();
+        this.authenticationSession = clientSession.getId();
         for (Map.Entry<String, String> entry : clientSession.getNotes().entrySet()) {
             notes.put(entry.getKey(), entry.getValue());
         }
     }
 
-    public static void setRestartCookie(KeycloakSession session, RealmModel realm, ClientConnection connection, UriInfo uriInfo, LoginSessionModel loginSession) {
-        RestartLoginCookie restart = new RestartLoginCookie(loginSession);
+    public static void setRestartCookie(KeycloakSession session, RealmModel realm, ClientConnection connection, UriInfo uriInfo, AuthenticationSessionModel authSession) {
+        RestartLoginCookie restart = new RestartLoginCookie(authSession);
         String encoded = restart.encode(session, realm);
         String path = AuthenticationManager.getRealmCookiePath(realm, uriInfo);
         boolean secureOnly = realm.getSslRequired().isRequired(connection);
@@ -149,11 +149,11 @@ public class RestartLoginCookie {
     }
 
 
-    public static LoginSessionModel restartSession(KeycloakSession session, RealmModel realm) throws Exception {
+    public static AuthenticationSessionModel restartSession(KeycloakSession session, RealmModel realm) throws Exception {
         return restartSessionByClientSession(session, realm);
     }
 
-    private static LoginSessionModel restartSessionByClientSession(KeycloakSession session, RealmModel realm) throws Exception {
+    private static AuthenticationSessionModel restartSessionByClientSession(KeycloakSession session, RealmModel realm) throws Exception {
         Cookie cook = session.getContext().getRequestHeaders().getCookies().get(KC_RESTART);
         if (cook ==  null) {
             logger.debug("KC_RESTART cookie doesn't exist");
@@ -171,14 +171,14 @@ public class RestartLoginCookie {
         ClientModel client = realm.getClientByClientId(cookie.getClientId());
         if (client == null) return null;
 
-        LoginSessionModel loginSession = session.loginSessions().createLoginSession(realm, client, true);
-        loginSession.setProtocol(cookie.getAuthMethod());
-        loginSession.setRedirectUri(cookie.getRedirectUri());
-        loginSession.setAction(cookie.getAction());
+        AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client, true);
+        authSession.setProtocol(cookie.getAuthMethod());
+        authSession.setRedirectUri(cookie.getRedirectUri());
+        authSession.setAction(cookie.getAction());
         for (Map.Entry<String, String> entry : cookie.getNotes().entrySet()) {
-            loginSession.setNote(entry.getKey(), entry.getValue());
+            authSession.setNote(entry.getKey(), entry.getValue());
         }
 
-        return loginSession;
+        return authSession;
     }
 }

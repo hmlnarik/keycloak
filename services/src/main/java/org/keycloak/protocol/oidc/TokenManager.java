@@ -33,7 +33,6 @@ import org.keycloak.jose.jws.crypto.HashProvider;
 import org.keycloak.jose.jws.crypto.RSAProvider;
 import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.ClientTemplateModel;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeyManager;
@@ -60,7 +59,7 @@ import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.UserSessionManager;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.util.TokenUtil;
 import org.keycloak.common.util.Time;
 
@@ -344,30 +343,30 @@ public class TokenManager {
     }
 
 
-    public static ClientLoginSessionModel attachLoginSession(KeycloakSession session, UserSessionModel userSession, LoginSessionModel loginSession) {
-        ClientModel client = loginSession.getClient();
+    public static ClientLoginSessionModel attachAuthenticationSession(KeycloakSession session, UserSessionModel userSession, AuthenticationSessionModel authSession) {
+        ClientModel client = authSession.getClient();
 
         ClientLoginSessionModel clientSession = session.sessions().createClientSession(userSession.getRealm(), client, userSession);
-        clientSession.setRedirectUri(loginSession.getRedirectUri());
-        clientSession.setProtocol(loginSession.getProtocol());
+        clientSession.setRedirectUri(authSession.getRedirectUri());
+        clientSession.setProtocol(authSession.getProtocol());
 
-        clientSession.setRoles(loginSession.getRoles());
-        clientSession.setProtocolMappers(loginSession.getProtocolMappers());
+        clientSession.setRoles(authSession.getRoles());
+        clientSession.setProtocolMappers(authSession.getProtocolMappers());
 
-        Map<String, String> transferredNotes = loginSession.getNotes();
+        Map<String, String> transferredNotes = authSession.getNotes();
         for (Map.Entry<String, String> entry : transferredNotes.entrySet()) {
             clientSession.setNote(entry.getKey(), entry.getValue());
         }
 
-        Map<String, String> transferredUserSessionNotes = loginSession.getUserSessionNotes();
+        Map<String, String> transferredUserSessionNotes = authSession.getUserSessionNotes();
         for (Map.Entry<String, String> entry : transferredUserSessionNotes.entrySet()) {
             userSession.setNote(entry.getKey(), entry.getValue());
         }
 
         clientSession.setTimestamp(Time.currentTime());
 
-        // Remove login session now
-        session.loginSessions().removeLoginSession(userSession.getRealm(), loginSession);
+        // Remove authentication session now
+        session.authenticationSessions().removeAuthenticationSession(userSession.getRealm(), authSession);
 
         return clientSession;
     }

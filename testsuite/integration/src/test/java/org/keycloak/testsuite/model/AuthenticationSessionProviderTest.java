@@ -22,19 +22,18 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserManager;
 import org.keycloak.models.UserModel;
-import org.keycloak.sessions.LoginSessionModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.testsuite.rule.KeycloakRule;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class LoginSessionProviderTest {
+public class AuthenticationSessionProviderTest {
 
     @ClassRule
     public static KeycloakRule kc = new KeycloakRule();
@@ -78,46 +77,46 @@ public class LoginSessionProviderTest {
         ClientModel client1 = realm.getClientByClientId("test-app");
         UserModel user1 = session.users().getUserByUsername("user1", realm);
 
-        LoginSessionModel loginSession = session.loginSessions().createLoginSession(realm,client1, false);
+        AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client1, false);
 
-        loginSession.setAction("foo");
-        loginSession.setTimestamp(100);
+        authSession.setAction("foo");
+        authSession.setTimestamp(100);
 
         resetSession();
 
         // Ensure session is here
-        loginSession = session.loginSessions().getLoginSession(realm, loginSession.getId());
-        testLoginSession(loginSession, client1.getId(), null, "foo", 100);
+        authSession = session.authenticationSessions().getAuthenticationSession(realm, authSession.getId());
+        testLoginSession(authSession, client1.getId(), null, "foo", 100);
 
         // Update and commit
-        loginSession.setAction("foo-updated");
-        loginSession.setTimestamp(200);
-        loginSession.setAuthenticatedUser(session.users().getUserByUsername("user1", realm));
+        authSession.setAction("foo-updated");
+        authSession.setTimestamp(200);
+        authSession.setAuthenticatedUser(session.users().getUserByUsername("user1", realm));
 
         resetSession();
 
         // Ensure session was updated
-        loginSession = session.loginSessions().getLoginSession(realm, loginSession.getId());
-        testLoginSession(loginSession, client1.getId(), user1.getId(), "foo-updated", 200);
+        authSession = session.authenticationSessions().getAuthenticationSession(realm, authSession.getId());
+        testLoginSession(authSession, client1.getId(), user1.getId(), "foo-updated", 200);
 
         // Remove and commit
-        session.loginSessions().removeLoginSession(realm, loginSession);
+        session.authenticationSessions().removeAuthenticationSession(realm, authSession);
 
         resetSession();
 
         // Ensure session was removed
-        Assert.assertNull(session.loginSessions().getLoginSession(realm, loginSession.getId()));
+        Assert.assertNull(session.authenticationSessions().getAuthenticationSession(realm, authSession.getId()));
 
     }
 
-    private void testLoginSession(LoginSessionModel loginSession, String expectedClientId, String expectedUserId, String expectedAction, int expectedTimestamp) {
-        Assert.assertEquals(expectedClientId, loginSession.getClient().getId());
+    private void testLoginSession(AuthenticationSessionModel authSession, String expectedClientId, String expectedUserId, String expectedAction, int expectedTimestamp) {
+        Assert.assertEquals(expectedClientId, authSession.getClient().getId());
         if (expectedUserId == null) {
-            Assert.assertNull(loginSession.getAuthenticatedUser());
+            Assert.assertNull(authSession.getAuthenticatedUser());
         } else {
-            Assert.assertEquals(expectedUserId, loginSession.getAuthenticatedUser().getId());
+            Assert.assertEquals(expectedUserId, authSession.getAuthenticatedUser().getId());
         }
-        Assert.assertEquals(expectedAction, loginSession.getAction());
-        Assert.assertEquals(expectedTimestamp, loginSession.getTimestamp());
+        Assert.assertEquals(expectedAction, authSession.getAction());
+        Assert.assertEquals(expectedTimestamp, authSession.getTimestamp());
     }
 }
