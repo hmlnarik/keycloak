@@ -213,9 +213,9 @@ public class LoginActionsService {
             if (!clientCode.isValidAction(requiredAction)) {
                 AuthenticationSessionModel authSession = getAuthenticationSession();
                 if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(authSession.getAction())) {
-                    // TODO:mposolda
-                    logger.info("Redirecting to requiredActions now. Do we really need to redirect here? Couldn't we just continue?");
-                    response = redirectToRequiredActions(null, authSession);
+                    // TODO:mposolda debug or trace
+                    logger.info("Incorrect flow '%s' . User authenticated already. Trying requiredActions now.");
+                    response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, uriInfo, event);
                     return false;
                 } // TODO:mposolda
                 /*else if (clientSession.getUserSession() != null && clientSession.getUserSession().getState() == UserSessionModel.State.LOGGED_IN) {
@@ -310,7 +310,7 @@ public class LoginActionsService {
                 if (execution==null && !flowPath.equals(lastFlow)) {
                     logger.infof("Transition between flows! Current flow: %s, Previous flow: %s", flowPath, lastFlow);
 
-                    if (isFlowTransitionAllowed(lastFlow)) {
+                    if (lastFlow == null || isFlowTransitionAllowed(lastFlow)) {
                         authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
                         authSession.removeAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
                         lastExecFromSession = null;
