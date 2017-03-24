@@ -379,10 +379,8 @@ public class TokenManager {
         }
 
         clientSession.setUserSession(null);
-        clientSession.setRoles(null);
-        clientSession.setProtocolMappers(null);
 
-        if (userSession.getClientSessions().isEmpty()) {
+        if (userSession.getClientLoginSessions().isEmpty()) {
             sessions.removeUserSession(realm, userSession);
         }
     }
