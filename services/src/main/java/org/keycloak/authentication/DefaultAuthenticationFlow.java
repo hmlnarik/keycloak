@@ -92,7 +92,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
                 authenticator.action(result);
                 Response response = processResult(result, true);
                 if (response == null) {
-                    processor.getAuthenticationSession().removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+                    processor.getAuthenticationSession().removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
                     if (result.status == FlowStatus.SUCCESS) {
                         // we do this so that flow can redirect to a non-action URL
                         processor.setActionSuccessful();
@@ -206,7 +206,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
 
                 // We just do another GET to ensure that page refresh will work
                 if (isAction) {
-                    processor.getAuthenticationSession().removeNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+                    processor.getAuthenticationSession().removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
                     return processor.redirectToFlow(execution.getId());
                 }
 
@@ -222,7 +222,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
                 throw new AuthenticationFlowException(result.getError());
             case FORK:
                 logger.debugv("reset browser login from authenticator: {0}", execution.getAuthenticator());
-                processor.getAuthenticationSession().setNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, execution.getId());
+                processor.getAuthenticationSession().setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, execution.getId());
                 throw new ForkFlowException(result.getSuccessMessage(), result.getErrorMessage());
             case FORCE_CHALLENGE:
                 processor.getAuthenticationSession().setExecutionStatus(execution.getId(), ClientSessionModel.ExecutionStatus.CHALLENGED);
@@ -268,7 +268,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
     }
 
     public Response sendChallenge(AuthenticationProcessor.Result result, AuthenticationExecutionModel execution) {
-        processor.getAuthenticationSession().setNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, execution.getId());
+        processor.getAuthenticationSession().setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, execution.getId());
         return result.getChallenge();
     }
 

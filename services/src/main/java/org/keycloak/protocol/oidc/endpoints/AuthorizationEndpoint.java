@@ -393,7 +393,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
 
     private Response buildAuthorizationCodeAuthorizationResponse() {
         this.event.event(EventType.LOGIN);
-        authenticationSession.setNote(Details.AUTH_TYPE, CODE_AUTH_TYPE);
+        authenticationSession.setAuthNote(Details.AUTH_TYPE, CODE_AUTH_TYPE);
 
         return handleBrowserAuthenticationRequest(authenticationSession, new OIDCLoginProtocol(session, realm, uriInfo, headers, event), TokenUtil.hasPrompt(request.getPrompt(), OIDCLoginProtocol.PROMPT_VALUE_NONE), false);
     }

@@ -172,6 +172,34 @@ public class AuthenticationSessionAdapter implements AuthenticationSessionModel 
     }
 
     @Override
+    public String getAuthNote(String name) {
+        return entity.getAuthNotes() != null ? entity.getAuthNotes().get(name) : null;
+    }
+
+    @Override
+    public void setAuthNote(String name, String value) {
+        if (entity.getAuthNotes() == null) {
+            entity.setAuthNotes(new HashMap<String, String>());
+        }
+        entity.getAuthNotes().put(name, value);
+        update();
+    }
+
+    @Override
+    public void removeAuthNote(String name) {
+        if (entity.getAuthNotes() != null) {
+            entity.getAuthNotes().remove(name);
+        }
+        update();
+    }
+
+    @Override
+    public void clearAuthNotes() {
+        entity.setAuthNotes(new HashMap<>());
+        update();
+    }
+
+    @Override
     public void setUserSessionNote(String name, String value) {
         if (entity.getUserSessionNotes() == null) {
             entity.setUserSessionNotes(new HashMap<String, String>());

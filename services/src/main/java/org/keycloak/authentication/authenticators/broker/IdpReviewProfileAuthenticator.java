@@ -73,7 +73,7 @@ public class IdpReviewProfileAuthenticator extends AbstractIdpAuthenticator {
     }
 
     protected boolean requiresUpdateProfilePage(AuthenticationFlowContext context, SerializedBrokeredIdentityContext userCtx, BrokeredIdentityContext brokerContext) {
-        String enforceUpdateProfile = context.getAuthenticationSession().getNote(ENFORCE_UPDATE_PROFILE);
+        String enforceUpdateProfile = context.getAuthenticationSession().getAuthNote(ENFORCE_UPDATE_PROFILE);
         if (Boolean.parseBoolean(enforceUpdateProfile)) {
             return true;
         }
@@ -122,7 +122,7 @@ public class IdpReviewProfileAuthenticator extends AbstractIdpAuthenticator {
             }
 
             userCtx.setEmail(email);
-            context.getAuthenticationSession().setNote(UPDATE_PROFILE_EMAIL_CHANGED, "true");
+            context.getAuthenticationSession().setAuthNote(UPDATE_PROFILE_EMAIL_CHANGED, "true");
         }
 
         AttributeFormDataProcessor.process(formData, realm, userCtx);
