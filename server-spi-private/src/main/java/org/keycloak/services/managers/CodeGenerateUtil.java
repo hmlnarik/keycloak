@@ -44,7 +44,13 @@ class CodeGenerateUtil {
                 return null;
             }
         } else if (expectedClazz.equals(LoginSessionModel.class)) {
-            result = session.loginSessions().getCurrentLoginSession(realm);
+            try {
+                String[] parts = code.split("\\.");
+                String id = parts[2];
+                result = session.loginSessions().getLoginSession(realm, id);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                return null;
+            }
         } else if (expectedClazz.equals(ClientLoginSessionModel.class)) {
             try {
                 String[] parts = code.split("\\.");
@@ -77,7 +83,10 @@ class CodeGenerateUtil {
 
             return sb.toString();
         } else if (clientSession instanceof LoginSessionModel) {
-            // Should be sufficient. LoginSession itself is in the cookie
+            StringBuilder sb = new StringBuilder();
+            sb.append(actionId);
+            sb.append('.');
+            sb.append(clientSession.getId());
             return actionId;
         } else if (clientSession instanceof ClientLoginSessionModel) {
             String userSessionId = ((ClientLoginSessionModel) clientSession).getUserSession().getId();
