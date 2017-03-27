@@ -62,16 +62,9 @@ public interface CommonClientSessionModel {
     public static enum Action {
         OAUTH_GRANT,
         CODE_TO_TOKEN,
-        VERIFY_EMAIL,
-        UPDATE_PROFILE,
-        CONFIGURE_TOTP,
-        UPDATE_PASSWORD,
-        RECOVER_PASSWORD, // deprecated
         AUTHENTICATE,
         SOCIAL_CALLBACK,
         LOGGED_OUT,
-        RESET_CREDENTIALS,
-        EXECUTE_ACTIONS,
         REQUIRED_ACTIONS
     }
 

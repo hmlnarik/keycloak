@@ -17,40 +17,35 @@
 
 package org.keycloak.testsuite.pages;
 
-import org.jboss.arquillian.test.api.ArquillianResource;
-import org.keycloak.testsuite.util.OAuthClient;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 
 /**
- * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class InfoPage extends AbstractPage {
+public class LoginExpiredPage extends AbstractPage {
 
-    @ArquillianResource
-    protected OAuthClient oauth;
+    @FindBy(id = "loginRestartLink")
+    private WebElement loginRestartLink;
 
-    @FindBy(className = "instruction")
-    private WebElement infoMessage;
+    @FindBy(id = "loginContinueLink")
+    private WebElement loginContinueLink;
 
-    @FindBy(linkText = "« Back to Application")
-    private WebElement backToApplicationLink;
 
-    public String getInfo() {
-        return infoMessage.getText();
+    public void clickLoginRestartLink() {
+        loginRestartLink.click();
     }
+
+    public void clickLoginContinueLink() {
+        loginContinueLink.click();
+    }
+
 
     public boolean isCurrent() {
-        return driver.getPageSource().contains("kc-info-message");
+        return driver.getTitle().equals("Page has expired");
     }
 
-    @Override
     public void open() {
         throw new UnsupportedOperationException();
     }
-
-    public void clickBackToApplicationLink() {
-        backToApplicationLink.click();
-    }
-
 }

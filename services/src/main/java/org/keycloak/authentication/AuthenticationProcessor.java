@@ -40,12 +40,14 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.models.utils.KeycloakModelUtils;
+import org.keycloak.protocol.AuthorizationEndpointBase;
 import org.keycloak.protocol.LoginProtocol;
 import org.keycloak.protocol.LoginProtocol.Error;
 import org.keycloak.protocol.oidc.TokenManager;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.BruteForceProtector;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
@@ -54,6 +56,7 @@ import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.HashMap;
@@ -705,9 +708,14 @@ public class AuthenticationProcessor {
         logger.info("Redirecting to flow with execution: " + execution);
         authenticationSession.setAuthNote(LAST_PROCESSED_EXECUTION, execution);
 
-        URI redirect = LoginActionsService.loginActionsBaseUrl(getUriInfo())
-                .path(flowPath)
-                .queryParam("execution", execution).build(getRealm().getName());
+        UriBuilder builder = LoginActionsService.loginActionsBaseUrl(getUriInfo())
+                .path(flowPath);
+
+        if (execution != null) {
+            builder.queryParam("execution", execution);
+        }
+
+        URI redirect = builder.build(getRealm().getName());
         return Response.status(302).location(redirect).build();
 
     }
@@ -736,7 +744,7 @@ public class AuthenticationProcessor {
     }
 
     public static AuthenticationSessionModel clone(KeycloakSession session, AuthenticationSessionModel authSession) {
-        AuthenticationSessionModel clone = session.authenticationSessions().createAuthenticationSession(authSession.getRealm(), authSession.getClient(), true);
+        AuthenticationSessionModel clone = new AuthenticationSessionManager(session).createAuthenticationSession(authSession.getRealm(), authSession.getClient(), true);
 
         // Transfer just the client "notes", but not "authNotes"
         for (Map.Entry<String, String> entry : authSession.getNotes().entrySet()) {
@@ -866,10 +874,26 @@ public class AuthenticationProcessor {
         if (attemptedUsername != null) username = attemptedUsername;
         String rememberMe = authSession.getAuthNote(Details.REMEMBER_ME);
         boolean remember = rememberMe != null && rememberMe.equalsIgnoreCase("true");
+
+        // TODO:mposolda Need to handle case when authenticator didn't attach userSession, but we have userSession with same ID. Could happen with login ignoring cookie (eg. prompt=login etc).
+        // Remove existing userSession? There are some corner cases around that (eg. userSession logged with different user. This needs to be handled during refreshToken validation etc)
         if (userSession == null) { // if no authenticator attached a usersession
-            userSession = session.sessions().createUserSession(realm, authSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), authSession.getProtocol(), remember, null, null);
+
+            userSession = session.sessions().getUserSession(realm, authSession.getId());
+            if (userSession == null) {
+                userSession = session.sessions().createUserSession(authSession.getId(), realm, authSession.getAuthenticatedUser(), username, connection.getRemoteAddr(), authSession.getProtocol(), remember, null, null);
+            } else {
+                // We have existing userSession even if it wasn't attached to authenticator. Could happen if SSO authentication was ignored (eg. prompt=login) and in some other cases.
+                // We need to handle case when different user was used and update that (TODO:mposolda evaluate this again and corner cases like token refresh etc)
+                logger.info("No SSO login, but found existing userSession with ID '%s' after finished authentication.");
+                if (!authSession.getAuthenticatedUser().equals(userSession.getUser())) {
+                    logger.warnf("Different user authenticated to userSession. Existing user '%s', new user '%s'", userSession.getUser().getUsername(), authSession.getAuthenticatedUser().getUsername());
+                    userSession.setUser(authSession.getAuthenticatedUser());
+                }
+            }
             userSession.setState(UserSessionModel.State.LOGGING_IN);
         }
+
         if (remember) {
             event.detail(Details.REMEMBER_ME, "true");
         }
@@ -910,7 +934,6 @@ public class AuthenticationProcessor {
         AuthenticationManager.setRolesAndMappersInSession(authenticationSession);
 
         if (isActionRequired()) {
-            // TODO:mposolda This was changed to avoid additional redirect. Doublecheck consequences...
             //return redirectToRequiredActions(session, realm, authenticationSession, uriInfo);
             ClientSessionCode<AuthenticationSessionModel> accessCode = new ClientSessionCode<>(session, realm, authenticationSession);
             accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
@@ -921,7 +944,7 @@ public class AuthenticationProcessor {
             event.detail(Details.CODE_ID, authenticationSession.getId());  // todo This should be set elsewhere.  find out why tests fail.  Don't know where this is supposed to be set
             // the user has successfully logged in and we can clear his/her previous login failure attempts.
             logSuccess();
-            return AuthenticationManager.finishedRequiredActions(session, authenticationSession, connection, request, uriInfo, event);
+            return AuthenticationManager.finishedRequiredActions(session, authenticationSession, userSession, connection, request, uriInfo, event);
         }
     }
 

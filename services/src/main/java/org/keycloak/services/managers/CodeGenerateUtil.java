@@ -122,7 +122,7 @@ class CodeGenerateUtil {
         @Override
         public AuthenticationSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
             // Read authSessionID from cookie. Code is ignored for now
-            return session.authenticationSessions().getCurrentAuthenticationSession(realm);
+            return new AuthenticationSessionManager(session).getCurrentAuthenticationSession(realm);
         }
 
         @Override
@@ -132,7 +132,7 @@ class CodeGenerateUtil {
 
         @Override
         public void removeExpiredSession(KeycloakSession session, AuthenticationSessionModel clientSession) {
-            session.authenticationSessions().removeAuthenticationSession(clientSession.getRealm(), clientSession);
+            new AuthenticationSessionManager(session).removeAuthenticationSession(clientSession.getRealm(), clientSession, true);
         }
     }
 

@@ -23,6 +23,7 @@ import org.junit.Test;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.events.Details;
+import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
 import org.keycloak.models.BrowserSecurityHeaders;
 import org.keycloak.representations.idm.EventRepresentation;
@@ -570,7 +571,7 @@ public class LoginTest extends AbstractTestRealmKeycloakTest {
         //Assert.assertEquals("Login timeout. Please login again.", loginPage.getError());
         setTimeOffset(0);
 
-        events.expectLogin().user((String) null).session((String) null).error("expired_code").clearDetails()
+        events.expectLogin().user((String) null).session((String) null).error(Errors.EXPIRED_CODE).clearDetails()
                 .detail(Details.RESTART_AFTER_TIMEOUT, "true")
                 .client((String) null)
                 .assertEvent();

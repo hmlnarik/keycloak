@@ -52,6 +52,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.protocol.LoginProtocol;
 import org.keycloak.protocol.LoginProtocol.Error;
+import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.protocol.oidc.TokenManager;
 import org.keycloak.representations.AccessToken;
 import org.keycloak.services.ServicesLogger;
@@ -87,6 +88,9 @@ import java.util.Set;
 public class AuthenticationManager {
     public static final String SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS= "SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS";
     public static final String END_AFTER_REQUIRED_ACTIONS = "END_AFTER_REQUIRED_ACTIONS";
+
+    // Last authenticated client in userSession.
+    public static final String LAST_AUTHENTICATED_CLIENT = "LAST_AUTHENTICATED_CLIENT";
 
     // userSession note with authTime (time when authentication flow including requiredActions was finished)
     public static final String AUTH_TIME = "AUTH_TIME";
@@ -470,7 +474,9 @@ public class AuthenticationManager {
             userSession.setNote(AUTH_TIME, String.valueOf(authTime));
         }
 
-        return protocol.authenticated(userSession, new ClientSessionCode<>(session, realm, clientSession));
+        userSession.setNote(LAST_AUTHENTICATED_CLIENT, clientSession.getClient().getId());
+
+        return protocol.authenticated(userSession, clientSession);
 
     }
 
@@ -485,11 +491,11 @@ public class AuthenticationManager {
                                                   HttpRequest request, UriInfo uriInfo, EventBuilder event) {
         Response requiredAction = actionRequired(session, authSession, clientConnection, request, uriInfo, event);
         if (requiredAction != null) return requiredAction;
-        return finishedRequiredActions(session, authSession, clientConnection, request, uriInfo, event);
+        return finishedRequiredActions(session, authSession, null, clientConnection, request, uriInfo, event);
 
     }
 
-    public static Response finishedRequiredActions(KeycloakSession session, AuthenticationSessionModel authSession,
+    public static Response finishedRequiredActions(KeycloakSession session, AuthenticationSessionModel authSession, UserSessionModel userSession,
                                                    ClientConnection clientConnection, HttpRequest request, UriInfo uriInfo, EventBuilder event) {
         if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null) {
             LoginFormsProvider infoPage = session.getProvider(LoginFormsProvider.class)
@@ -506,10 +512,12 @@ public class AuthenticationManager {
                     .createInfoPage();
             return response;
 
+            // TODO:mposolda doublecheck if restart-cookie and authentication session are cleared in this flow
+
         }
         RealmModel realm = authSession.getRealm();
 
-        AuthenticatedClientSessionModel clientSession = AuthenticationProcessor.attachSession(authSession, null, session, realm, clientConnection, event);
+        AuthenticatedClientSessionModel clientSession = AuthenticationProcessor.attachSession(authSession, userSession, session, realm, clientConnection, event);
 
         event.event(EventType.LOGIN);
         event.session(clientSession.getUserSession());

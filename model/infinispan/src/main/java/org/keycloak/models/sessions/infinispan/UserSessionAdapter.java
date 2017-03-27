@@ -97,6 +97,11 @@ public class UserSessionAdapter implements UserSessionModel {
     }
 
     @Override
+    public void setUser(UserModel user) {
+        entity.setUser(user.getId());
+    }
+
+    @Override
     public String getLoginUsername() {
         return entity.getLoginUsername();
     }

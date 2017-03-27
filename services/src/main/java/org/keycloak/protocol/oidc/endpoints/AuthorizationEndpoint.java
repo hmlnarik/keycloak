@@ -41,6 +41,7 @@ import org.keycloak.protocol.oidc.utils.RedirectUtils;
 import org.keycloak.services.ErrorPageException;
 import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.Urls;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.LoginActionsService;
 import org.keycloak.services.util.CacheControlUtil;
@@ -126,7 +127,12 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
             return errorResponse;
         }
 
-        createLoginSession();
+        AuthorizationEndpointChecks checks = getOrCreateAuthenticationSession(client, request.getState());
+        if (checks.response != null) {
+            return checks.response;
+        }
+
+        authenticationSession = checks.authSession;
 
         // So back button doesn't work
         CacheControlUtil.noBackButtonCacheControlHeader();
@@ -163,6 +169,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
 
         return this;
     }
+
 
     private void checkSsl() {
         if (!uriInfo.getBaseUri().getScheme().equals("https") && realm.getSslRequired().isRequired(clientConnection)) {
@@ -358,8 +365,20 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
         }
     }
 
-    private void createLoginSession() {
-        authenticationSession = session.authenticationSessions().createAuthenticationSession(realm, client, true);
+
+    @Override
+    protected boolean isNewRequest(AuthenticationSessionModel authSession, String stateFromRequest) {
+        if (stateFromRequest==null) {
+            return true;
+        }
+
+        // If state is same, we likely have the refresh of some previous request
+        String stateFromSession = authSession.getNote(OIDCLoginProtocol.STATE_PARAM);
+        return !stateFromRequest.equals(stateFromSession);
+    }
+
+
+    private void updateAuthenticationSession() {
         authenticationSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
         authenticationSession.setRedirectUri(redirectUri);
         authenticationSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
@@ -377,11 +396,11 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
         if (request.getResponseMode() != null) authenticationSession.setNote(OIDCLoginProtocol.RESPONSE_MODE_PARAM, request.getResponseMode());
 
         // https://tools.ietf.org/html/rfc7636#section-4
-        if (request.getCodeChallenge() != null) loginSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_PARAM, request.getCodeChallenge());
+        if (request.getCodeChallenge() != null) authenticationSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_PARAM, request.getCodeChallenge());
         if (request.getCodeChallengeMethod() != null) {
-            loginSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_METHOD_PARAM, request.getCodeChallengeMethod());
+            authenticationSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_METHOD_PARAM, request.getCodeChallengeMethod());
         } else {
-            loginSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_METHOD_PARAM, OIDCLoginProtocol.PKCE_METHOD_PLAIN);
+            authenticationSession.setNote(OIDCLoginProtocol.CODE_CHALLENGE_METHOD_PARAM, OIDCLoginProtocol.PKCE_METHOD_PLAIN);
         }
 
         if (request.getAdditionalReqParams() != null) {
@@ -390,6 +409,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
             }
         }
     }
+
 
     private Response buildAuthorizationCodeAuthorizationResponse() {
         this.event.event(EventType.LOGIN);
@@ -405,6 +425,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
         String flowId = flow.getId();
 
         AuthenticationProcessor processor = createProcessor(authenticationSession, flowId, LoginActionsService.REGISTRATION_PATH);
+        authenticationSession.setNote(APP_INITIATED_FLOW, LoginActionsService.REGISTRATION_PATH);
 
         return processor.authenticate();
     }
@@ -416,6 +437,7 @@ public class AuthorizationEndpoint extends AuthorizationEndpointBase {
         String flowId = flow.getId();
 
         AuthenticationProcessor processor = createProcessor(authenticationSession, flowId, LoginActionsService.RESET_CREDENTIALS_PATH);
+        authenticationSession.setNote(APP_INITIATED_FLOW, LoginActionsService.REGISTRATION_PATH);
 
         return processor.authenticate();
     }

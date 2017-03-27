@@ -61,11 +61,12 @@ public class AuthorizationCodeTest extends AbstractKeycloakTest {
     public void clientConfiguration() {
         oauth.responseType(OAuth2Constants.CODE);
         oauth.responseMode(null);
+        oauth.state(OAuthClient.randomState());
     }
 
     @Test
     public void authorizationRequest() throws IOException {
-        oauth.state("OpenIdConnect.AuthenticationProperties=2302984sdlk");
+        oauth.state(OAuthClient.hardcodedState("OpenIdConnect.AuthenticationProperties=2302984sdlk"));
 
         OAuthClient.AuthorizationEndpointResponse response = oauth.doLogin("test-user@localhost", "password");
 
@@ -99,8 +100,6 @@ public class AuthorizationCodeTest extends AbstractKeycloakTest {
     @Test
     public void authorizationValidRedirectUri() throws IOException {
         ClientManager.realm(adminClient.realm("test")).clientId("test-app").addRedirectUris(oauth.getRedirectUri());
-
-        oauth.state("mystate");
 
         OAuthClient.AuthorizationEndpointResponse response = oauth.doLogin("test-user@localhost", "password");
 
@@ -143,7 +142,7 @@ public class AuthorizationCodeTest extends AbstractKeycloakTest {
     @Test
     public void authorizationRequestFormPostResponseMode() throws IOException {
         oauth.responseMode(OIDCResponseMode.FORM_POST.toString().toLowerCase());
-        oauth.state("OpenIdConnect.AuthenticationProperties=2302984sdlk");
+        oauth.state(OAuthClient.hardcodedState("OpenIdConnect.AuthenticationProperties=2302984sdlk"));
         oauth.doLoginGrant("test-user@localhost", "password");
 
         String sources = driver.getPageSource();

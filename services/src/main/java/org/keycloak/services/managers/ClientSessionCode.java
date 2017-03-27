@@ -44,8 +44,6 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
 
     private static final Logger logger = Logger.getLogger(ClientSessionCode.class);
 
-    private static final String NEXT_CODE = ClientSessionCode.class.getName() + ".nextCode";
-
     private KeycloakSession session;
     private final RealmModel realm;
     private final CLIENT_SESSION commonLoginSession;
@@ -206,12 +204,11 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
     }
 
     public String getCode() {
-        String nextCode = (String) session.getAttribute(NEXT_CODE + "." + commonLoginSession.getId());
+        String nextCode = commonLoginSession.getNote(ACTIVE_CODE);
         if (nextCode == null) {
             nextCode = generateCode(commonLoginSession);
-            session.setAttribute(NEXT_CODE + "." + commonLoginSession.getId(), nextCode);
         } else {
-            logger.debug("Code already generated for session, using code from session attributes");
+            logger.debug("Code already generated for session, using same code");
         }
         return nextCode;
     }
