@@ -77,7 +77,7 @@ public class AuthenticationSessionProviderTest {
         ClientModel client1 = realm.getClientByClientId("test-app");
         UserModel user1 = session.users().getUserByUsername("user1", realm);
 
-        AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client1, false);
+        AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client1);
 
         authSession.setAction("foo");
         authSession.setTimestamp(100);

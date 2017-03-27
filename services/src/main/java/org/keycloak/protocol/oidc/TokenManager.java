@@ -57,6 +57,7 @@ import org.keycloak.representations.IDToken;
 import org.keycloak.representations.RefreshToken;
 import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.UserSessionManager;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -366,7 +367,7 @@ public class TokenManager {
         clientSession.setTimestamp(Time.currentTime());
 
         // Remove authentication session now
-        session.authenticationSessions().removeAuthenticationSession(userSession.getRealm(), authSession);
+        new AuthenticationSessionManager(session).removeAuthenticationSession(userSession.getRealm(), authSession, true);
 
         return clientSession;
     }

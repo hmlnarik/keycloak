@@ -64,6 +64,7 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
+import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.protocol.ProtocolMapper;
 import org.keycloak.protocol.oidc.mappers.OIDCAccessTokenMapper;
 import org.keycloak.representations.AccessToken;
@@ -220,7 +221,8 @@ public class PolicyEvaluationService {
                     AuthenticatedClientSessionModel clientSession = null;
                     UserSessionModel userSession = null;
                     try {
-                        userSession = keycloakSession.sessions().createUserSession(realm, userModel, userModel.getUsername(), "127.0.0.1", "passwd", false, null, null);
+                        String id = KeycloakModelUtils.generateId();
+                        userSession = keycloakSession.sessions().createUserSession(id, realm, userModel, userModel.getUsername(), "127.0.0.1", "passwd", false, null, null);
                         clientSession = keycloakSession.sessions().createClientSession(userSession.getRealm(), clientModel, userSession);
 
                         UserSessionModel finalUserSession = userSession;

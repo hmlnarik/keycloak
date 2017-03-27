@@ -55,6 +55,7 @@ import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.services.util.CacheControlUtil;
@@ -89,7 +90,7 @@ import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 /**
- * Resource class for the oauth/openid connect token service
+ * Resource class for the saml connect token service
  *
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
@@ -100,6 +101,8 @@ public class SamlService extends AuthorizationEndpointBase {
 
     @Context
     protected KeycloakSession session;
+
+    private String requestRelayState;
 
     public SamlService(RealmModel realm, EventBuilder event) {
         super(realm, event);
@@ -271,7 +274,13 @@ public class SamlService extends AuthorizationEndpointBase {
                 return ErrorPage.error(session, Messages.INVALID_REDIRECT_URI);
             }
 
-            AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client, true);
+            AuthorizationEndpointChecks checks = getOrCreateAuthenticationSession(client, relayState);
+            if (checks.response != null) {
+                return checks.response;
+            }
+
+            AuthenticationSessionModel authSession = checks.authSession;
+
             authSession.setProtocol(SamlProtocol.LOGIN_PROTOCOL);
             authSession.setRedirectUri(redirect);
             authSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
@@ -443,6 +452,16 @@ public class SamlService extends AuthorizationEndpointBase {
                 return !realm.getSslRequired().isRequired(clientConnection);
             }
         }
+
+        public Response execute(String samlRequest, String samlResponse, String relayState) {
+            Response response = basicChecks(samlRequest, samlResponse);
+            if (response != null)
+                return response;
+            if (samlRequest != null)
+                return handleSamlRequest(samlRequest, relayState);
+            else
+                return handleSamlResponse(samlResponse, relayState);
+        }
     }
 
     protected class PostBindingProtocol extends BindingProtocol {
@@ -465,16 +484,6 @@ public class SamlService extends AuthorizationEndpointBase {
         @Override
         protected String getBindingType() {
             return SamlProtocol.SAML_POST_BINDING;
-        }
-
-        public Response execute(String samlRequest, String samlResponse, String relayState) {
-            Response response = basicChecks(samlRequest, samlResponse);
-            if (response != null)
-                return response;
-            if (samlRequest != null)
-                return handleSamlRequest(samlRequest, relayState);
-            else
-                return handleSamlResponse(samlResponse, relayState);
         }
 
     }
@@ -505,16 +514,6 @@ public class SamlService extends AuthorizationEndpointBase {
         @Override
         protected String getBindingType() {
             return SamlProtocol.SAML_REDIRECT_BINDING;
-        }
-
-        public Response execute(String samlRequest, String samlResponse, String relayState) {
-            Response response = basicChecks(samlRequest, samlResponse);
-            if (response != null)
-                return response;
-            if (samlRequest != null)
-                return handleSamlRequest(samlRequest, relayState);
-            else
-                return handleSamlResponse(samlResponse, relayState);
         }
 
     }
@@ -616,7 +615,7 @@ public class SamlService extends AuthorizationEndpointBase {
             return ErrorPage.error(session, Messages.INVALID_REDIRECT_URI);
         }
 
-        AuthenticationSessionModel authSession = createLoginSessionForIdpInitiatedSso(this.session, this.realm, client, relayState);
+        AuthenticationSessionModel authSession = getOrCreateLoginSessionForIdpInitiatedSso(this.session, this.realm, client, relayState);
 
         return newBrowserAuthentication(authSession, false, false);
     }
@@ -632,7 +631,7 @@ public class SamlService extends AuthorizationEndpointBase {
      * @param relayState Optional relay state - free field as per SAML specification
      * @return
      */
-    public static AuthenticationSessionModel createLoginSessionForIdpInitiatedSso(KeycloakSession session, RealmModel realm, ClientModel client, String relayState) {
+    private AuthenticationSessionModel getOrCreateLoginSessionForIdpInitiatedSso(KeycloakSession session, RealmModel realm, ClientModel client, String relayState) {
         String bindingType = SamlProtocol.SAML_POST_BINDING;
         if (client.getManagementUrl() == null && client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_POST_ATTRIBUTE) == null && client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_REDIRECT_ATTRIBUTE) != null) {
             bindingType = SamlProtocol.SAML_REDIRECT_BINDING;
@@ -648,7 +647,12 @@ public class SamlService extends AuthorizationEndpointBase {
             redirect = client.getManagementUrl();
         }
 
-        AuthenticationSessionModel authSession = session.authenticationSessions().createAuthenticationSession(realm, client, true);
+        AuthorizationEndpointChecks checks = getOrCreateAuthenticationSession(client, null);
+        if (checks.response != null) {
+            throw new IllegalStateException("Not expected to detect re-sent request for IDP initiated SSO");
+        }
+
+        AuthenticationSessionModel authSession = checks.authSession;
         authSession.setProtocol(SamlProtocol.LOGIN_PROTOCOL);
         authSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
         authSession.setNote(SamlProtocol.SAML_BINDING, SamlProtocol.SAML_POST_BINDING);
@@ -663,6 +667,22 @@ public class SamlService extends AuthorizationEndpointBase {
         }
 
         return authSession;
+    }
+
+
+    @Override
+    protected boolean isNewRequest(AuthenticationSessionModel authSession, String requestRelayState) {
+        // No support of browser "refresh" or "back" buttons for SAML IDP initiated SSO. So always treat as new request
+        String idpInitiated = authSession.getNote(SamlProtocol.SAML_IDP_INITIATED_LOGIN);
+        if (Boolean.parseBoolean(idpInitiated)) {
+            return true;
+        }
+
+        if (requestRelayState == null) {
+            return true;
+        }
+
+        return !requestRelayState.equals(authSession.getNote(GeneralConstants.RELAY_STATE));
     }
 
     @POST

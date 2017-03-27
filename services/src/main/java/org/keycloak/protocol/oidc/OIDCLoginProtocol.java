@@ -36,6 +36,7 @@ import org.keycloak.protocol.oidc.utils.OIDCResponseType;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.ResourceAdminManager;
 import org.keycloak.sessions.CommonClientSessionModel;
@@ -155,8 +156,8 @@ public class OIDCLoginProtocol implements LoginProtocol {
 
 
     @Override
-    public Response authenticated(UserSessionModel userSession, ClientSessionCode<AuthenticatedClientSessionModel> accessCode) {
-        AuthenticatedClientSessionModel clientSession = accessCode.getClientSession();
+    public Response authenticated(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
+        ClientSessionCode<AuthenticatedClientSessionModel> accessCode = new ClientSessionCode<>(session, realm, clientSession);
         setupResponseTypeAndMode(clientSession);
 
         String redirect = clientSession.getRedirectUri();
@@ -221,8 +222,7 @@ public class OIDCLoginProtocol implements LoginProtocol {
         OIDCRedirectUriBuilder redirectUri = OIDCRedirectUriBuilder.fromUri(redirect, responseMode).addParam(OAuth2Constants.ERROR, translateError(error));
         if (state != null)
             redirectUri.addParam(OAuth2Constants.STATE, state);
-        session.authenticationSessions().removeAuthenticationSession(realm, authSession);
-        RestartLoginCookie.expireRestartCookie(realm, session.getContext().getConnection(), uriInfo);
+        new AuthenticationSessionManager(session).removeAuthenticationSession(realm, authSession, true);
         return redirectUri.build();
     }
 
