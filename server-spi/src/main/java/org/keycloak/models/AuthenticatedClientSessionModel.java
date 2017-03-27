@@ -23,7 +23,7 @@ import org.keycloak.sessions.CommonClientSessionModel;
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface ClientLoginSessionModel extends CommonClientSessionModel {
+public interface AuthenticatedClientSessionModel extends CommonClientSessionModel {
 
     void setUserSession(UserSessionModel userSession);
     UserSessionModel getUserSession();

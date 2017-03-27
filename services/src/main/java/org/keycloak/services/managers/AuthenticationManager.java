@@ -37,7 +37,7 @@ import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.jose.jws.AlgorithmType;
 import org.keycloak.jose.jws.JWSBuilder;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientTemplateModel;
 import org.keycloak.models.KeyManager;
@@ -168,7 +168,7 @@ public class AuthenticationManager {
         logger.debugv("Logging out: {0} ({1})", user.getUsername(), userSession.getId());
         expireUserSessionCookie(session, userSession, realm, uriInfo, headers, connection);
 
-        for (ClientLoginSessionModel clientSession : userSession.getClientLoginSessions().values()) {
+        for (AuthenticatedClientSessionModel clientSession : userSession.getAuthenticatedClientSessions().values()) {
             backchannelLogoutClientSession(session, realm, clientSession, userSession, uriInfo, headers);
         }
         if (logoutBroker) {
@@ -186,9 +186,9 @@ public class AuthenticationManager {
         session.sessions().removeUserSession(realm, userSession);
     }
 
-    public static void backchannelLogoutClientSession(KeycloakSession session, RealmModel realm, ClientLoginSessionModel clientSession, UserSessionModel userSession, UriInfo uriInfo, HttpHeaders headers) {
+    public static void backchannelLogoutClientSession(KeycloakSession session, RealmModel realm, AuthenticatedClientSessionModel clientSession, UserSessionModel userSession, UriInfo uriInfo, HttpHeaders headers) {
         ClientModel client = clientSession.getClient();
-        if (!client.isFrontchannelLogout() && !ClientLoginSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) {
+        if (!client.isFrontchannelLogout() && !AuthenticatedClientSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) {
             String authMethod = clientSession.getProtocol();
             if (authMethod == null) return; // must be a keycloak service like account
             LoginProtocol protocol = session.getProvider(LoginProtocol.class, authMethod);
@@ -196,7 +196,7 @@ public class AuthenticationManager {
                     .setHttpHeaders(headers)
                     .setUriInfo(uriInfo);
             protocol.backchannelLogout(userSession, clientSession);
-            clientSession.setAction(ClientLoginSessionModel.Action.LOGGED_OUT.name());
+            clientSession.setAction(AuthenticatedClientSessionModel.Action.LOGGED_OUT.name());
         }
 
     }
@@ -207,8 +207,8 @@ public class AuthenticationManager {
 
         List<UserSessionModel> userSessions = session.sessions().getUserSessions(realm, user);
         for (UserSessionModel userSession : userSessions) {
-            Collection<ClientLoginSessionModel> clientSessions = userSession.getClientLoginSessions().values();
-            for (ClientLoginSessionModel clientSession : clientSessions) {
+            Collection<AuthenticatedClientSessionModel> clientSessions = userSession.getAuthenticatedClientSessions().values();
+            for (AuthenticatedClientSessionModel clientSession : clientSessions) {
                 if (clientSession.getClient().getId().equals(clientId)) {
                     AuthenticationManager.backchannelLogoutClientSession(session, realm, clientSession, userSession, uriInfo, headers);
                     TokenManager.dettachClientSession(session.sessions(), realm, clientSession);
@@ -225,10 +225,10 @@ public class AuthenticationManager {
         if (userSession.getState() != UserSessionModel.State.LOGGING_OUT) {
             userSession.setState(UserSessionModel.State.LOGGING_OUT);
         }
-        List<ClientLoginSessionModel> redirectClients = new LinkedList<>();
-        for (ClientLoginSessionModel clientSession : userSession.getClientLoginSessions().values()) {
+        List<AuthenticatedClientSessionModel> redirectClients = new LinkedList<>();
+        for (AuthenticatedClientSessionModel clientSession : userSession.getAuthenticatedClientSessions().values()) {
             ClientModel client = clientSession.getClient();
-            if (ClientLoginSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) continue;
+            if (AuthenticatedClientSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) continue;
             if (client.isFrontchannelLogout()) {
                 String authMethod = clientSession.getProtocol();
                 if (authMethod == null) continue; // must be a keycloak service like account
@@ -243,21 +243,21 @@ public class AuthenticationManager {
                 try {
                     logger.debugv("backchannel logout to: {0}", client.getClientId());
                     protocol.backchannelLogout(userSession, clientSession);
-                    clientSession.setAction(ClientLoginSessionModel.Action.LOGGED_OUT.name());
+                    clientSession.setAction(AuthenticatedClientSessionModel.Action.LOGGED_OUT.name());
                 } catch (Exception e) {
                     ServicesLogger.LOGGER.failedToLogoutClient(e);
                 }
             }
         }
 
-        for (ClientLoginSessionModel nextRedirectClient : redirectClients) {
+        for (AuthenticatedClientSessionModel nextRedirectClient : redirectClients) {
             String authMethod = nextRedirectClient.getProtocol();
             LoginProtocol protocol = session.getProvider(LoginProtocol.class, authMethod);
             protocol.setRealm(realm)
                     .setHttpHeaders(headers)
                     .setUriInfo(uriInfo);
             // setting this to logged out cuz I"m not sure protocols can always verify that the client was logged out or not
-            nextRedirectClient.setAction(ClientLoginSessionModel.Action.LOGGED_OUT.name());
+            nextRedirectClient.setAction(AuthenticatedClientSessionModel.Action.LOGGED_OUT.name());
             try {
                 logger.debugv("frontchannel logout to: {0}", nextRedirectClient.getClient().getClientId());
                 Response response = protocol.frontchannelLogout(userSession, nextRedirectClient);
@@ -420,7 +420,7 @@ public class AuthenticationManager {
 
 
     public static Response redirectAfterSuccessfulFlow(KeycloakSession session, RealmModel realm, UserSessionModel userSession,
-                                                ClientLoginSessionModel clientSession,
+                                                AuthenticatedClientSessionModel clientSession,
                                                 HttpRequest request, UriInfo uriInfo, ClientConnection clientConnection,
                                                 EventBuilder event, String protocol) {
         LoginProtocol protocolImpl = session.getProvider(LoginProtocol.class, protocol);
@@ -433,7 +433,7 @@ public class AuthenticationManager {
     }
 
     public static Response redirectAfterSuccessfulFlow(KeycloakSession session, RealmModel realm, UserSessionModel userSession,
-                                                       ClientLoginSessionModel clientSession,
+                                                       AuthenticatedClientSessionModel clientSession,
                                                        HttpRequest request, UriInfo uriInfo, ClientConnection clientConnection,
                                                        EventBuilder event, LoginProtocol protocol) {
         Cookie sessionCookie = request.getHttpHeaders().getCookies().get(AuthenticationManager.KEYCLOAK_SESSION_COOKIE);
@@ -474,7 +474,7 @@ public class AuthenticationManager {
 
     }
 
-    public static boolean isSSOAuthentication(ClientLoginSessionModel clientSession) {
+    public static boolean isSSOAuthentication(AuthenticatedClientSessionModel clientSession) {
         String ssoAuth = clientSession.getNote(SSO_AUTH);
         return Boolean.parseBoolean(ssoAuth);
     }
@@ -509,7 +509,7 @@ public class AuthenticationManager {
         }
         RealmModel realm = authSession.getRealm();
 
-        ClientLoginSessionModel clientSession = AuthenticationProcessor.attachSession(authSession, null, session, realm, clientConnection, event);
+        AuthenticatedClientSessionModel clientSession = AuthenticationProcessor.attachSession(authSession, null, session, realm, clientConnection, event);
 
         event.event(EventType.LOGIN);
         event.session(clientSession.getUserSession());
@@ -616,8 +616,8 @@ public class AuthenticationManager {
             if (realmRoles.size() > 0 || resourceRoles.size() > 0 || protocolMappers.size() > 0) {
                 accessCode.
 
-                        setAction(ClientLoginSessionModel.Action.REQUIRED_ACTIONS.name());
-                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, ClientLoginSessionModel.Action.OAUTH_GRANT.name());
+                        setAction(AuthenticatedClientSessionModel.Action.REQUIRED_ACTIONS.name());
+                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, AuthenticatedClientSessionModel.Action.OAUTH_GRANT.name());
 
                 return session.getProvider(LoginFormsProvider.class)
                         .setClientSessionCode(accessCode.getCode())

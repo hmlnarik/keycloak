@@ -31,7 +31,7 @@ import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.AuthenticatorConfigModel;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -849,8 +849,8 @@ public class AuthenticationProcessor {
     }
 
     // May create userSession too
-    public ClientLoginSessionModel attachSession() {
-        ClientLoginSessionModel clientSession = attachSession(authenticationSession, userSession, session, realm, connection, event);
+    public AuthenticatedClientSessionModel attachSession() {
+        AuthenticatedClientSessionModel clientSession = attachSession(authenticationSession, userSession, session, realm, connection, event);
 
         if (userSession == null) {
             userSession = clientSession.getUserSession();
@@ -860,7 +860,7 @@ public class AuthenticationProcessor {
     }
 
     // May create new userSession too (if userSession argument is null)
-    public static ClientLoginSessionModel attachSession(AuthenticationSessionModel authSession, UserSessionModel userSession, KeycloakSession session, RealmModel realm, ClientConnection connection, EventBuilder event) {
+    public static AuthenticatedClientSessionModel attachSession(AuthenticationSessionModel authSession, UserSessionModel userSession, KeycloakSession session, RealmModel realm, ClientConnection connection, EventBuilder event) {
         String username = authSession.getAuthenticatedUser().getUsername();
         String attemptedUsername = authSession.getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
         if (attemptedUsername != null) username = attemptedUsername;
@@ -874,7 +874,7 @@ public class AuthenticationProcessor {
             event.detail(Details.REMEMBER_ME, "true");
         }
 
-        ClientLoginSessionModel clientSession = TokenManager.attachAuthenticationSession(session, userSession, authSession);
+        AuthenticatedClientSessionModel clientSession = TokenManager.attachAuthenticationSession(session, userSession, authSession);
 
         event.user(userSession.getUser())
                 .detail(Details.USERNAME, username)
@@ -890,7 +890,7 @@ public class AuthenticationProcessor {
     public Response finishAuthentication(LoginProtocol protocol) {
         event.success();
         RealmModel realm = authenticationSession.getRealm();
-        ClientLoginSessionModel clientSession = attachSession();
+        AuthenticatedClientSessionModel clientSession = attachSession();
         return AuthenticationManager.redirectAfterSuccessfulFlow(session, realm, userSession,clientSession, request, uriInfo, connection, event, protocol);
 
     }
