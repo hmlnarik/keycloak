@@ -23,7 +23,7 @@ import org.infinispan.context.Flag;
 import org.jboss.logging.Logger;
 import org.keycloak.common.util.Time;
 import org.keycloak.models.ClientInitialAccessModel;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -58,7 +58,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -111,11 +110,11 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     }
 
     @Override
-    public ClientLoginSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession) {
+    public AuthenticatedClientSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession) {
         ClientLoginSessionEntity entity = new ClientLoginSessionEntity();
         entity.setClient(client.getId());
 
-        ClientLoginSessionAdapter adapter = new ClientLoginSessionAdapter(entity, (UserSessionAdapter) userSession, this, sessionCache);
+        AuthenticatedClientSessionAdapter adapter = new AuthenticatedClientSessionAdapter(entity, (UserSessionAdapter) userSession, this, sessionCache);
         adapter.setUserSession(userSession);
         return adapter;
     }
@@ -641,7 +640,7 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     }*/
 
     @Override
-    public ClientLoginSessionModel createOfflineClientSession(ClientLoginSessionModel clientSession) {
+    public AuthenticatedClientSessionModel createOfflineClientSession(AuthenticatedClientSessionModel clientSession) {
         return null;
     }
 

@@ -18,7 +18,7 @@
 package org.keycloak.protocol;
 
 import org.keycloak.events.EventBuilder;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
@@ -67,12 +67,12 @@ public interface LoginProtocol extends Provider {
 
     LoginProtocol setEventBuilder(EventBuilder event);
 
-    Response authenticated(UserSessionModel userSession, ClientSessionCode<ClientLoginSessionModel> accessCode);
+    Response authenticated(UserSessionModel userSession, ClientSessionCode<AuthenticatedClientSessionModel> accessCode);
 
     Response sendError(AuthenticationSessionModel authSession, Error error);
 
-    void backchannelLogout(UserSessionModel userSession, ClientLoginSessionModel clientSession);
-    Response frontchannelLogout(UserSessionModel userSession, ClientLoginSessionModel clientSession);
+    void backchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession);
+    Response frontchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession);
     Response finishLogout(UserSessionModel userSession);
 
     /**

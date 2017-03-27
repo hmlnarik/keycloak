@@ -28,7 +28,7 @@ import java.util.List;
 public interface UserSessionProvider extends Provider {
 
     ClientSessionModel createClientSession(RealmModel realm, ClientModel client);
-    ClientLoginSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession);
+    AuthenticatedClientSessionModel createClientSession(RealmModel realm, ClientModel client, UserSessionModel userSession);
     ClientSessionModel getClientSession(RealmModel realm, String id);
     ClientSessionModel getClientSession(String id);
 
@@ -65,7 +65,7 @@ public interface UserSessionProvider extends Provider {
     // Removes the attached clientSessions as well
     void removeOfflineUserSession(RealmModel realm, UserSessionModel userSession);
 
-    ClientLoginSessionModel createOfflineClientSession(ClientLoginSessionModel clientSession);
+    AuthenticatedClientSessionModel createOfflineClientSession(AuthenticatedClientSessionModel clientSession);
     ClientSessionModel getOfflineClientSession(RealmModel realm, String clientSessionId);
     List<UserSessionModel> getOfflineUserSessions(RealmModel realm, UserModel user);
 

@@ -23,7 +23,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.keycloak.common.util.Time;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
@@ -469,12 +469,12 @@ public class UserSessionProviderTest {
         ClientModel client2 = realm.getClientByClientId("third-party");
 
         // Create client1 session
-        ClientLoginSessionModel clientSession1 = session.sessions().createClientSession(realm, client1, userSession);
+        AuthenticatedClientSessionModel clientSession1 = session.sessions().createClientSession(realm, client1, userSession);
         clientSession1.setAction("foo1");
         clientSession1.setTimestamp(100);
 
         // Create client2 session
-        ClientLoginSessionModel clientSession2 = session.sessions().createClientSession(realm, client2, userSession);
+        AuthenticatedClientSessionModel clientSession2 = session.sessions().createClientSession(realm, client2, userSession);
         clientSession2.setAction("foo2");
         clientSession2.setTimestamp(200);
 
@@ -483,7 +483,7 @@ public class UserSessionProviderTest {
 
         // Ensure sessions are here
         userSession = session.sessions().getUserSession(realm, userSession.getId());
-        Map<String, ClientLoginSessionModel> clientSessions = userSession.getClientLoginSessions();
+        Map<String, AuthenticatedClientSessionModel> clientSessions = userSession.getAuthenticatedClientSessions();
         Assert.assertEquals(2, clientSessions.size());
         testClientLoginSession(clientSessions.get(client1.getId()), "test-app", userSession.getId(), "foo1", 100);
         testClientLoginSession(clientSessions.get(client2.getId()), "third-party", userSession.getId(), "foo2", 200);
@@ -496,7 +496,7 @@ public class UserSessionProviderTest {
 
         // Ensure updated
         userSession = session.sessions().getUserSession(realm, userSession.getId());
-        clientSessions = userSession.getClientLoginSessions();
+        clientSessions = userSession.getAuthenticatedClientSessions();
         testClientLoginSession(clientSessions.get(client1.getId()), "test-app", userSession.getId(), "foo1-updated", 100);
 
         // Rewrite session2
@@ -509,25 +509,25 @@ public class UserSessionProviderTest {
 
         // Ensure updated
         userSession = session.sessions().getUserSession(realm, userSession.getId());
-        clientSessions = userSession.getClientLoginSessions();
+        clientSessions = userSession.getAuthenticatedClientSessions();
         Assert.assertEquals(2, clientSessions.size());
         testClientLoginSession(clientSessions.get(client1.getId()), "test-app", userSession.getId(), "foo1-updated", 100);
         testClientLoginSession(clientSessions.get(client2.getId()), "third-party", userSession.getId(), "foo2-rewrited", 300);
 
         // remove session
-        clientSession1 = userSession.getClientLoginSessions().get(client1.getId());
+        clientSession1 = userSession.getAuthenticatedClientSessions().get(client1.getId());
         clientSession1.setUserSession(null);
 
         // Commit and ensure removed
         resetSession();
 
         userSession = session.sessions().getUserSession(realm, userSession.getId());
-        clientSessions = userSession.getClientLoginSessions();
+        clientSessions = userSession.getAuthenticatedClientSessions();
         Assert.assertEquals(1, clientSessions.size());
         Assert.assertNull(clientSessions.get(client1.getId()));
     }
 
-    private void testClientLoginSession(ClientLoginSessionModel clientLoginSession, String expectedClientId, String expectedUserSessionId, String expectedAction, int expectedTimestamp) {
+    private void testClientLoginSession(AuthenticatedClientSessionModel clientLoginSession, String expectedClientId, String expectedUserSessionId, String expectedAction, int expectedTimestamp) {
         Assert.assertEquals(expectedClientId, clientLoginSession.getClient().getClientId());
         Assert.assertEquals(expectedUserSessionId, clientLoginSession.getUserSession().getId());
         Assert.assertEquals(expectedAction, clientLoginSession.getAction());

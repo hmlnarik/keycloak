@@ -18,7 +18,7 @@
 package org.keycloak.models.sessions.infinispan;
 
 import org.infinispan.Cache;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -62,12 +62,12 @@ public class UserSessionAdapter implements UserSessionModel {
     }
 
     @Override
-    public Map<String, ClientLoginSessionModel> getClientLoginSessions() {
+    public Map<String, AuthenticatedClientSessionModel> getAuthenticatedClientSessions() {
         Map<String, ClientLoginSessionEntity> clientSessionEntities = entity.getClientLoginSessions();
-        Map<String, ClientLoginSessionModel> result = new HashMap<>();
+        Map<String, AuthenticatedClientSessionModel> result = new HashMap<>();
 
         clientSessionEntities.forEach((String key, ClientLoginSessionEntity value) -> {
-            result.put(key, new ClientLoginSessionAdapter(value, this, provider, cache));
+            result.put(key, new AuthenticatedClientSessionAdapter(value, this, provider, cache));
         });
 
         return Collections.unmodifiableMap(result);

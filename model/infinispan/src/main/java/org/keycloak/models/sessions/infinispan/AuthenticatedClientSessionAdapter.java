@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.infinispan.Cache;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
@@ -34,14 +34,14 @@ import org.keycloak.models.sessions.infinispan.entities.UserSessionEntity;
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class ClientLoginSessionAdapter implements ClientLoginSessionModel {
+public class AuthenticatedClientSessionAdapter implements AuthenticatedClientSessionModel {
 
     private final ClientLoginSessionEntity entity;
     private final InfinispanUserSessionProvider provider;
     private final Cache<String, SessionEntity> cache;
     private UserSessionAdapter userSession;
 
-    public ClientLoginSessionAdapter(ClientLoginSessionEntity entity, UserSessionAdapter userSession, InfinispanUserSessionProvider provider, Cache<String, SessionEntity> cache) {
+    public AuthenticatedClientSessionAdapter(ClientLoginSessionEntity entity, UserSessionAdapter userSession, InfinispanUserSessionProvider provider, Cache<String, SessionEntity> cache) {
         this.provider = provider;
         this.entity = entity;
         this.cache = cache;
