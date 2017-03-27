@@ -165,7 +165,7 @@ public class IdentityBrokerService {
 //
 //
 //        ClientLoginSessionModel clientSession = null;
-//        for (ClientLoginSessionModel cs : cookieResult.getSession().getClientLoginSessions().values()) {
+//        for (ClientLoginSessionModel cs : cookieResult.getSession().getAuthenticatedClientSessions().values()) {
 //            if (cs.getClient().getClientId().equals(clientId)) {
 //                byte[] decoded = Base64Url.decode(hash);
 //                MessageDigest md = null;

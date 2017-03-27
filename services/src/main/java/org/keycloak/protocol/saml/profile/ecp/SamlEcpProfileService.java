@@ -20,7 +20,7 @@ package org.keycloak.protocol.saml.profile.ecp;
 import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.AuthenticationFlowModel;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
@@ -94,7 +94,7 @@ public class SamlEcpProfileService extends SamlService {
         return new SamlProtocol() {
             // method created to send a SOAP Binding response instead of a HTTP POST response
             @Override
-            protected Response buildAuthenticatedResponse(ClientLoginSessionModel clientSession, String redirectUri, Document samlDocument, JaxrsSAML2BindingBuilder bindingBuilder) throws ConfigurationException, ProcessingException, IOException {
+            protected Response buildAuthenticatedResponse(AuthenticatedClientSessionModel clientSession, String redirectUri, Document samlDocument, JaxrsSAML2BindingBuilder bindingBuilder) throws ConfigurationException, ProcessingException, IOException {
                 Document document = bindingBuilder.postBinding(samlDocument).getDocument();
 
                 try {
@@ -114,7 +114,7 @@ public class SamlEcpProfileService extends SamlService {
                 }
             }
 
-            private void createRequestAuthenticatedHeader(ClientLoginSessionModel clientSession, Soap.SoapMessageBuilder messageBuilder) {
+            private void createRequestAuthenticatedHeader(AuthenticatedClientSessionModel clientSession, Soap.SoapMessageBuilder messageBuilder) {
                 ClientModel client = clientSession.getClient();
 
                 if ("true".equals(client.getAttribute(SamlConfigAttributes.SAML_CLIENT_SIGNATURE_ATTRIBUTE))) {

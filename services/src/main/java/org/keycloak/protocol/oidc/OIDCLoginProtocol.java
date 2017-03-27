@@ -23,7 +23,7 @@ import org.keycloak.common.util.Time;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -155,8 +155,8 @@ public class OIDCLoginProtocol implements LoginProtocol {
 
 
     @Override
-    public Response authenticated(UserSessionModel userSession, ClientSessionCode<ClientLoginSessionModel> accessCode) {
-        ClientLoginSessionModel clientSession = accessCode.getClientSession();
+    public Response authenticated(UserSessionModel userSession, ClientSessionCode<AuthenticatedClientSessionModel> accessCode) {
+        AuthenticatedClientSessionModel clientSession = accessCode.getClientSession();
         setupResponseTypeAndMode(clientSession);
 
         String redirect = clientSession.getRedirectUri();
@@ -242,13 +242,13 @@ public class OIDCLoginProtocol implements LoginProtocol {
     }
 
     @Override
-    public void backchannelLogout(UserSessionModel userSession, ClientLoginSessionModel clientSession) {
+    public void backchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
         ClientModel client = clientSession.getClient();
         new ResourceAdminManager(session).logoutClientSession(uriInfo.getRequestUri(), realm, client, clientSession);
     }
 
     @Override
-    public Response frontchannelLogout(UserSessionModel userSession, ClientLoginSessionModel clientSession) {
+    public Response frontchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
         // todo oidc redirect support
         throw new RuntimeException("NOT IMPLEMENTED");
     }

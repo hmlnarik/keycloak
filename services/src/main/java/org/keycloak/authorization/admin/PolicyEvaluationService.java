@@ -55,9 +55,8 @@ import org.keycloak.authorization.policy.evaluation.Result;
 import org.keycloak.authorization.store.ScopeStore;
 import org.keycloak.authorization.store.StoreFactory;
 import org.keycloak.authorization.util.Permissions;
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.ProtocolMapperModel;
@@ -218,14 +217,14 @@ public class PolicyEvaluationService {
 
                 if (clientId != null) {
                     ClientModel clientModel = realm.getClientById(clientId);
-                    ClientLoginSessionModel clientSession = null;
+                    AuthenticatedClientSessionModel clientSession = null;
                     UserSessionModel userSession = null;
                     try {
                         userSession = keycloakSession.sessions().createUserSession(realm, userModel, userModel.getUsername(), "127.0.0.1", "passwd", false, null, null);
                         clientSession = keycloakSession.sessions().createClientSession(userSession.getRealm(), clientModel, userSession);
 
                         UserSessionModel finalUserSession = userSession;
-                        ClientLoginSessionModel finalClientSession = clientSession;
+                        AuthenticatedClientSessionModel finalClientSession = clientSession;
 
                         for (ProtocolMapperModel mapping : clientModel.getProtocolMappers()) {
                             KeycloakSessionFactory sessionFactory = keycloakSession.getKeycloakSessionFactory();

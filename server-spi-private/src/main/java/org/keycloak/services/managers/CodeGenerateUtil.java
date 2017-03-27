@@ -20,7 +20,7 @@ package org.keycloak.services.managers;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.keycloak.models.ClientLoginSessionModel;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -39,7 +39,7 @@ class CodeGenerateUtil {
     static {
         PARSERS.put(ClientSessionModel.class, new ClientSessionModelParser());
         PARSERS.put(AuthenticationSessionModel.class, new AuthenticationSessionModelParser());
-        PARSERS.put(ClientLoginSessionModel.class, new ClientLoginSessionModelParser());
+        PARSERS.put(AuthenticatedClientSessionModel.class, new AuthenticatedClientSessionModelParser());
     }
 
 
@@ -137,10 +137,10 @@ class CodeGenerateUtil {
     }
 
 
-    private static class ClientLoginSessionModelParser implements ClientSessionParser<ClientLoginSessionModel> {
+    private static class AuthenticatedClientSessionModelParser implements ClientSessionParser<AuthenticatedClientSessionModel> {
 
         @Override
-        public ClientLoginSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
+        public AuthenticatedClientSessionModel parseSession(String code, KeycloakSession session, RealmModel realm) {
             try {
                 String[] parts = code.split("\\.");
                 String userSessionId = parts[2];
@@ -151,14 +151,14 @@ class CodeGenerateUtil {
                     return null;
                 }
 
-                return userSession.getClientLoginSessions().get(clientUUID);
+                return userSession.getAuthenticatedClientSessions().get(clientUUID);
             } catch (ArrayIndexOutOfBoundsException e) {
                 return null;
             }
         }
 
         @Override
-        public String generateCode(ClientLoginSessionModel clientSession, String actionId) {
+        public String generateCode(AuthenticatedClientSessionModel clientSession, String actionId) {
             String userSessionId = clientSession.getUserSession().getId();
             String clientUUID = clientSession.getClient().getId();
             StringBuilder sb = new StringBuilder();
@@ -172,7 +172,7 @@ class CodeGenerateUtil {
         }
 
         @Override
-        public void removeExpiredSession(KeycloakSession session, ClientLoginSessionModel clientSession) {
+        public void removeExpiredSession(KeycloakSession session, AuthenticatedClientSessionModel clientSession) {
             throw new IllegalStateException("Not yet implemented");
         }
 
