@@ -37,7 +37,6 @@ import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
-import org.keycloak.models.ActionTokenStoreProvider;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientLoginSessionModel;
 import org.keycloak.models.ClientModel;
@@ -678,19 +677,14 @@ public class LoginActionsService {
     protected Response resetCredentials(String code, ResetCredentialsActionToken token, String execution) {
         event.event(EventType.RESET_PASSWORD);
 
-        ResetCredentialsActionToken tokenFromStore = ResetCredentialsActionToken.from(token,
-          session.getProvider(ActionTokenStoreProvider.class)
-            .get(ResetCredentialsActionToken.key(token.getUserId()), token.getActionVerificationNonce()));
-
-        if (tokenFromStore == null) {
+        if (token == null) {
             // TODO: Use more appropriate code
             event.error(Errors.NOT_ALLOWED);
             return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
-
         }
 
         try {
-            TokenVerifier.from(tokenFromStore).checkOnly(
+            TokenVerifier.from(token).checkOnly(
               // Start basic checks
               this::isRealmEnabled,
               this::isSslUsed,
@@ -718,7 +712,7 @@ public class LoginActionsService {
             return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
         }
 
-        final ClientSessionModel clientSession = tokenFromStore.getClientSession();
+        final ClientSessionModel clientSession = token.getClientSession();
 
         return processResetCredentials(execution, clientSession, null);
     }
