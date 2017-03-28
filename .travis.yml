@@ -17,6 +17,66 @@ env:
     - TESTS=group3
     - TESTS=group4
     - TESTS=old
+    - TESTS=group1-a
+    - TESTS=group2-a
+    - TESTS=group3-a
+    - TESTS=group4-a
+    - TESTS=old-a
+    - TESTS=group1-b
+    - TESTS=group2-b
+    - TESTS=group3-b
+    - TESTS=group4-b
+    - TESTS=old-b
+    - TESTS=group1-c
+    - TESTS=group2-c
+    - TESTS=group3-c
+    - TESTS=group4-c
+    - TESTS=old-c
+    - TESTS=group1-c
+    - TESTS=group2-c
+    - TESTS=group3-c
+    - TESTS=group4-c
+    - TESTS=old-c
+    - TESTS=Agroup1-a
+    - TESTS=Agroup2-a
+    - TESTS=Agroup3-a
+    - TESTS=Agroup4-a
+    - TESTS=Aold-a
+    - TESTS=Agroup1-b
+    - TESTS=Agroup2-b
+    - TESTS=Agroup3-b
+    - TESTS=Agroup4-b
+    - TESTS=Aold-b
+    - TESTS=Agroup1-c
+    - TESTS=Agroup2-c
+    - TESTS=Agroup3-c
+    - TESTS=Agroup4-c
+    - TESTS=Aold-c
+    - TESTS=Agroup1-c
+    - TESTS=Agroup2-c
+    - TESTS=Agroup3-c
+    - TESTS=Agroup4-c
+    - TESTS=Aold-c
+    - TESTS=Bgroup1-a
+    - TESTS=Bgroup2-a
+    - TESTS=Bgroup3-a
+    - TESTS=Bgroup4-a
+    - TESTS=Bold-a
+    - TESTS=Bgroup1-b
+    - TESTS=Bgroup2-b
+    - TESTS=Bgroup3-b
+    - TESTS=Bgroup4-b
+    - TESTS=Bold-b
+    - TESTS=Bgroup1-c
+    - TESTS=Bgroup2-c
+    - TESTS=Bgroup3-c
+    - TESTS=Bgroup4-c
+    - TESTS=Bold-c
+    - TESTS=Bgroup1-c
+    - TESTS=Bgroup2-c
+    - TESTS=Bgroup3-c
+    - TESTS=Bgroup4-c
+    - TESTS=Bold-c
 
 jdk:
   - oraclejdk8
@@ -25,9 +85,9 @@ before_script:
   - export MAVEN_SKIP_RC=true
 
 install: 
-  - travis_wait 60 mvn install --no-snapshot-updates -Pdistribution -DskipTests=true -B -V -q
+  - mvn install --no-snapshot-updates -Pdistribution -DskipTests=true -B -V
 
 script:
-  - ./travis-run-tests.sh $TESTS
+  - ./travis-run-tests.sh nonexistent $TESTS
 
 sudo: false
