@@ -66,11 +66,15 @@ public class TokenVerifier<T extends JsonWebToken> {
         }
     };
 
+    /**
+     * Check for token being neither expired nor used before it gets valid.
+     * @see JsonWebToken#isActive()
+     */
     public static final Predicate<JsonWebToken> IS_ACTIVE = new Predicate<JsonWebToken>() {
         @Override
         public boolean test(JsonWebToken t) throws VerificationException {
             if (! t.isActive()) {
-                throw new TokenNotActiveException("Token is not active");
+                throw new TokenNotActiveException(t, "Token is not active");
             }
 
             return true;
@@ -300,14 +304,14 @@ public class TokenVerifier<T extends JsonWebToken> {
                     throw new VerificationException("Public key not set");
                 }
                 if (!RSAProvider.verify(jws, publicKey)) {
-                    throw new TokenSignatureInvalidException("Invalid token signature");
+                    throw new TokenSignatureInvalidException(token, "Invalid token signature");
                 }   break;
             case HMAC:
                 if (secretKey == null) {
                     throw new VerificationException("Secret key not set");
                 }
                 if (!HMACProvider.verify(jws, secretKey)) {
-                    throw new TokenSignatureInvalidException("Invalid token signature");
+                    throw new TokenSignatureInvalidException(token, "Invalid token signature");
                 }   break;
             default:
                 throw new VerificationException("Unknown or unsupported token algorithm");

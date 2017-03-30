@@ -17,6 +17,7 @@
 package org.keycloak.exceptions;
 
 import org.keycloak.common.VerificationException;
+import org.keycloak.representations.JsonWebToken;
 
 /**
  * Thrown when token signature is invalid.
@@ -24,19 +25,29 @@ import org.keycloak.common.VerificationException;
  */
 public class TokenSignatureInvalidException extends VerificationException {
 
-    public TokenSignatureInvalidException() {
+    private final JsonWebToken token;
+
+    public TokenSignatureInvalidException(JsonWebToken token) {
+        this.token = token;
     }
 
-    public TokenSignatureInvalidException(String message) {
+    public TokenSignatureInvalidException(JsonWebToken token, String message) {
         super(message);
+        this.token = token;
     }
 
-    public TokenSignatureInvalidException(String message, Throwable cause) {
+    public TokenSignatureInvalidException(JsonWebToken token, String message, Throwable cause) {
         super(message, cause);
+        this.token = token;
     }
 
-    public TokenSignatureInvalidException(Throwable cause) {
+    public TokenSignatureInvalidException(JsonWebToken token, Throwable cause) {
         super(cause);
+        this.token = token;
     }
 
+    public JsonWebToken getToken() {
+        return token;
+    }
+    
 }
