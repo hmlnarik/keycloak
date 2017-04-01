@@ -119,7 +119,7 @@ public class RestartLoginCookie {
         this.clientId = clientSession.getClient().getClientId();
         this.authMethod = clientSession.getProtocol();
         this.redirectUri = clientSession.getRedirectUri();
-        for (Map.Entry<String, String> entry : clientSession.getNotes().entrySet()) {
+        for (Map.Entry<String, String> entry : clientSession.getClientNotes().entrySet()) {
             notes.put(entry.getKey(), entry.getValue());
         }
     }
@@ -162,7 +162,7 @@ public class RestartLoginCookie {
         authSession.setRedirectUri(cookie.getRedirectUri());
         authSession.setAction(cookie.getAction());
         for (Map.Entry<String, String> entry : cookie.getNotes().entrySet()) {
-            authSession.setNote(entry.getKey(), entry.getValue());
+            authSession.setClientNote(entry.getKey(), entry.getValue());
         }
 
         return authSession;

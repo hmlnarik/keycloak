@@ -24,6 +24,7 @@ import org.keycloak.common.ClientConnection;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.services.util.CookieHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -94,13 +95,21 @@ public class AuthenticationSessionManager {
 
 
     public void removeAuthenticationSession(RealmModel realm, AuthenticationSessionModel authSession, boolean expireRestartCookie) {
-        log.infof("Removing authSession '%s' and expire restart-cookie", authSession.getId());
+        log.infof("Removing authSession '%s'. Expire restart cookie: %b", authSession.getId(), expireRestartCookie);
         session.authenticationSessions().removeAuthenticationSession(realm, authSession);
 
         // expire restart cookie
-        ClientConnection clientConnection = session.getContext().getConnection();
-        UriInfo uriInfo = session.getContext().getUri();
-        RestartLoginCookie.expireRestartCookie(realm, clientConnection, uriInfo);
+        if (expireRestartCookie) {
+            ClientConnection clientConnection = session.getContext().getConnection();
+            UriInfo uriInfo = session.getContext().getUri();
+            RestartLoginCookie.expireRestartCookie(realm, clientConnection, uriInfo);
+        }
+    }
+
+
+    // Check to see if we already have authenticationSession with same ID
+    public UserSessionModel getUserSession(AuthenticationSessionModel authSession) {
+        return session.sessions().getUserSession(authSession.getRealm(), authSession.getId());
     }
 
 }

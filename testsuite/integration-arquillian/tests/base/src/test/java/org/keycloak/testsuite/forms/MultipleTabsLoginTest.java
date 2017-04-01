@@ -111,8 +111,8 @@ public class MultipleTabsLoginTest extends AbstractTestRealmKeycloakTest {
     public AssertEvents events = new AssertEvents(this);
 
 
-    // Test for scenario when user is logged into JS application in 2 browser tabs. Then click "logout" and he is logged-out from both tabs.
-    // Now both browser tabs show the 1st login process and we need to make sure that actionURL (code with execution) is valid on both tabs, so user won't have error page when he tries to login from tab1
+    // Test for scenario when user is logged into JS application in 2 browser tabs. Then click "logout" in tab1 and he is logged-out from both tabs (tab2 is logged-out automatically due to session iframe few seconds later)
+    // Now both browser tabs show the 1st login screen and we need to make sure that actionURL (code with execution) is valid on both tabs, so user won't have error page when he tries to login from tab1
     @Test
     public void openMultipleTabs() {
         oauth.openLoginForm();
@@ -143,11 +143,14 @@ public class MultipleTabsLoginTest extends AbstractTestRealmKeycloakTest {
 
         String tab1Url = driver.getCurrentUrl();
 
-        // Simulate login in different browser tab. I should be directly on 'updatePasswordPage'
+        // Simulate login in different browser tab tab2. I will be on loginPage again.
         oauth.openLoginForm();
+        loginPage.assertCurrent();
+
+        // Login in tab2
+        loginPage.login("login-test", "password");
         updatePasswordPage.assertCurrent();
 
-        // Login in tab 2
         updatePasswordPage.changePassword("password", "password");
         updateProfilePage.update("John", "Doe3", "john@doe3.com");
         appPage.assertCurrent();
@@ -160,4 +163,86 @@ public class MultipleTabsLoginTest extends AbstractTestRealmKeycloakTest {
         infoPage.clickBackToApplicationLink();
         appPage.assertCurrent();
     }
+
+
+    @Test
+    public void expiredAuthenticationAction_currentCodeExpiredExecution() {
+        // Simulate to open login form in 2 tabs
+        oauth.openLoginForm();
+        loginPage.assertCurrent();
+        String actionUrl1 = getActionUrl(driver.getPageSource());
+
+        // Click "register" in tab2
+        loginPage.clickRegister();
+        registerPage.assertCurrent();
+
+        // Simulate going back to tab1 and confirm login form. Page "showExpired" should be shown (NOTE: WebDriver does it with GET, when real browser would do it with POST. Improve test if needed...)
+        driver.navigate().to(actionUrl1);
+        loginExpiredPage.assertCurrent();
+
+        // Click on continue and assert I am on "register" form
+        loginExpiredPage.clickLoginContinueLink();
+        registerPage.assertCurrent();
+
+        // Finally click "Back to login" and authenticate
+        registerPage.clickBackToLogin();
+        loginPage.assertCurrent();
+
+        // Login success now
+        loginPage.login("login-test", "password");
+        updatePasswordPage.changePassword("password", "password");
+        updateProfilePage.update("John", "Doe3", "john@doe3.com");
+        appPage.assertCurrent();
+    }
+
+
+    @Test
+    public void expiredAuthenticationAction_expiredCodeCurrentExecution() {
+        // Simulate to open login form in 2 tabs
+        oauth.openLoginForm();
+        loginPage.assertCurrent();
+        String actionUrl1 = getActionUrl(driver.getPageSource());
+
+        loginPage.login("invalid", "invalid");
+        loginPage.assertCurrent();
+        Assert.assertEquals("Invalid username or password.", loginPage.getError());
+
+        // Simulate going back to tab1 and confirm login form. Login page with "action expired" message should be shown (NOTE: WebDriver does it with GET, when real browser would do it with POST. Improve test if needed...)
+        driver.navigate().to(actionUrl1);
+        loginPage.assertCurrent();
+        Assert.assertEquals("Action expired. Please continue with login now.", loginPage.getError());
+
+        // Login success now
+        loginPage.login("login-test", "password");
+        updatePasswordPage.changePassword("password", "password");
+        updateProfilePage.update("John", "Doe3", "john@doe3.com");
+        appPage.assertCurrent();
+    }
+
+
+    @Test
+    public void expiredAuthenticationAction_expiredCodeExpiredExecution() {
+        // Open tab1
+        oauth.openLoginForm();
+        loginPage.assertCurrent();
+        String actionUrl1 = getActionUrl(driver.getPageSource());
+
+        // Authenticate in tab2
+        loginPage.login("login-test", "password");
+        updatePasswordPage.assertCurrent();
+
+        // Simulate going back to tab1 and confirm login form. Page "Page expired" should be shown (NOTE: WebDriver does it with GET, when real browser would do it with POST. Improve test if needed...)
+        driver.navigate().to(actionUrl1);
+        loginExpiredPage.assertCurrent();
+
+        // Finish login
+        loginExpiredPage.clickLoginContinueLink();
+        updatePasswordPage.assertCurrent();
+
+        updatePasswordPage.changePassword("password", "password");
+        updateProfilePage.update("John", "Doe3", "john@doe3.com");
+        appPage.assertCurrent();
+    }
+
+
 }

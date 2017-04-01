@@ -69,6 +69,7 @@ import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.idm.authorization.ResourceRepresentation;
 import org.keycloak.representations.idm.authorization.ScopeRepresentation;
 import org.keycloak.services.Urls;
+import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.resources.admin.RealmAuth;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
@@ -238,8 +239,8 @@ public class PolicyEvaluationService {
                     authSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
                     userSession = keycloakSession.sessions().createUserSession(id, realm, userModel, userModel.getUsername(), "127.0.0.1", "passwd", false, null, null);
 
-
-                    clientSession = new TokenManager().attachAuthenticationSession(keycloakSession, userSession, authSession);
+                    AuthenticationManager.setRolesAndMappersInSession(authSession);
+                    clientSession = TokenManager.attachAuthenticationSession(keycloakSession, userSession, authSession);
 
                     Set<RoleModel> requestedRoles = new HashSet<>();
                     for (String roleId : clientSession.getRoles()) {

@@ -18,6 +18,8 @@
 package org.keycloak.models;
 
 
+import java.util.Map;
+
 import org.keycloak.sessions.CommonClientSessionModel;
 
 /**
@@ -27,4 +29,9 @@ public interface AuthenticatedClientSessionModel extends CommonClientSessionMode
 
     void setUserSession(UserSessionModel userSession);
     UserSessionModel getUserSession();
+
+    public String getNote(String name);
+    public void setNote(String name, String value);
+    public void removeNote(String name);
+    public Map<String, String> getNotes();
 }

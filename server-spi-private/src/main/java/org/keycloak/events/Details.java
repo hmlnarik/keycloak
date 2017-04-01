@@ -63,4 +63,6 @@ public interface Details {
 
     String CLIENT_REGISTRATION_POLICY = "client_registration_policy";
 
+    String EXISTING_USER = "previous_user";
+
 }

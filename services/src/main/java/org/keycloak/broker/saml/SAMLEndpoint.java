@@ -68,6 +68,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -399,7 +400,8 @@ public class SAMLEndpoint {
 
 
                 return callback.authenticated(identity);
-
+            } catch (WebApplicationException e) {
+                return e.getResponse();
             } catch (Exception e) {
                 throw new IdentityBrokerException("Could not process response from SAML identity provider.", e);
             }

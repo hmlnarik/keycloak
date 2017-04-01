@@ -51,18 +51,7 @@ public class PageExpiredRedirect {
 
 
     public Response showPageExpired(AuthenticationSessionModel authSession) {
-        String executionId = authSession.getAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-        String latestFlowPath = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
-
-        if (latestFlowPath == null) {
-            latestFlowPath = authSession.getNote(AuthorizationEndpointBase.APP_INITIATED_FLOW);
-        }
-
-        if (latestFlowPath == null) {
-            latestFlowPath = LoginActionsService.AUTHENTICATE_PATH;
-        }
-
-        URI lastStepUrl = getLastExecutionUrl(latestFlowPath, executionId);
+        URI lastStepUrl = getLastExecutionUrl(authSession);
 
         logger.infof("Redirecting to 'page expired' now. Will use last step URL: %s", lastStepUrl);
 
@@ -80,6 +69,22 @@ public class PageExpiredRedirect {
             uriBuilder.queryParam("execution", executionId);
         }
         return uriBuilder.build(realm.getName());
+    }
+
+
+    public URI getLastExecutionUrl(AuthenticationSessionModel authSession) {
+        String executionId = authSession.getAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+        String latestFlowPath = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+
+        if (latestFlowPath == null) {
+            latestFlowPath = authSession.getClientNote(AuthorizationEndpointBase.APP_INITIATED_FLOW);
+        }
+
+        if (latestFlowPath == null) {
+            latestFlowPath = LoginActionsService.AUTHENTICATE_PATH;
+        }
+
+        return getLastExecutionUrl(latestFlowPath, executionId);
     }
 
 }

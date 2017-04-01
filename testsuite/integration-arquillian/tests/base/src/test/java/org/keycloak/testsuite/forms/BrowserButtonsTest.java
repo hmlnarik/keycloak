@@ -268,6 +268,17 @@ public class BrowserButtonsTest extends AbstractTestRealmKeycloakTest {
         registerPage.assertCurrent();
     }
 
+    @Test
+    public void clickBackButtonFromRegisterPage() {
+        loginPage.open();
+        loginPage.clickRegister();
+        registerPage.assertCurrent();
+
+        // Click browser "back" button. Should be back on login page
+        driver.navigate().back();
+        loginPage.assertCurrent();
+    }
+
 
     @Test
     public void backButtonToAuthorizationEndpoint() {

@@ -39,6 +39,7 @@ import org.keycloak.jose.jws.AlgorithmType;
 import org.keycloak.jose.jws.JWSBuilder;
 import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
+import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.ClientTemplateModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
@@ -59,10 +60,12 @@ import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.Urls;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.IdentityBrokerService;
+import org.keycloak.services.resources.LoginActionsService;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.services.util.CookieHelper;
 import org.keycloak.services.util.P3PHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.sessions.CommonClientSessionModel;
 
 import javax.crypto.SecretKey;
 import javax.ws.rs.core.Cookie;
@@ -70,6 +73,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.security.PublicKey;
@@ -495,6 +499,27 @@ public class AuthenticationManager {
 
     }
 
+
+    public static Response redirectToRequiredActions(KeycloakSession session, RealmModel realm, AuthenticationSessionModel authSession, UriInfo uriInfo, String requiredAction) {
+        // redirect to non-action url so browser refresh button works without reposting past data
+        ClientSessionCode<AuthenticationSessionModel> accessCode = new ClientSessionCode<>(session, realm, authSession);
+        accessCode.setAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name());
+        authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, LoginActionsService.REQUIRED_ACTION);
+        authSession.setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, requiredAction);
+
+        UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)
+                .path(LoginActionsService.REQUIRED_ACTION);
+
+        if (requiredAction != null) {
+            uriBuilder.queryParam("execution", requiredAction);
+        }
+
+        URI redirect = uriBuilder.build(realm.getName());
+        return Response.status(302).location(redirect).build();
+
+    }
+
+
     public static Response finishedRequiredActions(KeycloakSession session, AuthenticationSessionModel authSession, UserSessionModel userSession,
                                                    ClientConnection clientConnection, HttpRequest request, UriInfo uriInfo, EventBuilder event) {
         if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null) {
@@ -525,16 +550,22 @@ public class AuthenticationManager {
         return redirectAfterSuccessfulFlow(session, realm, clientSession.getUserSession(), clientSession, request, uriInfo, clientConnection, event, authSession.getProtocol());
     }
 
-    public static boolean isActionRequired(final KeycloakSession session, final AuthenticationSessionModel authSession,
-                                           final ClientConnection clientConnection,
-                                           final HttpRequest request, final UriInfo uriInfo, final EventBuilder event) {
+    // Return null if action is not required. Or the name of the requiredAction in case it is required.
+    public static String nextRequiredAction(final KeycloakSession session, final AuthenticationSessionModel authSession,
+                                            final ClientConnection clientConnection,
+                                            final HttpRequest request, final UriInfo uriInfo, final EventBuilder event) {
         final RealmModel realm = authSession.getRealm();
         final UserModel user = authSession.getAuthenticatedUser();
         final ClientModel client = authSession.getClient();
 
         evaluateRequiredActionTriggers(session, authSession, clientConnection, request, uriInfo, event, realm, user);
 
-        if (!user.getRequiredActions().isEmpty() || !authSession.getRequiredActions().isEmpty()) return true;
+        if (!user.getRequiredActions().isEmpty()) {
+            return user.getRequiredActions().iterator().next();
+        }
+        if (!authSession.getRequiredActions().isEmpty()) {
+            return authSession.getRequiredActions().iterator().next();
+        }
 
         if (client.isConsentRequired()) {
 
@@ -547,13 +578,13 @@ public class AuthenticationManager {
                 if (grantedConsent != null && grantedConsent.isRoleGranted(r)) {
                     continue;
                 }
-                return true;
+                return CommonClientSessionModel.Action.OAUTH_GRANT.name();
              }
 
             for (ProtocolMapperModel protocolMapper : accessCode.getRequestedProtocolMappers()) {
                 if (protocolMapper.isConsentRequired() && protocolMapper.getConsentText() != null) {
                     if (grantedConsent == null || !grantedConsent.isProtocolMapperGranted(protocolMapper)) {
-                        return true;
+                        return CommonClientSessionModel.Action.OAUTH_GRANT.name();
                     }
                 }
             }
@@ -562,7 +593,7 @@ public class AuthenticationManager {
         } else {
             event.detail(Details.CONSENT, Details.CONSENT_VALUE_NO_CONSENT_REQUIRED);
         }
-        return false;
+        return null;
 
     }
 
@@ -625,7 +656,7 @@ public class AuthenticationManager {
                 accessCode.
 
                         setAction(AuthenticatedClientSessionModel.Action.REQUIRED_ACTIONS.name());
-                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, AuthenticatedClientSessionModel.Action.OAUTH_GRANT.name());
+                authSession.setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, AuthenticatedClientSessionModel.Action.OAUTH_GRANT.name());
 
                 return session.getProvider(LoginFormsProvider.class)
                         .setClientSessionCode(accessCode.getCode())
@@ -649,7 +680,7 @@ public class AuthenticationManager {
 
         Set<String> requestedRoles = new HashSet<String>();
         // todo scope param protocol independent
-        String scopeParam = authSession.getNote(OAuth2Constants.SCOPE);
+        String scopeParam = authSession.getClientNote(OAuth2Constants.SCOPE);
         for (RoleModel r : TokenManager.getAccess(scopeParam, true, client, user)) {
             requestedRoles.add(r.getId());
         }
@@ -705,7 +736,7 @@ public class AuthenticationManager {
                 return response;
             }
             else if (context.getStatus() == RequiredActionContext.Status.CHALLENGE) {
-                authSession.setAuthNote(CURRENT_REQUIRED_ACTION, model.getProviderId());
+                authSession.setAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION, model.getProviderId());
                 return context.getChallenge();
             }
             else if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {

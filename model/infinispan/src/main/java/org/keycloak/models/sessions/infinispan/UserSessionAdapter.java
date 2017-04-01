@@ -67,9 +67,11 @@ public class UserSessionAdapter implements UserSessionModel {
         Map<String, ClientLoginSessionEntity> clientSessionEntities = entity.getClientLoginSessions();
         Map<String, AuthenticatedClientSessionModel> result = new HashMap<>();
 
-        clientSessionEntities.forEach((String key, ClientLoginSessionEntity value) -> {
-            result.put(key, new AuthenticatedClientSessionAdapter(value, this, provider, cache));
-        });
+        if (clientSessionEntities != null) {
+            clientSessionEntities.forEach((String key, ClientLoginSessionEntity value) -> {
+                result.put(key, new AuthenticatedClientSessionAdapter(value, this, provider, cache));
+            });
+        }
 
         return Collections.unmodifiableMap(result);
     }

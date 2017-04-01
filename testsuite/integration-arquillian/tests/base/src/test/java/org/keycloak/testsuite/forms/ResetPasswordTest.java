@@ -284,24 +284,21 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
         return changePasswordUrl;
     }
 
-    private void resetPasswordInvalidPassword(String username, String password, String error, boolean redirectedDirectlyToUpdatePassword) throws IOException, MessagingException {
-        if (!redirectedDirectlyToUpdatePassword) {
-            initiateResetPasswordFromResetPasswordPage(username);
+    private void resetPasswordInvalidPassword(String username, String password, String error) throws IOException, MessagingException {
 
-            events.expectRequiredAction(EventType.SEND_RESET_PASSWORD).user(userId).session((String) null)
-                    .detail(Details.USERNAME, username).detail(Details.EMAIL, "login@test.com").assertEvent();
+        initiateResetPasswordFromResetPasswordPage(username);
 
-            assertEquals(expectedMessagesCount, greenMail.getReceivedMessages().length);
+        events.expectRequiredAction(EventType.SEND_RESET_PASSWORD).user(userId).session((String) null)
+                .detail(Details.USERNAME, username).detail(Details.EMAIL, "login@test.com").assertEvent();
 
-            MimeMessage message = greenMail.getReceivedMessages()[greenMail.getReceivedMessages().length - 1];
+        assertEquals(expectedMessagesCount, greenMail.getReceivedMessages().length);
 
-            String changePasswordUrl = getPasswordResetEmailLink(message);
+        MimeMessage message = greenMail.getReceivedMessages()[greenMail.getReceivedMessages().length - 1];
 
-            driver.navigate().to(changePasswordUrl.trim());
-        } else {
-            loginPage.open();
-            loginPage.resetPassword();
-        }
+        String changePasswordUrl = getPasswordResetEmailLink(message);
+
+        driver.navigate().to(changePasswordUrl.trim());
+
 
         updatePasswordPage.assertCurrent();
 
@@ -559,20 +556,20 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
             setTimeOffset(2000000);
             resetPassword("login-test", "password1");
 
-            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.", false);
+            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.");
 
             setTimeOffset(4000000);
             resetPassword("login-test", "password2");
 
-            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.", false);
-            resetPasswordInvalidPassword("login-test", "password2", "Invalid password: must not be equal to any of last 3 passwords.", true);
+            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.");
+            resetPasswordInvalidPassword("login-test", "password2", "Invalid password: must not be equal to any of last 3 passwords.");
 
             setTimeOffset(6000000);
             resetPassword("login-test", "password3");
 
-            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.", false);
-            resetPasswordInvalidPassword("login-test", "password2", "Invalid password: must not be equal to any of last 3 passwords.", true);
-            resetPasswordInvalidPassword("login-test", "password3", "Invalid password: must not be equal to any of last 3 passwords.", true);
+            resetPasswordInvalidPassword("login-test", "password1", "Invalid password: must not be equal to any of last 3 passwords.");
+            resetPasswordInvalidPassword("login-test", "password2", "Invalid password: must not be equal to any of last 3 passwords.");
+            resetPasswordInvalidPassword("login-test", "password3", "Invalid password: must not be equal to any of last 3 passwords.");
 
             setTimeOffset(8000000);
             resetPassword("login-test", "password");

@@ -131,9 +131,7 @@ public class OIDCLoginProtocol implements LoginProtocol {
 
     }
 
-    private void setupResponseTypeAndMode(CommonClientSessionModel clientSession) {
-        String responseType = clientSession.getNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
-        String responseMode = clientSession.getNote(OIDCLoginProtocol.RESPONSE_MODE_PARAM);
+    private void setupResponseTypeAndMode(String responseType, String responseMode) {
         this.responseType = OIDCResponseType.parse(responseType);
         this.responseMode = OIDCResponseMode.parse(responseMode, this.responseType);
         this.event.detail(Details.RESPONSE_TYPE, responseType);
@@ -174,7 +172,10 @@ public class OIDCLoginProtocol implements LoginProtocol {
     @Override
     public Response authenticated(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
         ClientSessionCode<AuthenticatedClientSessionModel> accessCode = new ClientSessionCode<>(session, realm, clientSession);
-        setupResponseTypeAndMode(clientSession);
+
+        String responseTypeParam = clientSession.getNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
+        String responseModeParam = clientSession.getNote(OIDCLoginProtocol.RESPONSE_MODE_PARAM);
+        setupResponseTypeAndMode(responseTypeParam, responseModeParam);
 
         String redirect = clientSession.getRedirectUri();
         OIDCRedirectUriBuilder redirectUri = OIDCRedirectUriBuilder.fromUri(redirect, responseMode);
@@ -231,10 +232,12 @@ public class OIDCLoginProtocol implements LoginProtocol {
 
     @Override
     public Response sendError(AuthenticationSessionModel authSession, Error error) {
-        setupResponseTypeAndMode(authSession);
+        String responseTypeParam = authSession.getClientNote(OIDCLoginProtocol.RESPONSE_TYPE_PARAM);
+        String responseModeParam = authSession.getClientNote(OIDCLoginProtocol.RESPONSE_MODE_PARAM);
+        setupResponseTypeAndMode(responseTypeParam, responseModeParam);
 
         String redirect = authSession.getRedirectUri();
-        String state = authSession.getNote(OIDCLoginProtocol.STATE_PARAM);
+        String state = authSession.getClientNote(OIDCLoginProtocol.STATE_PARAM);
         OIDCRedirectUriBuilder redirectUri = OIDCRedirectUriBuilder.fromUri(redirect, responseMode).addParam(OAuth2Constants.ERROR, translateError(error));
         if (state != null)
             redirectUri.addParam(OAuth2Constants.STATE, state);
@@ -296,13 +299,13 @@ public class OIDCLoginProtocol implements LoginProtocol {
     }
 
     protected boolean isPromptLogin(AuthenticationSessionModel authSession) {
-        String prompt = authSession.getNote(OIDCLoginProtocol.PROMPT_PARAM);
+        String prompt = authSession.getClientNote(OIDCLoginProtocol.PROMPT_PARAM);
         return TokenUtil.hasPrompt(prompt, OIDCLoginProtocol.PROMPT_VALUE_LOGIN);
     }
 
     protected boolean isAuthTimeExpired(UserSessionModel userSession, AuthenticationSessionModel authSession) {
         String authTime = userSession.getNote(AuthenticationManager.AUTH_TIME);
-        String maxAge = authSession.getNote(OIDCLoginProtocol.MAX_AGE_PARAM);
+        String maxAge = authSession.getClientNote(OIDCLoginProtocol.MAX_AGE_PARAM);
         if (maxAge == null) {
             return false;
         }

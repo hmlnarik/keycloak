@@ -178,7 +178,7 @@ public class SamlProtocol implements LoginProtocol {
             } else {
                 SAML2ErrorResponseBuilder builder = new SAML2ErrorResponseBuilder().destination(authSession.getRedirectUri()).issuer(getResponseIssuer(realm)).status(translateErrorToSAMLStatus(error).get());
                 try {
-                    JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder().relayState(authSession.getNote(GeneralConstants.RELAY_STATE));
+                    JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder().relayState(authSession.getClientNote(GeneralConstants.RELAY_STATE));
                     SamlClient samlClient = new SamlClient(client);
                     KeyManager keyManager = session.keys();
                     if (samlClient.requiresRealmSignature()) {
@@ -250,10 +250,16 @@ public class SamlProtocol implements LoginProtocol {
         return RealmsResource.realmBaseUrl(uriInfo).build(realm.getName()).toString();
     }
 
-    protected boolean isPostBinding(CommonClientSessionModel authSession) {
+    protected boolean isPostBinding(AuthenticationSessionModel authSession) {
         ClientModel client = authSession.getClient();
         SamlClient samlClient = new SamlClient(client);
-        return SamlProtocol.SAML_POST_BINDING.equals(authSession.getNote(SamlProtocol.SAML_BINDING)) || samlClient.forcePostBinding();
+        return SamlProtocol.SAML_POST_BINDING.equals(authSession.getClientNote(SamlProtocol.SAML_BINDING)) || samlClient.forcePostBinding();
+    }
+
+    protected boolean isPostBinding(AuthenticatedClientSessionModel clientSession) {
+        ClientModel client = clientSession.getClient();
+        SamlClient samlClient = new SamlClient(client);
+        return SamlProtocol.SAML_POST_BINDING.equals(clientSession.getNote(SamlProtocol.SAML_BINDING)) || samlClient.forcePostBinding();
     }
 
     public static boolean isLogoutPostBindingForInitiator(UserSessionModel session) {
@@ -286,7 +292,7 @@ public class SamlProtocol implements LoginProtocol {
         return (logoutRedirectUrl == null || logoutRedirectUrl.trim().isEmpty());
     }
 
-    protected String getNameIdFormat(SamlClient samlClient, CommonClientSessionModel clientSession) {
+    protected String getNameIdFormat(SamlClient samlClient, AuthenticatedClientSessionModel clientSession) {
         String nameIdFormat = clientSession.getNote(GeneralConstants.NAMEID_FORMAT);
 
         boolean forceFormat = samlClient.forceNameIDFormat();

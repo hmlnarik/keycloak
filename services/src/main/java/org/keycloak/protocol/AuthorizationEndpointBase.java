@@ -21,6 +21,7 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.common.ClientConnection;
+import org.keycloak.common.util.ObjectUtil;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.AuthenticationFlowModel;
@@ -119,7 +120,7 @@ public abstract class AuthorizationEndpointBase {
 
                 AuthenticationManager.setRolesAndMappersInSession(authSession);
 
-                if (processor.isActionRequired()) {
+                if (processor.nextRequiredAction() != null) {
                     Response response = protocol.sendError(authSession, Error.PASSIVE_INTERACTION_REQUIRED);
                     return response;
                 }
@@ -134,7 +135,7 @@ public abstract class AuthorizationEndpointBase {
             try {
                 RestartLoginCookie.setRestartCookie(session, realm, clientConnection, uriInfo, authSession);
                 if (redirectToAuthentication) {
-                    return processor.redirectToFlow(null);
+                    return processor.redirectToFlow();
                 }
                 return processor.authenticate();
             } catch (Exception e) {
@@ -157,18 +158,30 @@ public abstract class AuthorizationEndpointBase {
 
             ClientSessionCode<AuthenticationSessionModel> check = new ClientSessionCode<>(session, realm, authSession);
             if (!check.isActionActive(ClientSessionCode.ActionType.LOGIN)) {
-                logger.infof("Authentication session '%s' exists, but is expired. Will remove it", authSession.getId());
-                manager.removeAuthenticationSession(realm, authSession, true);
 
-            } else if (isNewRequest(authSession, requestState)) {
-                logger.info("New request from application received, but authentication session already exists. Update existing authentication session");
+                logger.infof("Authentication session '%s' exists, but is expired. Restart existing authentication session", authSession.getId());
+                authSession.restartSession(realm, client);
                 return new AuthorizationEndpointChecks(authSession);
+
+            } else if (isNewRequest(authSession, client, requestState)) {
+                // Check if we have lastProcessedExecution and restart the session just if yes. Otherwise update just client information from the AuthorizationEndpoint request.
+                // This difference is needed, because of logout from JS applications in multiple browser tabs.
+                if (hasProcessedExecution(authSession)) {
+                    logger.info("New request from application received, but authentication session already exists. Restart existing authentication session");
+                    authSession.restartSession(realm, client);
+                } else {
+                    logger.info("New request from application received, but authentication session already exists. Update client information in existing authentication session");
+                    authSession.clearClientNotes(); // update client data
+                    authSession.updateClient(client);
+                }
+
+                return new AuthorizationEndpointChecks(authSession);
+
             } else {
                 logger.info("Re-sent some previous request to Authorization endpoint. Likely browser 'back' or 'refresh' button.");
 
-                // See if we have lastProcessedExecution note. If yes, we are expired. Otherwise it is browser refresh of initial username/password form
-                String lastProcessedExecution = authSession.getAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
-                if (lastProcessedExecution == null) {
+                // See if we have lastProcessedExecution note. If yes, we are expired. Also if we are in different flow than initial one. Otherwise it is browser refresh of initial username/password form
+                if (!shouldShowExpirePage(authSession)) {
                     return new AuthorizationEndpointChecks(authSession);
                 } else {
                     CacheControlUtil.noBackButtonCacheControlHeader();
@@ -194,8 +207,41 @@ public abstract class AuthorizationEndpointBase {
 
     }
 
+    private boolean hasProcessedExecution(AuthenticationSessionModel authSession) {
+        String lastProcessedExecution = authSession.getAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION);
+        return (lastProcessedExecution != null);
+    }
+
+    // See if we have lastProcessedExecution note. If yes, we are expired. Also if we are in different flow than initial one. Otherwise it is browser refresh of initial username/password form
+    private boolean shouldShowExpirePage(AuthenticationSessionModel authSession) {
+        if (hasProcessedExecution(authSession)) {
+            return true;
+        }
+
+        String initialFlow = authSession.getClientNote(APP_INITIATED_FLOW);
+        if (initialFlow == null) {
+            initialFlow = LoginActionsService.AUTHENTICATE_PATH;
+        }
+
+        String lastFlow = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
+        // Check if we transitted between flows (eg. clicking "register" on login screen)
+        if (!initialFlow.equals(lastFlow)) {
+            logger.infof("Transition between flows! Current flow: %s, Previous flow: %s", initialFlow, lastFlow);
+
+            if (lastFlow == null || LoginActionsService.isFlowTransitionAllowed(initialFlow, lastFlow)) {
+                authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, initialFlow);
+                authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Try to see if it is new request from the application, or refresh of some previous request
-    protected abstract boolean isNewRequest(AuthenticationSessionModel authSession, String requestState);
+    protected abstract boolean isNewRequest(AuthenticationSessionModel authSession, ClientModel clientFromRequest, String requestState);
 
 
     protected static class AuthorizationEndpointChecks {

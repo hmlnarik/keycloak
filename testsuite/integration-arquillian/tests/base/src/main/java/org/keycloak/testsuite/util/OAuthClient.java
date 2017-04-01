@@ -163,7 +163,7 @@ public class OAuthClient {
         realm = "test";
         clientId = "test-app";
         redirectUri = APP_ROOT + "/auth";
-        state = randomState();
+        state = KeycloakModelUtils::generateId;
         scope = null;
         uiLocales = null;
         clientSessionState = null;
@@ -694,8 +694,17 @@ public class OAuthClient {
         return this;
     }
 
-    public OAuthClient state(StateParamProvider state) {
-        this.state = state;
+    public OAuthClient stateParamHardcoded(String value) {
+        this.state = () -> {
+            return value;
+        };
+        return this;
+    }
+
+    public OAuthClient stateParamRandom() {
+        this.state = () -> {
+            return KeycloakModelUtils.generateId();
+        };
         return this;
     }
 
@@ -930,22 +939,10 @@ public class OAuthClient {
     }
 
 
-    public interface StateParamProvider {
+    private interface StateParamProvider {
 
         String getState();
 
-    }
-
-    public static StateParamProvider hardcodedState(String value) {
-        return () -> {
-            return value;
-        };
-    }
-
-    public static StateParamProvider randomState() {
-        return () -> {
-            return KeycloakModelUtils.generateId();
-        };
     }
 
 
