@@ -93,6 +93,7 @@ import java.net.URI;
 import java.util.Objects;
 import java.util.function.*;
 import javax.ws.rs.core.*;
+import static org.keycloak.TokenVerifier.optional;
 import static org.keycloak.authentication.DefaultActionToken.ACTION_TOKEN_BASIC_CHECKS;
 import static org.keycloak.authentication.ResetCredentialsActionToken.RESET_CREDENTIALS_TYPE;
 
@@ -861,10 +862,10 @@ public class LoginActionsService {
         ResetCredentialsActionToken token;
         ResetCredentialsActionTokenChecks singleUseCheck = new ResetCredentialsActionTokenChecks(session, realm, event);
         try {
-            token = TokenVerifier.create(tokenString, ResetCredentialsActionToken.class)
+            token = TokenVerifier.createHollow(tokenString, ResetCredentialsActionToken.class)
               .secretKey(session.keys().getActiveHmacKey(realm).getSecretKey())
 
-              .checkOnly(
+              .withChecks(
                 new TokenTypeCheck(RESET_CREDENTIALS_TYPE),
 
                 checkThat(realm::isEnabled, Errors.REALM_DISABLED, Messages.REALM_NOT_ENABLED),
@@ -886,7 +887,7 @@ public class LoginActionsService {
                 new IsActionRequired<>(Action.AUTHENTICATE, ResetCredentialsActionToken::getAuthenticationSession),
                 new IsClientValid<>(ResetCredentialsActionToken::getAuthenticationSession)
               )
-              .check(ACTION_TOKEN_BASIC_CHECKS)
+              .withChecks(ACTION_TOKEN_BASIC_CHECKS)
 
               .verify()
               .getToken();
@@ -937,21 +938,6 @@ public class LoginActionsService {
         return processResetCredentials(true, execution, authSession, null);
     }
 
-
-    private static <T extends JsonWebToken> Predicate<T> optional(final Predicate<T> mandatoryPredicate) {
-        return (T t) -> {
-            try {
-                if (! mandatoryPredicate.test(t)) {
-                    logger.trace("Optional predicate " + mandatoryPredicate + " failed.");
-                }
-
-                return true;
-            } catch (VerificationException ex) {
-                logger.tracef(ex, "Optional predicate " + mandatoryPredicate + " failed.");
-                return true;
-            }
-        };
-    }
 
     // Verify if action is processed in same browser.
     private boolean isSameBrowser(AuthenticationSessionModel actionTokenSession) {
