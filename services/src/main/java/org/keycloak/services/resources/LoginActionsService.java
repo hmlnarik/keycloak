@@ -16,6 +16,8 @@
  */
 package org.keycloak.services.resources;
 
+import org.keycloak.authentication.authenticators.resetcred.ResetCredentialsActionToken;
+import org.keycloak.authentication.authenticators.resetcred.ResetCredentialsActionTokenChecks;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.keycloak.OAuth2Constants;
@@ -30,6 +32,7 @@ import org.keycloak.TokenVerifier.TokenTypeCheck;
 import org.keycloak.authentication.*;
 import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticator;
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
+import org.keycloak.authentication.requiredactions.ExecuteActionsActionToken;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
 import org.keycloak.common.util.ObjectUtil;
@@ -59,6 +62,7 @@ import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.utils.OIDCResponseMode;
 import org.keycloak.protocol.oidc.utils.OIDCResponseType;
+import org.keycloak.protocol.oidc.utils.RedirectUtils;
 import org.keycloak.representations.JsonWebToken;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.ServicesLogger;
@@ -90,12 +94,10 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Providers;
 import java.net.URI;
-import java.util.Objects;
 import java.util.function.*;
 import javax.ws.rs.core.*;
 import static org.keycloak.TokenVerifier.optional;
 import static org.keycloak.authentication.DefaultActionToken.ACTION_TOKEN_BASIC_CHECKS;
-import static org.keycloak.authentication.ResetCredentialsActionToken.RESET_CREDENTIALS_TYPE;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -281,7 +283,7 @@ public class LoginActionsService {
                 return null;
             }
 
-            // authenticationSession retrieve
+            // object retrieve
             AuthenticationSessionModel authSession = ClientSessionCode.getClientSession(code, session, realm, AuthenticationSessionModel.class);
             if (authSession != null) {
                 return authSession;
@@ -320,7 +322,7 @@ public class LoginActionsService {
 
 
         private boolean initialVerifyCode() {
-            // Basic realm checks and authenticationSession retrieve
+            // Basic realm checks and object retrieve
             AuthenticationSessionModel authSession = initialVerify();
             if (authSession == null) {
                 return false;
@@ -583,13 +585,6 @@ public class LoginActionsService {
         return authenticate(code, execution);
     }
 
-    @Path(RESET_CREDENTIALS_PATH)
-    @POST
-    public Response resetCredentialsPOST(@QueryParam("code") String code,
-                                         @QueryParam("execution") String execution) {
-        return resetCredentials(code, execution);
-    }
-
     private Predicate<JsonWebToken> checkThat(BooleanSupplier function, String errorEvent, String errorMessage) {
         return t -> {
             if (! function.getAsBoolean()) {
@@ -602,73 +597,6 @@ public class LoginActionsService {
     }
 
     /**
-     * Verifies that the authentication session has not yet been converted to user session, in other words
-     * that the user has not yet completed authentication and logged in.
-     */
-    private class IsAuthenticationSessionNotConvertedToUserSession<T extends JsonWebToken> implements Predicate<T> {
-
-        private final Function<T, String> getAuthenticationSessionIdFromToken;
-
-        public IsAuthenticationSessionNotConvertedToUserSession(Function<T, String> getAuthenticationSessionIdFromToken) {
-            this.getAuthenticationSessionIdFromToken = getAuthenticationSessionIdFromToken;
-        }
-
-        @Override
-        public boolean test(T t) throws VerificationException {
-            String authSessionId = t == null ? null : getAuthenticationSessionIdFromToken.apply(t);
-            if (authSessionId == null) {
-                return false;
-            }
-
-            if (session.sessions().getUserSession(realm, authSessionId) != null) {
-                throw new LoginActionsServiceException(
-                  session.getProvider(LoginFormsProvider.class)
-                        .setSuccess(Messages.ALREADY_LOGGED_IN)
-                        .createInfoPage());
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Verifies whether client stored in the authentication session both exists and is enabled. If yes, it also sets the client
-     * into session context.
-     * @param <T>
-     */
-    private class IsClientValid<T extends JsonWebToken> implements Predicate<T> {
-
-        private final Function<T, AuthenticationSessionModel> getAuthenticationSessionFromToken;
-
-        public IsClientValid(Function<T, AuthenticationSessionModel> getAuthenticationSessionFromToken) {
-            this.getAuthenticationSessionFromToken = getAuthenticationSessionFromToken;
-        }
-
-        @Override
-        public boolean test(T t) throws VerificationException {
-            AuthenticationSessionModel authenticationSession = getAuthenticationSessionFromToken.apply(t);
-
-            ClientModel client = authenticationSession == null ? null : authenticationSession.getClient();
-
-            if (client == null) {
-                event.error(Errors.CLIENT_NOT_FOUND);
-                new AuthenticationSessionManager(session).removeAuthenticationSession(realm, authenticationSession, true);
-                throw new LoginActionsServiceException(ErrorPage.error(session, Messages.UNKNOWN_LOGIN_REQUESTER));
-            }
-
-            if (! client.isEnabled()) {
-                event.error(Errors.CLIENT_NOT_FOUND);
-                new AuthenticationSessionManager(session).removeAuthenticationSession(realm, authenticationSession, true);
-                throw new LoginActionsServiceException(ErrorPage.error(session, Messages.LOGIN_REQUESTER_NOT_ENABLED));
-            }
-
-            session.getContext().setClient(client);
-
-            return true;
-        }
-    }
-
-    /**
      * This check verifies that:
      * <ul>
      * <li>If authentication session ID is not set in the token, passes.</li>
@@ -678,30 +606,28 @@ public class LoginActionsService {
      *
      * @param <T>
      */
-    private class CanResolveAuthenticationSession<T extends JsonWebToken> implements Predicate<T> {
+    private class CanResolveAuthenticationSessionById<T extends JsonWebToken> implements Predicate<T> {
 
         private final Function<T, String> getAuthenticationSessionIdFromToken;
 
-        private final BiConsumer<T, AuthenticationSessionModel> setAuthenticationSessionToToken;
+        private final Consumer<AuthenticationSessionModel> setAuthenticationSession;
 
-        public CanResolveAuthenticationSession(Function<T, String> getAuthenticationSessionIdFromToken,
-          BiConsumer<T, AuthenticationSessionModel> setAuthenticationSessionToToken) {
+        public CanResolveAuthenticationSessionById(Function<T, String> getAuthenticationSessionIdFromToken,
+          Consumer<AuthenticationSessionModel> setAuthenticationSession) {
             this.getAuthenticationSessionIdFromToken = getAuthenticationSessionIdFromToken;
-            this.setAuthenticationSessionToToken = setAuthenticationSessionToToken;
+            this.setAuthenticationSession = setAuthenticationSession;
         }
 
         @Override
         public boolean test(T t) throws VerificationException {
             String authSessionId = t == null ? null : getAuthenticationSessionIdFromToken.apply(t);
 
-            AuthenticationSessionModel authSession;
             if (authSessionId == null) {
                 return true;
-            } else {
-                authSession = session.authenticationSessions().getAuthenticationSession(realm, authSessionId);
             }
+            AuthenticationSessionModel authSession = session.authenticationSessions().getAuthenticationSession(realm, authSessionId);
 
-            if (authSession == null) { // timeout or logged-already (NOPE - this is handled by IsAuthenticationSessionNotConvertedToUserSession)
+            if (authSession == null) { // session destroyed due to timeout or already logged in. The latter is prevented when using single-use cache
                 throw new LoginActionsServiceException(restartAuthenticationSessionFromCookie());
             }
 
@@ -709,69 +635,31 @@ public class LoginActionsService {
               .detail(Details.CODE_ID, authSession.getId())
               .client(authSession.getClient());
 
-            setAuthenticationSessionToToken.accept(t, authSession);
+            setAuthenticationSession.accept(authSession);
 
             return true;
         }
     }
 
-    /**
-     * This check verifies that if the token has not authentication session set, a new authentication session is introduced
-     * for the given client and reset-credentials flow is started with this new session.
-     */
-    private class ResetCredsIntroduceAuthenticationSessionIfNotSet implements Predicate<ResetCredentialsActionToken> {
+    @Path(RESET_CREDENTIALS_PATH)
+    @POST
+    public Response resetCredentialsPOST(@QueryParam("code") String code,
+                                         @QueryParam("execution") String execution,
+                                         @QueryParam(Constants.KEY) String key) {
+        event.event(EventType.RESET_PASSWORD);
 
-        private final String defaultClientId;
-
-        public ResetCredsIntroduceAuthenticationSessionIfNotSet(String defaultClientId) {
-            this.defaultClientId = defaultClientId;
+        if (key != null) {
+            return handleActionToken(
+              key,
+              ResetCredentialsActionToken.TOKEN_TYPE,
+              ResetCredentialsActionToken.class,
+              token -> handleResetCredentialsToken(token, execution),
+              Errors.NOT_ALLOWED, Messages.RESET_CREDENTIAL_NOT_ALLOWED,
+              token -> ((ResetCredentialsActionToken) token).getAuthenticationSessionId()
+            );
         }
 
-        @Override
-        public boolean test(ResetCredentialsActionToken t) throws VerificationException {
-            AuthenticationSessionModel authSession = t.getAuthenticationSession();
-
-            if (authSession == null) {
-                authSession = createAuthenticationSessionForClient(this.defaultClientId);
-                throw new LoginActionsServiceException(processResetCredentials(false, null, authSession, null));
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Verifies that if authentication session exists and any action is required according to it, then it is
-     * the expected one.
-     *
-     * If there is an action required in the session, furthermore it is not the expected one, and the required
-     * action is redirection to "required actions", it throws with response performing the redirect to required
-     * actions.
-     * @param <T>
-     */
-    private class IsActionRequired<T extends JsonWebToken> implements Predicate<T> {
-
-        private final ClientSessionModel.Action expectedAction;
-        
-        private final Function<T, AuthenticationSessionModel> getAuthenticationSessionFromToken;
-
-        public IsActionRequired(Action expectedAction, Function<T, AuthenticationSessionModel> getAuthenticationSessionFromToken) {
-            this.expectedAction = expectedAction;
-            this.getAuthenticationSessionFromToken = getAuthenticationSessionFromToken;
-        }
-
-        @Override
-        public boolean test(T t) throws VerificationException {
-            AuthenticationSessionModel authSession = getAuthenticationSessionFromToken.apply(t);
-            
-            if (authSession != null && ! Objects.equals(authSession.getAction(), this.expectedAction.name())) {
-                if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(authSession.getAction())) {
-                    throw new LoginActionsServiceException(redirectToRequiredActions(null, authSession));
-                }
-            }
-
-            return true;
-        }
+        return resetCredentials(code, execution);
     }
 
     /**
@@ -806,14 +694,10 @@ public class LoginActionsService {
             return processResetCredentials(false, null, authSession, null);
         }
 
-        if (key != null) {
-            return resetCredentialsByToken(key, execution);
-        }
-        
-        return resetCredentials(code, execution);
+        return resetCredentialsPOST(code, execution, key);
     }
 
-    private AuthenticationSessionModel createAuthenticationSessionForClient(String clientId)
+    AuthenticationSessionModel createAuthenticationSessionForClient(String clientId)
       throws UriBuilderException, IllegalArgumentException {
         AuthenticationSessionModel authSession;
 
@@ -833,13 +717,12 @@ public class LoginActionsService {
     }
 
     /**
-     * @deprecated In favor of {@link #resetCredentialsByToken(String, String)}
+     * @deprecated In favor of {@link #handleToken(String, String)}
      * @param code
      * @param execution
      * @return
      */
     protected Response resetCredentials(String code, String execution) {
-        event.event(EventType.RESET_PASSWORD);
         SessionCodeChecks checks = checksForCode(code, execution, RESET_CREDENTIALS_PATH);
         if (!checks.verifyCode(ClientSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.USER)) {
             return checks.response;
@@ -847,7 +730,9 @@ public class LoginActionsService {
         final AuthenticationSessionModel authSession = checks.getAuthenticationSession();
 
         if (!realm.isResetPasswordAllowed()) {
-            event.client(authSession.getClient());
+            if (authSession != null) {
+                event.client(authSession.getClient());
+            }
             event.error(Errors.NOT_ALLOWED);
             return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
 
@@ -856,75 +741,126 @@ public class LoginActionsService {
         return processResetCredentials(checks.actionRequest, execution, authSession, null);
     }
 
-    protected Response resetCredentialsByToken(String tokenString, String execution) {
-        event.event(EventType.RESET_PASSWORD);
+    private static class TokenContext<T> {
+        private T object;
 
-        ResetCredentialsActionToken token;
-        ResetCredentialsActionTokenChecks singleUseCheck = new ResetCredentialsActionTokenChecks(session, realm, event);
+        public T getObject() {
+            return object;
+        }
+
+        public T setObject(T t) {
+            this.object = t;
+            return t;
+        }
+    }
+
+    @FunctionalInterface
+    public interface TokenHandlerBody<T extends JsonWebToken> {
+        Response handle(T tokenString) throws VerificationException;
+    }
+
+    /**
+     * Handles a given token using the given token handler. If there is any {@link VerificationException} thrown
+     * in the handler, it is handled automatically here to reduce boilerplate code.
+     *
+     * @param tokenString Original token string
+     * @param expectedTokenType Expected string in token type field (operation id)
+     * @param body Function to handle action token
+     * @param eventError
+     * @param defaultErrorMessage
+     * @param authSessionIdFromToken Function to obtain authentication session ID from token. Can be null.
+     * @return
+     */
+    protected <T extends DefaultActionToken> Response handleActionToken(String tokenString, String expectedTokenType,
+      Class<T> tokenClass, TokenHandlerBody<T> body,
+      String eventError, String defaultErrorMessage, Function<? super T, String> authSessionIdFromToken) {
         try {
-            token = TokenVerifier.createHollow(tokenString, ResetCredentialsActionToken.class)
-              .secretKey(session.keys().getActiveHmacKey(realm).getSecretKey())
-
+            return body.handle(TokenVerifier.createHollow(tokenString, tokenClass)
               .withChecks(
-                new TokenTypeCheck(RESET_CREDENTIALS_TYPE),
-
-                checkThat(realm::isEnabled, Errors.REALM_DISABLED, Messages.REALM_NOT_ENABLED),
-                checkThat(realm::isResetPasswordAllowed, Errors.NOT_ALLOWED, Messages.RESET_CREDENTIAL_NOT_ALLOWED),
-                checkThat(this::checkSsl, Errors.SSL_REQUIRED, Messages.HTTPS_REQUIRED),
-
-                new IsAuthenticationSessionNotConvertedToUserSession<>(ResetCredentialsActionToken::getAuthenticationSessionId),
-
-                // Authentication session might not be part of the token, hence the following check is optional
-                optional(new CanResolveAuthenticationSession<>(ResetCredentialsActionToken::getAuthenticationSessionId, ResetCredentialsActionToken::setAuthenticationSession)),
-
-                // Check for being active has to be after authentication session is resolved so that it can be used in error handling
                 TokenVerifier.IS_ACTIVE,
-
-                singleUseCheck, // TODO:hmlnarik make it use a check via generic single-use cache
-
-                new ResetCredsIntroduceAuthenticationSessionIfNotSet(Constants.ACCOUNT_MANAGEMENT_CLIENT_ID),
-
-                new IsActionRequired<>(Action.AUTHENTICATE, ResetCredentialsActionToken::getAuthenticationSession),
-                new IsClientValid<>(ResetCredentialsActionToken::getAuthenticationSession)
+                new TokenTypeCheck(expectedTokenType)
               )
+
               .withChecks(ACTION_TOKEN_BASIC_CHECKS)
 
-              .verify()
-              .getToken();
-        } catch (TokenNotActiveException ex) {
-            token = (ResetCredentialsActionToken) ex.getToken();
+              .withChecks(  // Global checks - related to realm and connection
+                checkThat(realm::isEnabled, Errors.REALM_DISABLED, Messages.REALM_NOT_ENABLED),
+                checkThat(this::checkSsl, Errors.SSL_REQUIRED, Messages.HTTPS_REQUIRED)
+              )
 
-            if (token != null && token.getAuthenticationSession() != null) {
+              .secretKey(session.keys().getActiveHmacKey(realm).getSecretKey())
+              .verify()
+              .getToken()
+            );
+        } catch (TokenNotActiveException ex) {
+            T token = (T) ex.getToken();
+            AuthenticationSessionModel authSession = (token == null || authSessionIdFromToken == null)
+              ? null
+              : session.authenticationSessions().getAuthenticationSession(realm, authSessionIdFromToken.apply(token));
+
+            if (authSession != null) {
                 event.clone()
-                  .client(token.getAuthenticationSession().getClient())
+                  .user(token == null ? null : token.getUserId())
+                  .detail(Details.ACTION, token == null ? null : token.getActionId())
+                  .client(authSession.getClient())
                   .error(Errors.EXPIRED_CODE);
-                AuthenticationSessionModel authSession = token.getAuthenticationSession();
                 AuthenticationProcessor.resetFlow(authSession);
                 return processAuthentication(false, null, authSession, Messages.LOGIN_TIMEOUT);
             }
 
-            event
-              .detail(Details.REASON, ex.getMessage())
-              .error(Errors.NOT_ALLOWED);
-            return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
+            return handleActionTokenVerificationException(ex, eventError, defaultErrorMessage);
         } catch (LoginActionsServiceException ex) {
-            if (ex.getResponse() == null) {
-                event
-                  .detail(Details.REASON, ex.getMessage())
-                  .error(Errors.NOT_ALLOWED);
-                return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
-            } else {
-                return ex.getResponse();
-            }
+            Response response = ex.getResponse();
+            return response == null
+              ? handleActionTokenVerificationException(ex, eventError, defaultErrorMessage)
+              : response;
         } catch (VerificationException ex) {
-            event
-              .detail(Details.REASON, ex.getMessage())
-              .error(Errors.NOT_ALLOWED);
-            return ErrorPage.error(session, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
+            return handleActionTokenVerificationException(ex, eventError, defaultErrorMessage);
         }
+    }
 
-        final AuthenticationSessionModel authSession = token.getAuthenticationSession();
-        authSession.setAuthNote(ResetCredentialsActionToken.class.getName(), tokenString);
+    private Response handleActionTokenVerificationException(VerificationException ex, String eventError, String errorMessage) {
+        event
+          .detail(Details.REASON, ex.getMessage())
+          .error(eventError);
+        return ErrorPage.error(session, errorMessage);
+    }
+
+    private Response handleResetCredentialsToken(ResetCredentialsActionToken token, String execution) throws VerificationException {
+        event
+          .detail(Details.TOKEN_ID, token.getId())
+          .user(token.getUserId());
+
+        LoginActionsServiceChecks checks = new LoginActionsServiceChecks(this, session, realm, uriInfo, event);
+        TokenContext<AuthenticationSessionModel> authSessionContext = new TokenContext<>();
+        ResetCredentialsActionTokenChecks singleUseCheck = new ResetCredentialsActionTokenChecks(session, realm, event);
+
+        TokenVerifier.createHollow(token)
+          .withChecks(// Checks specific to reset-credentials
+            checkThat(realm::isResetPasswordAllowed, Errors.NOT_ALLOWED, Messages.RESET_CREDENTIAL_NOT_ALLOWED),
+
+            checks.new IsAlreadyLoggedIn<>(ResetCredentialsActionToken::getAuthenticationSessionId),
+
+            singleUseCheck, // TODO:hmlnarik make it use a check via generic single-use cache
+
+            // Authentication session might not be part of the token, hence the following check is optional
+            optional(new CanResolveAuthenticationSessionById<>(ResetCredentialsActionToken::getAuthenticationSessionId, authSessionContext::setObject)),
+
+            checks.new StartWithFreshAuthenticationSessionIfNotSet(
+              Constants.ACCOUNT_MANAGEMENT_CLIENT_ID,
+              authSessionContext::getObject,
+              authSession -> processResetCredentials(false, null, authSession, null)
+            ),
+            checks.new AuthenticationSessionUserIdMatches(authSessionContext::getObject),
+            checks.new IsActionRequired(Action.AUTHENTICATE, authSessionContext::getObject),
+            checks.new IsClientValid(() -> authSessionContext.getObject().getClient(), () -> authSessionContext.getObject())
+          )
+
+          .verify();
+
+        final AuthenticationSessionModel authSession = authSessionContext.getObject();
+        // token.getActionVerificationNonce() is always non-null, see DefaultActionToken::ACTION_TOKEN_BASIC_CHECKS
+        authSession.setAuthNote(ResetCredentialsActionToken.class.getName(), token.getActionVerificationNonce().toString());
 
         // Verify if action is processed in same browser.
         if (!isSameBrowser(authSession)) {
@@ -1308,29 +1244,62 @@ public class LoginActionsService {
     @Path("execute-actions")
     @GET
     public Response executeActions(@QueryParam("key") String key) {
-        // TODO:mposolda
-        /*
         event.event(EventType.EXECUTE_ACTIONS);
-        if (key != null) {
-            SessionCodeChecks checks = checksForCode(key);
-            if (!checks.verifyCode(ClientSessionModel.Action.EXECUTE_ACTIONS.name(), ClientSessionCode.ActionType.USER)) {
-                return checks.response;
-            }
-            ClientSessionModel clientSession = checks.getClientSession();
-            // verify user email as we know it is valid as this entry point would never have gotten here.
-            clientSession.getUserSession().getUser().setEmailVerified(true);
-            clientSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
-            clientSession.setNote(ClientSessionModel.Action.EXECUTE_ACTIONS.name(), "true");
-            return AuthenticationProcessor.redirectToRequiredActions(session, realm, clientSession, uriInfo);
-        } else {
-            event.error(Errors.INVALID_CODE);
-            return ErrorPage.error(session, Messages.INVALID_CODE);
-        }*/
-        return null;
+
+        return handleActionToken(
+          key,
+          ExecuteActionsActionToken.TOKEN_TYPE,
+          ExecuteActionsActionToken.class,
+          this::handleExecuteActions,
+          Errors.INVALID_CODE,
+          Messages.INVALID_CODE,
+          null
+        );
     }
 
-    private String getActionCookie() {
-        return getActionCookie(headers, realm, uriInfo, clientConnection);
+    private Response handleExecuteActions(ExecuteActionsActionToken token) throws VerificationException {
+        event
+          .detail(Details.TOKEN_ID, token.getId())
+          .user(token.getUserId());
+
+        LoginActionsServiceChecks checks = new LoginActionsServiceChecks(this, session, realm, uriInfo, event);
+        String clientId = token.getClientId() == null ? Constants.ACCOUNT_MANAGEMENT_CLIENT_ID : token.getClientId();
+        TokenContext<UserModel> userContext = new TokenContext<>();
+        TokenContext<ClientModel> clientContext = new TokenContext<>();
+
+        TokenVerifier.createHollow(token)
+          .withChecks(// Checks specific to execute-actions
+//            singleUseCheck, // TODO:hmlnarik make it use a check via generic single-use cache
+
+            checks.new IsUserValid(() -> token.getUserId(), userContext::setObject),
+            checks.new IsClientValid(() -> clientContext.setObject(realm.getClientByClientId(clientId)), null),
+            checks.new IsRedirectionValid(clientContext::getObject, token.getRedirectUri())
+          )
+
+          .verify();
+
+        final AuthenticationSessionModel authSession = createAuthenticationSessionForClient(clientId);
+        // token.getActionVerificationNonce() is always non-null, see DefaultActionToken::ACTION_TOKEN_BASIC_CHECKS
+        String redirectUri = RedirectUtils.verifyRedirectUri(uriInfo, token.getRedirectUri(), realm, realm.getClientByClientId(clientId));
+        if (redirectUri != null) {
+            authSession.setNote(AuthenticationManager.SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS, "true");
+            
+            authSession.setRedirectUri(redirectUri);
+            authSession.setNote(OIDCLoginProtocol.REDIRECT_URI_PARAM, redirectUri);
+        }
+
+        authSession.setAuthNote(ExecuteActionsActionToken.class.getName(), token.getActionVerificationNonce().toString());
+        for (String requiredAction : token.getRequiredActions()) {
+            authSession.addRequiredAction(requiredAction);
+        }
+
+        UserModel user = userContext.getObject();
+        // verify user email as we know it is valid as this entry point would never have gotten here.
+        user.setEmailVerified(true);
+        authSession.setAuthenticatedUser(user);
+        authSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
+
+        return AuthenticationProcessor.redirectToRequiredActions(session, realm, authSession, uriInfo);
     }
 
     public static String getActionCookie(HttpHeaders headers, RealmModel realm, UriInfo uriInfo, ClientConnection clientConnection) {
@@ -1459,7 +1428,7 @@ public class LoginActionsService {
         throw new RuntimeException("Unreachable");
     }
 
-    private Response redirectToRequiredActions(String action, AuthenticationSessionModel authSession) {
+    Response redirectToRequiredActions(String action, AuthenticationSessionModel authSession) {
         authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
 
         UriBuilder uriBuilder = LoginActionsService.loginActionsBaseUrl(uriInfo)

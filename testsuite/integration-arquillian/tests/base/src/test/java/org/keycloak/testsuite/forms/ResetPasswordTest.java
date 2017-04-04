@@ -376,7 +376,7 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
 
             assertEquals("You took too long to login. Login process starting from beginning.", loginPage.getError());
 
-            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user((String) null).session((String) null).clearDetails().assertEvent();
+            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user(userId).session((String) null).clearDetails().assertEvent();
         } finally {
             setTimeOffset(0);
         }
@@ -412,7 +412,7 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
 
             assertEquals("You took too long to login. Login process starting from beginning.", loginPage.getError());
 
-            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user((String) null).session((String) null).clearDetails().assertEvent();
+            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user(userId).session((String) null).clearDetails().assertEvent();
         } finally {
             setTimeOffset(0);
 

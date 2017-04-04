@@ -52,7 +52,8 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
     @Override
     public void authenticate(AuthenticationFlowContext context) {
         UserModel user = context.getUser();
-        String username = context.getAuthenticationSession().getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+        AuthenticationSessionModel authenticationSession = context.getAuthenticationSession();
+        String username = authenticationSession.getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
 
         // we don't want people guessing usernames, so if there was a problem obtaining the user, the user will be null.
         // just reset login for with a success message
@@ -80,7 +81,8 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
         Long lastCreatedPassword = getLastChangedTimestamp(keycloakSession, context.getRealm(), user);
 
         // We send the secret in the email in a link as a query param.
-        ResetCredentialsActionToken token = new ResetCredentialsActionToken(user.getId(), absoluteExpirationInSecs, null, lastCreatedPassword, context.getAuthenticationSession());
+        ResetCredentialsActionToken token = new ResetCredentialsActionToken(user.getId(), absoluteExpirationInSecs,
+          null, lastCreatedPassword, authenticationSession.getId());
         String link = UriBuilder
           .fromUri(context.getRefreshExecutionUrl())
           .queryParam(Constants.KEY, token.serialize(keycloakSession, context.getRealm(), context.getUriInfo()))
@@ -93,7 +95,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
             event.clone().event(EventType.SEND_RESET_PASSWORD)
                          .user(user)
                          .detail(Details.USERNAME, username)
-                         .detail(Details.EMAIL, user.getEmail()).detail(Details.CODE_ID, context.getAuthenticationSession().getId()).success();
+                         .detail(Details.EMAIL, user.getEmail()).detail(Details.CODE_ID, authenticationSession.getId()).success();
             context.forkWithSuccessMessage(new FormMessage(Messages.EMAIL_SENT));
         } catch (EmailException e) {
             event.clone().event(EventType.SEND_RESET_PASSWORD)
@@ -119,50 +121,8 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
     @Override
     public void action(AuthenticationFlowContext context) {
         KeycloakSession keycloakSession = context.getSession();
-        String actionTokenString = context.getAuthenticationSession().getAuthNote(ResetCredentialsActionToken.class.getName());
-        ResetCredentialsActionToken tokenFromMail = null;
-
-        try {
-            tokenFromMail = ResetCredentialsActionToken.deserialize(actionTokenString);
-        } catch (VerificationException ex) {
-            context.getEvent().detail(Details.REASON, ex.getMessage());
-            // flow returns in the next condition so no "return" statmenent here
-        }
-
-        if (tokenFromMail == null) {
-            context.getEvent()
-              .error(Errors.INVALID_CODE);
-            Response challenge = context.form()
-                    .setError(Messages.INVALID_CODE)
-                    .createErrorPage();
-            context.failure(AuthenticationFlowError.INTERNAL_ERROR, challenge);
-            return;
-        }
-
-        String userId = tokenFromMail.getUserId();
-
-        Long lastCreatedPasswordMail = tokenFromMail.getLastChangedPasswordTimestamp();
-        Long lastCreatedPasswordFromStore = getLastChangedTimestamp(keycloakSession, context.getRealm(), context.getUser());
-
-        String authenticationSessionId = tokenFromMail.getAuthenticationSessionId();
-        AuthenticationSessionModel authenticationSession = authenticationSessionId == null
-          ? null
-          : keycloakSession.authenticationSessions().getAuthenticationSession(context.getRealm(), authenticationSessionId);
-
-        if (authenticationSession == null
-          || ! Objects.equals(lastCreatedPasswordMail, lastCreatedPasswordFromStore)
-          || ! Objects.equals(userId, context.getUser().getId())) {
-            context.getEvent()
-              .user(userId)
-              .detail(Details.USERNAME, context.getUser().getUsername())
-              .detail(Details.TOKEN_ID, tokenFromMail.getId())
-              .error(Errors.EXPIRED_CODE);
-            Response challenge = context.form()
-                    .setError(Messages.EXPIRED_CODE)
-                    .createErrorPage();
-            context.failure(AuthenticationFlowError.INTERNAL_ERROR, challenge);
-            return;
-        }
+        String tokenFromMailNonceString = context.getAuthenticationSession().getAuthNote(ResetCredentialsActionToken.class.getName());
+        UUID tokenFromMailNonce = UUID.fromString(tokenFromMailNonceString);
 
         // We now know email is valid, so set it to valid.
         context.getUser().setEmailVerified(true);
