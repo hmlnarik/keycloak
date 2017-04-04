@@ -14,33 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.keycloak.authentication;
+package org.keycloak.authentication.actiontoken;
 
-import org.keycloak.representations.JsonWebToken;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.keycloak.provider.Provider;
+import org.keycloak.provider.ProviderFactory;
+import org.keycloak.provider.Spi;
 
 /**
  *
  * @author hmlnarik
  */
-public class DefaultActionTokenKey extends JsonWebToken {
+public class ActionTokenHandlerSpi implements Spi {
 
-    // The authenticationSession note with ID of the user authenticated via the action token
-    public static final String ACTION_TOKEN_USER_ID = "ACTION_TOKEN_USER";
-
-    public DefaultActionTokenKey(String userId, String actionId) {
-        subject = userId;
-        type = actionId;
+    @Override
+    public boolean isInternal() {
+        return true;
     }
 
-    @JsonIgnore
-    public String getUserId() {
-        return getSubject();
+    @Override
+    public String getName() {
+        return NAME;
+    }
+    private static final String NAME = "actionTokenHandler";
+
+    @Override
+    public Class<? extends Provider> getProviderClass() {
+        return ActionTokenHandler.class;
     }
 
-    @JsonIgnore
-    public String getActionId() {
-        return getType();
+    @Override
+    public Class<? extends ProviderFactory> getProviderFactoryClass() {
+        return ActionTokenHandlerFactory.class;
     }
 
 }

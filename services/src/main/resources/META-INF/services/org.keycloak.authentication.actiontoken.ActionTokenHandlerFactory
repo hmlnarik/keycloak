@@ -1,0 +1,2 @@
+org.keycloak.authentication.actiontoken.resetcred.ResetCredentialsActionTokenHandler
+org.keycloak.authentication.actiontoken.execactions.ExecuteActionsActionTokenHandler
