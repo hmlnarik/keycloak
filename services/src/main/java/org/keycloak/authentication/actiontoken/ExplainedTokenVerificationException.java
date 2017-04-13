@@ -16,6 +16,7 @@
  */
 package org.keycloak.authentication.actiontoken;
 
+import org.keycloak.authentication.ExplainedVerificationException;
 import org.keycloak.exceptions.TokenVerificationException;
 import org.keycloak.representations.JsonWebToken;
 
@@ -27,6 +28,11 @@ import org.keycloak.representations.JsonWebToken;
  */
 public class ExplainedTokenVerificationException extends TokenVerificationException {
     private final String errorEvent;
+
+    public ExplainedTokenVerificationException(JsonWebToken token, ExplainedVerificationException cause) {
+        super(token, cause.getMessage(), cause);
+        this.errorEvent = cause.getErrorEvent();
+    }
 
     public ExplainedTokenVerificationException(JsonWebToken token, String errorEvent) {
         super(token);

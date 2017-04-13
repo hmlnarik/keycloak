@@ -19,6 +19,7 @@ package org.keycloak.services.resources;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.DefaultActionToken;
+import org.keycloak.authentication.ExplainedVerificationException;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
 import org.keycloak.authentication.actiontoken.ExplainedTokenVerificationException;
 import org.keycloak.common.VerificationException;
@@ -34,6 +35,7 @@ import org.keycloak.services.resources.LoginActionsServiceChecks.AdjustFlowExcep
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.sessions.CommonClientSessionModel.Action;
 import java.util.Objects;
+import java.util.function.Consumer;
 import javax.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 /**
@@ -191,20 +193,47 @@ public class LoginActionsServiceChecks {
      *  Verifies whether the user given by ID both exists in the current realm. If yes,
      *  it optionally also injects the user using the given function (e.g. into session context).
      */
-    public static <T extends DefaultActionToken> void checkIsUserValid(ActionTokenContext<T> context, T t) throws VerificationException {
-        String userId = t.getUserId();
-
-        UserModel user = userId == null ? null : context.getSession().users().getUserById(userId, context.getRealm());
+    public static void checkIsUserValid(KeycloakSession session, RealmModel realm, String userId, Consumer<UserModel> userSetter) throws VerificationException {
+        UserModel user = userId == null ? null : session.users().getUserById(userId, realm);
 
         if (user == null) {
-            throw new ExplainedTokenVerificationException(t, Errors.USER_NOT_FOUND, Messages.INVALID_USER);
+            throw new ExplainedVerificationException(Errors.USER_NOT_FOUND, Messages.INVALID_USER);
         }
 
         if (! user.isEnabled()) {
-            throw new ExplainedTokenVerificationException(t, Errors.USER_DISABLED, Messages.INVALID_USER);
+            throw new ExplainedVerificationException(Errors.USER_DISABLED, Messages.INVALID_USER);
         }
 
-        context.getAuthenticationSession().setAuthenticatedUser(user);
+        if (userSetter != null) {
+            userSetter.accept(user);
+        }
+    }
+
+    /**
+     *  Verifies whether the user given by ID both exists in the current realm. If yes,
+     *  it optionally also injects the user using the given function (e.g. into session context).
+     */
+    public static <T extends DefaultActionToken> void checkIsUserValid(ActionTokenContext<T> context, T t) throws VerificationException {
+        try {
+            checkIsUserValid(context.getSession(), context.getRealm(), t.getUserId(), context.getAuthenticationSession()::setAuthenticatedUser);
+        } catch (ExplainedVerificationException ex) {
+            throw new ExplainedTokenVerificationException(t, ex);
+        }
+    }
+
+    /**
+     * Verifies whether the client denoted by client ID in token's {@code iss} ({@code issuedFor})
+     * field both exists and is enabled. If yes,
+     * it optionally also injects the client using the given function (e.g. into session context).
+     */
+    public static void checkIsClientValid(KeycloakSession session, ClientModel client) throws VerificationException {
+        if (client == null) {
+            throw new ExplainedVerificationException(Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
+        }
+
+        if (! client.isEnabled()) {
+            throw new ExplainedVerificationException(Errors.CLIENT_NOT_FOUND, Messages.LOGIN_REQUESTER_NOT_ENABLED);
+        }
     }
 
     /**
@@ -217,16 +246,14 @@ public class LoginActionsServiceChecks {
         AuthenticationSessionModel authSession = context.getAuthenticationSession();
         ClientModel client = authSession == null ? null : authSession.getClient();
 
-        if (client == null) {
-            throw new ExplainedTokenVerificationException(t, Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
-        }
+        try {
+            checkIsClientValid(context.getSession(), client);
 
-        if (clientId != null && ! Objects.equals(client.getClientId(), clientId)) {
-            throw new ExplainedTokenVerificationException(t, Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
-        }
-
-        if (! client.isEnabled()) {
-            throw new ExplainedTokenVerificationException(t, Errors.CLIENT_NOT_FOUND, Messages.LOGIN_REQUESTER_NOT_ENABLED);
+            if (clientId != null && ! Objects.equals(client.getClientId(), clientId)) {
+                throw new ExplainedTokenVerificationException(t, Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
+            }
+        } catch (ExplainedVerificationException ex) {
+            throw new ExplainedTokenVerificationException(t, ex);
         }
     }
 
