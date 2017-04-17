@@ -17,7 +17,7 @@
 package org.keycloak.authentication.actiontoken.execactions;
 
 import org.keycloak.TokenVerifier;
-import org.keycloak.authentication.DefaultActionToken;
+import org.keycloak.authentication.actiontoken.DefaultActionToken;
 import org.keycloak.common.VerificationException;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.LinkedList;
@@ -33,7 +33,6 @@ public class ExecuteActionsActionToken extends DefaultActionToken {
     public static final String TOKEN_TYPE = "execute-actions";
     private static final String JSON_FIELD_REQUIRED_ACTIONS = "rqac";
     private static final String JSON_FIELD_REDIRECT_URI = "reduri";
-    private static final String JSON_FIELD_AUTHENTICATION_SESSION_ID = "asid";
 
     public ExecuteActionsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, List<String> requiredActions, String redirectUri, String clientId) {
         super(userId, TOKEN_TYPE, absoluteExpirationInSecs, actionVerificationNonce);
@@ -44,16 +43,6 @@ public class ExecuteActionsActionToken extends DefaultActionToken {
 
     private ExecuteActionsActionToken() {
         super(null, TOKEN_TYPE, -1, null);
-    }
-
-    @JsonProperty(value = JSON_FIELD_AUTHENTICATION_SESSION_ID)
-    public String getAuthenticationSessionId() {
-        return (String) getOtherClaims().get(JSON_FIELD_AUTHENTICATION_SESSION_ID);
-    }
-
-    @JsonProperty(value = JSON_FIELD_AUTHENTICATION_SESSION_ID)
-    public final void setAuthenticationSessionId(String authenticationSessionId) {
-        setOtherClaims(JSON_FIELD_AUTHENTICATION_SESSION_ID, authenticationSessionId);
     }
 
     @JsonProperty(value = JSON_FIELD_REQUIRED_ACTIONS)

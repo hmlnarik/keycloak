@@ -18,7 +18,7 @@ package org.keycloak.services.resources;
 
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.AuthenticationProcessor;
-import org.keycloak.authentication.DefaultActionToken;
+import org.keycloak.authentication.actiontoken.DefaultActionToken;
 import org.keycloak.authentication.ExplainedVerificationException;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
 import org.keycloak.authentication.actiontoken.ExplainedTokenVerificationException;
@@ -31,12 +31,10 @@ import org.keycloak.representations.JsonWebToken;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.messages.Messages;
-import org.keycloak.services.resources.LoginActionsServiceChecks.AdjustFlowException.NextStep;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.sessions.CommonClientSessionModel.Action;
 import java.util.Objects;
 import java.util.function.Consumer;
-import javax.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 /**
  *
@@ -46,56 +44,10 @@ public class LoginActionsServiceChecks {
 
     private static final Logger LOG = Logger.getLogger(LoginActionsServiceChecks.class.getName());
 
-    @FunctionalInterface
-    public interface RestartFlow {
-        Response restartFlow(AuthenticationSessionModel authenticationSession);
-    }
-
-    public static class AdjustFlowException extends VerificationException {
-        public static enum NextStep {
-            NONE,
-            RESTART_FLOW_FROM_COOKIE,
-            START_RESET_CREDENTIALS_FLOW_WITH_NEW_SESSION,
-            REDIRECT_TO_REQUIRED_ACTIONS,
-            REDIRECT_TO_RESET_CREDENTIALS,
-        }
-
-        private final NextStep nextStep;
-
-        public AdjustFlowException(NextStep nextStep) {
-            this.nextStep = nextStep == null ? NextStep.NONE : nextStep;
-        }
-
-        public NextStep getNextStep() {
-            return nextStep;
-        }
-    }
-
     /**
-     * This check verifies that if the token has not authentication session set, a new authentication session is introduced
-     * for the given client and reset-credentials flow is started with this new session.
+     * Exception signalling that flow needs to be restarted because authentication session IDs from cookie and token do not match.
      */
-    public static class StartWithFreshAuthenticationSessionIfNotSet implements Predicate<JsonWebToken> {
-
-        private final ActionTokenContext<?> context;
-        private final NextStep nextStepOnFailure;
-
-        public StartWithFreshAuthenticationSessionIfNotSet(ActionTokenContext<?> context, NextStep nextStepOnFailure) {
-            this.context = context;
-            this.nextStepOnFailure = nextStepOnFailure;
-        }
-
-        @Override
-        public boolean test(JsonWebToken t) throws VerificationException {
-            AuthenticationSessionModel authSession = context.getAuthenticationSession();
-
-            if (authSession == null) {
-                throw new AdjustFlowException(nextStepOnFailure);
-            }
-
-            return true;
-        }
-    }
+    public static class RestartFlowException extends VerificationException { }
 
     /**
      * This check verifies that user ID (subject) from the token matches
@@ -213,18 +165,17 @@ public class LoginActionsServiceChecks {
      *  Verifies whether the user given by ID both exists in the current realm. If yes,
      *  it optionally also injects the user using the given function (e.g. into session context).
      */
-    public static <T extends DefaultActionToken> void checkIsUserValid(ActionTokenContext<T> context, T t) throws VerificationException {
+    public static <T extends DefaultActionToken> void checkIsUserValid(T token, ActionTokenContext<T> context) throws VerificationException {
         try {
-            checkIsUserValid(context.getSession(), context.getRealm(), t.getUserId(), context.getAuthenticationSession()::setAuthenticatedUser);
+            checkIsUserValid(context.getSession(), context.getRealm(), token.getUserId(), context.getAuthenticationSession()::setAuthenticatedUser);
         } catch (ExplainedVerificationException ex) {
-            throw new ExplainedTokenVerificationException(t, ex);
+            throw new ExplainedTokenVerificationException(token, ex);
         }
     }
 
     /**
      * Verifies whether the client denoted by client ID in token's {@code iss} ({@code issuedFor})
-     * field both exists and is enabled. If yes,
-     * it optionally also injects the client using the given function (e.g. into session context).
+     * field both exists and is enabled.
      */
     public static void checkIsClientValid(KeycloakSession session, ClientModel client) throws VerificationException {
         if (client == null) {
@@ -238,11 +189,10 @@ public class LoginActionsServiceChecks {
 
     /**
      * Verifies whether the client denoted by client ID in token's {@code iss} ({@code issuedFor})
-     * field both exists and is enabled. If yes,
-     * it optionally also injects the client using the given function (e.g. into session context).
+     * field both exists and is enabled.
      */
-    public static <T extends DefaultActionToken> void checkIsClientValid(ActionTokenContext<T> context, T t) throws VerificationException {
-        String clientId = t.getIssuedFor();
+    public static <T extends DefaultActionToken> void checkIsClientValid(T token, ActionTokenContext<T> context) throws VerificationException {
+        String clientId = token.getIssuedFor();
         AuthenticationSessionModel authSession = context.getAuthenticationSession();
         ClientModel client = authSession == null ? null : authSession.getClient();
 
@@ -250,10 +200,10 @@ public class LoginActionsServiceChecks {
             checkIsClientValid(context.getSession(), client);
 
             if (clientId != null && ! Objects.equals(client.getClientId(), clientId)) {
-                throw new ExplainedTokenVerificationException(t, Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
+                throw new ExplainedTokenVerificationException(token, Errors.CLIENT_NOT_FOUND, Messages.UNKNOWN_LOGIN_REQUESTER);
             }
         } catch (ExplainedVerificationException ex) {
-            throw new ExplainedTokenVerificationException(t, ex);
+            throw new ExplainedTokenVerificationException(token, ex);
         }
     }
 
@@ -292,8 +242,8 @@ public class LoginActionsServiceChecks {
      *  Examples:
      *  <ul>
      *      <li>1. Email from administrator with reset e-mail - token does not contain auth session ID</li>
-     *      <li>2. Email from "verify e-mail" step - token does contain auth session ID.</li>
-     *      <li>3. User clicked the link in an e-mail - authentication session cookie is not set</li>
+     *      <li>2. Email from "verify e-mail" step within flow - token contains auth session ID.</li>
+     *      <li>3. User clicked the link in an e-mail and gets to a new browser - authentication session cookie is not set</li>
      *      <li>4. User clicked the link in an e-mail while having authentication running - authentication session cookie
      *             is already set in the browser</li>
      *  </ul>
@@ -305,7 +255,7 @@ public class LoginActionsServiceChecks {
      *          <li>If the auth session IDs from token and cookie match, pass</li>
      *          <li>Else if the auth session from cookie was forked and its parent auth session ID
      *              matches that of token, replaces current auth session with that of parent and passes</li>
-     *          <li>Else requests restart session from cookie</li>
+     *          <li>Else requests restart by throwing RestartFlow exception</li>
      *          </ul>
      *      </li>
      *  </ul>
@@ -315,33 +265,31 @@ public class LoginActionsServiceChecks {
      *  @param <T>
      */
     public static <T extends JsonWebToken> void checkAuthenticationSessionFromCookieMatchesOneFromToken(ActionTokenContext<T> context, String authSessionIdFromToken) throws VerificationException {
-        NextStep nextStepOnFailure = context.getHandler().getNextStepWhenAuthenticationSessionUnset();
-
         if (authSessionIdFromToken == null) {
-            throw new AdjustFlowException(nextStepOnFailure);
+            throw new RestartFlowException();
         }
 
         AuthenticationSessionManager asm = new AuthenticationSessionManager(context.getSession());
         String authSessionIdFromCookie = asm.getCurrentAuthenticationSessionId(context.getRealm());
 
         if (authSessionIdFromCookie == null) {
-            throw new AdjustFlowException(nextStepOnFailure);
+            throw new RestartFlowException();
         }
 
         AuthenticationSessionModel authSessionFromCookie = context.getSession()
           .authenticationSessions().getAuthenticationSession(context.getRealm(), authSessionIdFromCookie);
         if (authSessionFromCookie == null) {    // Cookie contains ID of expired auth session
-            throw new AdjustFlowException(nextStepOnFailure);
+            throw new RestartFlowException();
         }
 
         if (Objects.equals(authSessionIdFromCookie, authSessionIdFromToken)) {
-            context.setAuthenticationSession(authSessionFromCookie);
+            context.setAuthenticationSession(authSessionFromCookie, false);
             return;
         }
 
         String parentSessionId = authSessionFromCookie.getAuthNote(AuthenticationProcessor.FORKED_FROM);
         if (parentSessionId == null || ! Objects.equals(authSessionIdFromToken, parentSessionId)) {
-            throw new AdjustFlowException(nextStepOnFailure);
+            throw new RestartFlowException();
         }
 
         AuthenticationSessionModel authSessionFromParent = context.getSession()
@@ -356,32 +304,7 @@ public class LoginActionsServiceChecks {
         // Refresh browser cookie
         asm.setAuthSessionCookie(parentSessionId, context.getRealm());
 
-        context.setAuthenticationSession(authSessionFromParent);
+        context.setAuthenticationSession(authSessionFromParent, false);
         context.setExecutionId(authSessionFromParent.getAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION));
     }
-
-    /**
-     *  This check verifies that authentication session is set in the token context.
-     */
-    public static class AuthenticationSessionSet implements Predicate<JsonWebToken> {
-
-        private final ActionTokenContext<?> context;
-
-        private final NextStep nextStepOnFailure;
-
-        public AuthenticationSessionSet(ActionTokenContext<?> context, NextStep nextStepOnFailure) {
-            this.context = context;
-            this.nextStepOnFailure = nextStepOnFailure;
-        }
-
-        @Override
-        public boolean test(JsonWebToken t) throws VerificationException {
-            if (context.getAuthenticationSession() == null) {
-                throw new AdjustFlowException(this.nextStepOnFailure);
-            }
-
-            return true;
-        }
-    }
-
 }

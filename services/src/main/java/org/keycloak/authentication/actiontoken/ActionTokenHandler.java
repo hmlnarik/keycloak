@@ -19,14 +19,12 @@ package org.keycloak.authentication.actiontoken;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.common.VerificationException;
-import org.keycloak.events.Errors;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.provider.Provider;
 import org.keycloak.representations.JsonWebToken;
 import org.keycloak.services.managers.AuthenticationManager;
-import org.keycloak.services.messages.Messages;
-import org.keycloak.services.resources.LoginActionsServiceChecks.AdjustFlowException.NextStep;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import javax.ws.rs.core.Response;
 
@@ -42,9 +40,15 @@ public interface ActionTokenHandler<T extends JsonWebToken> extends Provider {
         Response processFlow(boolean action, String execution, AuthenticationSessionModel authSession, String flowPath, AuthenticationFlowModel flow, String errorMessage, AuthenticationProcessor processor);
     };
 
-    Class<T> getTokenClass();
-
-    Predicate<? super T>[] getVerifiers(ActionTokenContext tokenContext);
+    /**
+     * Returns an array of verifiers that are tested prior to handling the token. All verifiers have to pass successfully
+     * for token to be handled. The returned array must not be {@code null}.
+     * @param tokenContext
+     * @return Verifiers or an empty array
+     */
+    default Predicate<? super T>[] getVerifiers(ActionTokenContext<T> tokenContext) {
+        return new Predicate[] {};
+    }
 
     /**
      * Performs the action as per the token details. This method is only called if all verifiers
@@ -55,28 +59,61 @@ public interface ActionTokenHandler<T extends JsonWebToken> extends Provider {
      * @return
      * @throws VerificationException
      */
-    Response handleToken(T token, ActionTokenContext tokenContext, ProcessFlow processFlow) throws VerificationException;
+    Response handleToken(T token, ActionTokenContext<T> tokenContext, ProcessFlow processFlow);
 
+    /**
+     * Returns the Java token class for use with deserialization.
+     * @return
+     */
+    Class<T> getTokenClass();
+
+    /**
+     * Returns an authentication session ID requested from within the given token
+     * @param token Token. Can be {@code null}
+     * @return authentication session ID
+     */
+    String getAuthenticationSessionIdFromToken(T token);
+
+    /**
+     * Returns a event type logged with {@link EventBuilder} class.
+     * @return
+     */
     EventType eventType();
 
-    NextStep getNextStepWhenAuthenticationSessionUnset();
+    /**
+     * Returns an error to be shown in the {@link EventBuilder} detail when token handling fails and
+     * no more specific error is provided.
+     * @return
+     */
+    String getDefaultEventError();
 
+    /**
+     * Returns an error to be shown in the response when token handling fails and no more specific
+     * error message is provided.
+     * @return
+     */
+    String getDefaultErrorMessage();
+
+    /**
+     * Returns a response that restarts a flow that this action token initiates, or {@code null} if
+     * no special handling is requested.
+     * 
+     * @return
+     */
+    default Response handleRestartRequest(T token, ActionTokenContext<T> tokenContext, ProcessFlow processFlow) {
+        return null;
+    }
+
+    /**
+     * Creates a fresh authentication session according to the information from the token.
+     * @param token
+     * @param tokenContext
+     * @return
+     */
     default AuthenticationSessionModel startFreshAuthenticationSession(T token, ActionTokenContext<T> tokenContext) {
         AuthenticationSessionModel authSession = tokenContext.createAuthenticationSessionForClient(token.getIssuedFor());
         authSession.setAuthNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
         return authSession;
-    }
-
-    default String getAuthenticationSessionIdFromToken(T token) {
-        return null;
-    }
-
-    default String getDefaultEventError() {
-        return Errors.INVALID_CODE;
-    }
-
-    default String getDefaultErrorMessage() {
-        return Messages.INVALID_CODE;
     }
 
 }

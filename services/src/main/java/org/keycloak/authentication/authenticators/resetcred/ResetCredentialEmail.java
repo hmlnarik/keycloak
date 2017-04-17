@@ -17,6 +17,7 @@
 
 package org.keycloak.authentication.authenticators.resetcred;
 
+import org.keycloak.authentication.actiontoken.DefaultActionTokenKey;
 import org.keycloak.Config;
 import org.keycloak.authentication.*;
 import org.keycloak.authentication.actiontoken.resetcred.ResetCredentialsActionToken;
@@ -92,9 +93,9 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
 
         // We send the secret in the email in a link as a query param.
         ResetCredentialsActionToken token = new ResetCredentialsActionToken(user.getId(), absoluteExpirationInSecs,
-          null, lastCreatedPassword, authenticationSession.getId());
+          null, authenticationSession.getId(), lastCreatedPassword);
         String link = UriBuilder
-          .fromUri(context.getActionTokenUrl(token.serialize(keycloakSession, context.getRealm(), context.getUriInfo())))
+          .fromUri(context.getActionTokenUrl(token.serialize(context.getSession(), context.getRealm(), context.getUriInfo())))
           .build()
           .toString();
         long expirationInMinutes = TimeUnit.SECONDS.toMinutes(validityInSecs);

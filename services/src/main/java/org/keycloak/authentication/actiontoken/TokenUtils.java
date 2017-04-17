@@ -46,6 +46,26 @@ public class TokenUtils {
         };
     }
 
+    /**
+     * Returns a predicate for use in {@link TokenVerifier} using the given boolean-returning function.
+     * When the function return {@code false}, this predicate throws a {@link ExplainedTokenVerificationException}
+     * with {@code message} and {@code errorEvent} set from {@code errorMessage} and {@code errorEvent}, .
+     *
+     * @param function
+     * @param errorEvent
+     * @param errorMessage
+     * @return
+     */
+    public static <T extends JsonWebToken> Predicate<T> checkThat(java.util.function.Predicate<T> function, String errorEvent, String errorMessage) {
+        return (T t) -> {
+            if (! function.test(t)) {
+                throw new ExplainedTokenVerificationException(t, errorEvent, errorMessage);
+            }
+
+            return true;
+        };
+    }
+
     
     /**
      * Returns a predicate that is applied only if the given {@code condition} evaluates to {@true}. In case
@@ -59,4 +79,7 @@ public class TokenUtils {
         return t -> (! condition.test(t)) || predicate.test(t);
     }
 
+    public static <T extends JsonWebToken> Predicate<? super T>[] predicates(Predicate<? super T>... predicate) {
+        return predicate;
+    }
 }

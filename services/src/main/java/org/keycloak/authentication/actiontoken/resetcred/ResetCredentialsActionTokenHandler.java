@@ -16,23 +16,17 @@
  */
 package org.keycloak.authentication.actiontoken.resetcred;
 
-import org.keycloak.Config.Scope;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.actiontoken.*;
 import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticator;
-import org.keycloak.common.VerificationException;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.UserModel;
 import org.keycloak.services.ErrorPage;
-import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.messages.Messages;
-import org.keycloak.services.resources.LoginActionsServiceChecks.AdjustFlowException.NextStep;
 import org.keycloak.services.resources.LoginActionsServiceChecks.IsActionRequired;
-import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.sessions.CommonClientSessionModel.Action;
 import javax.ws.rs.core.Response;
 import static org.keycloak.services.resources.LoginActionsService.RESET_CREDENTIALS_PATH;
@@ -41,75 +35,33 @@ import static org.keycloak.services.resources.LoginActionsService.RESET_CREDENTI
  *
  * @author hmlnarik
  */
-public class ResetCredentialsActionTokenHandler
-  implements ActionTokenHandler<ResetCredentialsActionToken>, ActionTokenHandlerFactory<ResetCredentialsActionToken> {
+public class ResetCredentialsActionTokenHandler extends AbstractActionTokenHander<ResetCredentialsActionToken> {
 
-    @Override
-    public ActionTokenHandler<ResetCredentialsActionToken> create(KeycloakSession session) {
-        return this;
+    public ResetCredentialsActionTokenHandler() {
+        super(
+          ResetCredentialsActionToken.TOKEN_TYPE,
+          ResetCredentialsActionToken.class,
+          Messages.RESET_CREDENTIAL_NOT_ALLOWED,
+          EventType.RESET_PASSWORD,
+          Errors.NOT_ALLOWED
+        );
+
     }
 
     @Override
-    public void init(Scope config) {
-    }
-
-    @Override
-    public void postInit(KeycloakSessionFactory factory) {
-    }
-
-    @Override
-    public String getId() {
-        return ResetCredentialsActionToken.TOKEN_TYPE;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public String getAuthenticationSessionIdFromToken(ResetCredentialsActionToken token) {
-        return token == null ? null : token.getAuthenticationSessionId();
-    }
-
-    @Override
-    public Predicate<? super ResetCredentialsActionToken>[] getVerifiers(ActionTokenContext tokenContext) {
+    public Predicate<? super ResetCredentialsActionToken>[] getVerifiers(ActionTokenContext<ResetCredentialsActionToken> tokenContext) {
         return new Predicate[] {
             TokenUtils.checkThat(tokenContext.getRealm()::isResetPasswordAllowed, Errors.NOT_ALLOWED, Messages.RESET_CREDENTIAL_NOT_ALLOWED),
 
             new IsActionRequired(tokenContext, Action.AUTHENTICATE),
 
-//            singleUseCheck,
+//            singleUseCheck,   // TODO:hmlnarik - fix with single-use cache
         };
     }
 
     @Override
-    public Response handleToken(ResetCredentialsActionToken token, ActionTokenContext tokenContext, ProcessFlow processFlow) throws VerificationException {
-        AuthenticationProcessor authProcessor = new AuthenticationProcessor() {
-
-            @Override
-            protected Response authenticationComplete() {
-                boolean firstBrokerLoginInProgress = (tokenContext.getAuthenticationSession().getAuthNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) != null);
-                if (firstBrokerLoginInProgress) {
-
-                    UserModel linkingUser = AbstractIdpAuthenticator.getExistingUser(session, tokenContext.getRealm(), tokenContext.getAuthenticationSession());
-                    if (!linkingUser.getId().equals(tokenContext.getAuthenticationSession().getAuthenticatedUser().getId())) {
-                        return ErrorPage.error(session,
-                          Messages.IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE,
-                          tokenContext.getAuthenticationSession().getAuthenticatedUser().getUsername(),
-                          linkingUser.getUsername()
-                        );
-                    }
-
-                    logger.debugf("Forget-password flow finished when authenticated user '%s' after first broker login.", linkingUser.getUsername());
-
-                    // TODO:mposolda Isn't this a bug that we redirect to 'afterBrokerLoginEndpoint' without rather continue with firstBrokerLogin and other authenticators like OTP?
-                    //return redirectToAfterBrokerLoginEndpoint(authSession, true);
-                    return null;
-                } else {
-                    return super.authenticationComplete();
-                }
-            }
-        };
+    public Response handleToken(ResetCredentialsActionToken token, ActionTokenContext tokenContext, ProcessFlow processFlow) {
+        AuthenticationProcessor authProcessor = new ResetCredsAuthenticationProcessor(tokenContext);
 
         return processFlow.processFlow(
           false,
@@ -123,28 +75,46 @@ public class ResetCredentialsActionTokenHandler
     }
 
     @Override
-    public Class<ResetCredentialsActionToken> getTokenClass() {
-        return ResetCredentialsActionToken.class;
+    public Response handleRestartRequest(ResetCredentialsActionToken token, ActionTokenContext<ResetCredentialsActionToken> tokenContext, ProcessFlow processFlow) {
+        // In the case restart is requested, the handling is exactly the same as if a token had been
+        // handled correctly but with a fresh authentication session
+        AuthenticationSessionManager asm = new AuthenticationSessionManager(tokenContext.getSession());
+        asm.removeAuthenticationSession(tokenContext.getRealm(), tokenContext.getAuthenticationSession(), false);
+
+        tokenContext.setAuthenticationSession(tokenContext.createAuthenticationSessionForClient(null), true);
+        return handleToken(token, tokenContext, processFlow);
     }
 
-    @Override
-    public EventType eventType() {
-        return EventType.RESET_PASSWORD;
-    }
+    public static class ResetCredsAuthenticationProcessor extends AuthenticationProcessor {
 
-    @Override
-    public NextStep getNextStepWhenAuthenticationSessionUnset() {
-        return NextStep.START_RESET_CREDENTIALS_FLOW_WITH_NEW_SESSION;
-    }
+        private final ActionTokenContext tokenContext;
 
-    @Override
-    public String getDefaultEventError() {
-        return Errors.NOT_ALLOWED;
-    }
+        public ResetCredsAuthenticationProcessor(ActionTokenContext tokenContext) {
+            this.tokenContext = tokenContext;
+        }
 
-    @Override
-    public String getDefaultErrorMessage() {
-        return Messages.RESET_CREDENTIAL_NOT_ALLOWED;
-    }
+        @Override
+        protected Response authenticationComplete() {
+            boolean firstBrokerLoginInProgress = (tokenContext.getAuthenticationSession().getAuthNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) != null);
+            if (firstBrokerLoginInProgress) {
 
+                UserModel linkingUser = AbstractIdpAuthenticator.getExistingUser(session, tokenContext.getRealm(), tokenContext.getAuthenticationSession());
+                if (!linkingUser.getId().equals(tokenContext.getAuthenticationSession().getAuthenticatedUser().getId())) {
+                    return ErrorPage.error(session,
+                      Messages.IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE,
+                      tokenContext.getAuthenticationSession().getAuthenticatedUser().getUsername(),
+                      linkingUser.getUsername()
+                    );
+                }
+
+                logger.debugf("Forget-password flow finished when authenticated user '%s' after first broker login.", linkingUser.getUsername());
+
+                // TODO:mposolda Isn't this a bug that we redirect to 'afterBrokerLoginEndpoint' without rather continue with firstBrokerLogin and other authenticators like OTP?
+                //return redirectToAfterBrokerLoginEndpoint(authSession, true);
+                return null;
+            } else {
+                return super.authenticationComplete();
+            }
+        }
+    }
 }

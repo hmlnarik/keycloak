@@ -40,9 +40,10 @@ public class ActionTokenContext<T extends JsonWebToken> {
     private final UriInfo uriInfo;
     private final ClientConnection clientConnection;
     private final HttpRequest request;
-    private final EventBuilder event;
+    private EventBuilder event;
     private final ActionTokenHandler<T> handler;
     private AuthenticationSessionModel authenticationSession;
+    private boolean authenticationSessionFresh;
     private String executionId;
 
     public ActionTokenContext(KeycloakSession session, RealmModel realm, UriInfo uriInfo, ClientConnection clientConnection, HttpRequest request, EventBuilder event, ActionTokenHandler<T> handler) {
@@ -57,6 +58,10 @@ public class ActionTokenContext<T extends JsonWebToken> {
 
     public EventBuilder getEvent() {
         return event;
+    }
+
+    public void setEvent(EventBuilder event) {
+        this.event = event;
     }
 
     public KeycloakSession getSession() {
@@ -88,7 +93,6 @@ public class ActionTokenContext<T extends JsonWebToken> {
         
         authSession = new AuthenticationSessionManager(session).createAuthenticationSession(realm, client, true);
         authSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
-        //authSession.setNote(AuthenticationManager.END_AFTER_REQUIRED_ACTIONS, "true");
         authSession.setProtocol(OIDCLoginProtocol.LOGIN_PROTOCOL);
         String redirectUri = Urls.accountBase(uriInfo.getBaseUri()).path("/").build(realm.getName()).toString(); // TODO:mposolda It seems that this should be taken from client rather then hardcoded to account?
         authSession.setRedirectUri(redirectUri);
@@ -99,12 +103,17 @@ public class ActionTokenContext<T extends JsonWebToken> {
         return authSession;
     }
 
+    public boolean isAuthenticationSessionFresh() {
+        return authenticationSessionFresh;
+    }
+
     public AuthenticationSessionModel getAuthenticationSession() {
         return authenticationSession;
     }
 
-    public void setAuthenticationSession(AuthenticationSessionModel authenticationSession) {
+    public void setAuthenticationSession(AuthenticationSessionModel authenticationSession, boolean isFresh) {
         this.authenticationSession = authenticationSession;
+        this.authenticationSessionFresh = isFresh;
         if (this.event != null) {
             ClientModel client = authenticationSession == null ? null : authenticationSession.getClient();
             this.event.client((String) (client == null ? null : client.getClientId()));

@@ -16,6 +16,7 @@
  */
 package org.keycloak.testsuite.forms;
 
+import org.keycloak.authentication.actiontoken.resetcred.ResetCredentialsActionToken;
 import org.jboss.arquillian.graphene.page.Page;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
@@ -374,7 +375,7 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
 
             assertEquals("You took too long to login. Login process starting from beginning.", loginPage.getError());
 
-            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user(userId).session((String) null).clearDetails().assertEvent();
+            events.expectRequiredAction(EventType.EXECUTE_ACTION_TOKEN_ERROR).error("expired_code").client((String) null).user(userId).session((String) null).clearDetails().detail(Details.ACTION, ResetCredentialsActionToken.TOKEN_TYPE).assertEvent();
         } finally {
             setTimeOffset(0);
         }
@@ -410,7 +411,7 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
 
             assertEquals("You took too long to login. Login process starting from beginning.", loginPage.getError());
 
-            events.expectRequiredAction(EventType.RESET_PASSWORD).error("expired_code").client("test-app").user(userId).session((String) null).clearDetails().assertEvent();
+            events.expectRequiredAction(EventType.EXECUTE_ACTION_TOKEN_ERROR).error("expired_code").client((String) null).user(userId).session((String) null).clearDetails().detail(Details.ACTION, ResetCredentialsActionToken.TOKEN_TYPE).assertEvent();
         } finally {
             setTimeOffset(0);
 

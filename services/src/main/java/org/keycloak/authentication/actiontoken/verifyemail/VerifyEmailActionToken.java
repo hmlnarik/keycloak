@@ -14,40 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.keycloak.authentication.actiontoken.resetcred;
+package org.keycloak.authentication.actiontoken.verifyemail;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 import org.keycloak.authentication.actiontoken.DefaultActionToken;
 
 /**
- * Representation of a token that represents a time-limited reset credentials action.
+ * Representation of a token that represents a time-limited verify e-mail action.
  *
  * @author hmlnarik
  */
-public class ResetCredentialsActionToken extends DefaultActionToken {
+public class VerifyEmailActionToken extends DefaultActionToken {
 
-    public static final String TOKEN_TYPE = "reset-credentials";
-    private static final String JSON_FIELD_LAST_CHANGE_PASSWORD_TIMESTAMP = "lcpt";
+    public static final String TOKEN_TYPE = "verify-email";
 
-    @JsonProperty(value = JSON_FIELD_LAST_CHANGE_PASSWORD_TIMESTAMP)
-    private Long lastChangedPasswordTimestamp;
+    private static final String JSON_FIELD_EMAIL = "eml";
 
-    public ResetCredentialsActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, String authenticationSessionId, Long lastChangedPasswordTimestamp) {
+    @JsonProperty(value = JSON_FIELD_EMAIL)
+    private String email;
+
+    public VerifyEmailActionToken(String userId, int absoluteExpirationInSecs, UUID actionVerificationNonce, String authenticationSessionId,
+      String email) {
         super(userId, TOKEN_TYPE, absoluteExpirationInSecs, actionVerificationNonce);
         setAuthenticationSessionId(authenticationSessionId);
-        this.lastChangedPasswordTimestamp = lastChangedPasswordTimestamp;
+        this.email = email;
     }
 
-    private ResetCredentialsActionToken() {
+    private VerifyEmailActionToken() {
         super(null, TOKEN_TYPE, -1, null);
     }
 
-    public Long getLastChangedPasswordTimestamp() {
-        return lastChangedPasswordTimestamp;
+    public String getEmail() {
+        return email;
     }
 
-    public final void setLastChangedPasswordTimestamp(Long lastChangedPasswordTimestamp) {
-        this.lastChangedPasswordTimestamp = lastChangedPasswordTimestamp;
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

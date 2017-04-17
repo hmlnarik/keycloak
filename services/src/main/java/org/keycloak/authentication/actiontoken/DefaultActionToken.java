@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.keycloak.authentication;
+package org.keycloak.authentication.actiontoken;
 
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.common.VerificationException;
@@ -40,6 +40,7 @@ import javax.ws.rs.core.UriInfo;
 public class DefaultActionToken extends DefaultActionTokenKey {
 
     public static final String JSON_FIELD_ACTION_VERIFICATION_NONCE = "nonce";
+    public static final String JSON_FIELD_AUTHENTICATION_SESSION_ID = "asid";
 
     public static Predicate<DefaultActionToken> ACTION_TOKEN_BASIC_CHECKS = t -> {
         if (t.getActionVerificationNonce() == null) {
@@ -76,6 +77,17 @@ public class DefaultActionToken extends DefaultActionTokenKey {
         expiration = absoluteExpirationInSecs;
     }
 
+
+    @JsonProperty(value = JSON_FIELD_AUTHENTICATION_SESSION_ID)
+    public String getAuthenticationSessionId() {
+        return (String) getOtherClaims().get(JSON_FIELD_AUTHENTICATION_SESSION_ID);
+    }
+
+    @JsonProperty(value = JSON_FIELD_AUTHENTICATION_SESSION_ID)
+    public final void setAuthenticationSessionId(String authenticationSessionId) {
+        setOtherClaims(JSON_FIELD_AUTHENTICATION_SESSION_ID, authenticationSessionId);
+    }
+
     public UUID getActionVerificationNonce() {
         return actionVerificationNonce;
     }
@@ -83,6 +95,9 @@ public class DefaultActionToken extends DefaultActionTokenKey {
     @JsonIgnore
     public Map<String, String> getNotes() {
         Map<String, String> res = new HashMap<>();
+        if (getAuthenticationSessionId() != null) {
+            res.put(JSON_FIELD_AUTHENTICATION_SESSION_ID, getAuthenticationSessionId());
+        }
         return res;
     }
 
