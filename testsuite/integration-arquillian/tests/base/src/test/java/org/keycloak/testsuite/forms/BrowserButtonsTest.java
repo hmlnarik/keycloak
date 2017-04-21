@@ -255,8 +255,6 @@ public class BrowserButtonsTest extends AbstractTestRealmKeycloakTest {
     // KEYCLOAK-4670 - Flow 5
     @Test
     public void clickBackButtonAfterReturnFromRegister() throws Exception {
-        Thread.sleep(100000000);
-
         loginPage.open();
         loginPage.clickRegister();
         registerPage.assertCurrent();

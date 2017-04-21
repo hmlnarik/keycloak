@@ -32,7 +32,6 @@ import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticato
 import org.keycloak.authentication.authenticators.broker.util.PostBrokerLoginConstants;
 import org.keycloak.authentication.authenticators.broker.util.SerializedBrokeredIdentityContext;
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
-import org.keycloak.authentication.requiredactions.VerifyEmail;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
@@ -190,13 +189,6 @@ public class LoginActionsService {
         return res;
     }
 
-    private SessionCodeChecks checksForCodeRefreshNotAllowed(String code, String execution, String flowPath) {
-        SessionCodeChecks res = new SessionCodeChecks(code, execution, flowPath);
-        res.setAllowRefresh(false);
-        res.initialVerify();
-        return res;
-    }
-
 
 
     private class SessionCodeChecks {
@@ -204,7 +196,6 @@ public class LoginActionsService {
         Response response;
         ClientSessionCode.ParseResult<AuthenticationSessionModel> result;
         private boolean actionRequest;
-        private boolean allowRefresh = true;
 
         private final String code;
         private final String execution;
@@ -228,15 +219,6 @@ public class LoginActionsService {
             return response != null;
         }
 
-        public boolean isAllowRefresh() {
-            return allowRefresh;
-        }
-
-        public void setAllowRefresh(boolean allowRefresh) {
-            this.allowRefresh = allowRefresh;
-        }
-
-
         boolean verifyCode(String expectedAction, ClientSessionCode.ActionType actionType) {
             if (failed()) {
                 return false;
@@ -250,8 +232,8 @@ public class LoginActionsService {
                 AuthenticationSessionModel authSession = getAuthenticationSession();
                 if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(authSession.getAction())) {
                     // TODO:mposolda debug or trace
-                    logger.info("Incorrect flow '%s' . User authenticated already. Redirecting to requiredActions now.");
-                    response = redirectToRequiredActions(null);
+                    logger.info("Incorrect flow '%s' . User authenticated already.");
+                    response = showPageExpired(authSession);
                     return false;
                 } else {
                     // TODO:mposolda could this happen? Doublecheck if we use other AuthenticationSession.Action besides AUTHENTICATE and REQUIRED_ACTIONS
@@ -392,7 +374,7 @@ public class LoginActionsService {
                 if (clientCode == null) {
 
                     // In case that is replayed action, but sent to the same FORM like actual FORM, we just re-render the page
-                    if (allowRefresh && ObjectUtil.isEqualOrBothNull(execution, authSession.getAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION))) {
+                    if (ObjectUtil.isEqualOrBothNull(execution, authSession.getAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION))) {
                         String latestFlowPath = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
                         URI redirectUri = getLastExecutionUrl(latestFlowPath, execution);
 
@@ -406,8 +388,8 @@ public class LoginActionsService {
                 }
 
 
-                actionRequest = execution != null;
-                if (actionRequest) {
+                actionRequest = true;
+                if (execution != null) {
                     authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
                 }
                 return true;
@@ -1134,23 +1116,6 @@ public class LoginActionsService {
         return AuthenticationManager.redirectAfterSuccessfulFlow(session, realm, clientSession.getUserSession(), clientSession, request, uriInfo, clientConnection, event, authSession.getProtocol());
     }
 
-    @Path("email-verification")
-    @GET
-    public Response emailVerification(@QueryParam("code") String code, @QueryParam("execution") String execution) {
-        event.event(EventType.SEND_VERIFY_EMAIL);
-
-        SessionCodeChecks checks = checksForCodeRefreshNotAllowed(code, execution, REQUIRED_ACTION);
-        if (!checks.verifyCode(ClientSessionModel.Action.REQUIRED_ACTIONS.name(), ClientSessionCode.ActionType.USER)) {
-            return checks.response;
-        }
-        ClientSessionCode accessCode = checks.clientCode;
-        AuthenticationSessionModel authSession = checks.getAuthenticationSession();
-        initLoginEvent(authSession);
-
-        event.clone().event(EventType.SEND_VERIFY_EMAIL).detail(Details.EMAIL, authSession.getAuthenticatedUser().getEmail()).success();
-
-        return VerifyEmail.sendVerifyEmail(session, accessCode.getCode(), authSession.getAuthenticatedUser(), authSession);
-    }
 
     /**
      * Initiated by admin, not the user on login
