@@ -55,7 +55,6 @@ import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationManager;
-import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.services.util.CacheControlUtil;
@@ -98,11 +97,6 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 public class SamlService extends AuthorizationEndpointBase {
 
     protected static final Logger logger = Logger.getLogger(SamlService.class);
-
-    @Context
-    protected KeycloakSession session;
-
-    private String requestRelayState;
 
     public SamlService(RealmModel realm, EventBuilder event) {
         super(realm, event);
@@ -599,6 +593,10 @@ public class SamlService extends AuthorizationEndpointBase {
         if (client == null) {
             event.error(Errors.CLIENT_NOT_FOUND);
             return ErrorPage.error(session, Messages.CLIENT_NOT_FOUND);
+        }
+        if (!client.isEnabled()) {
+            event.error(Errors.CLIENT_DISABLED);
+            return ErrorPage.error(session, Messages.CLIENT_DISABLED);
         }
         if (client.getManagementUrl() == null && client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_POST_ATTRIBUTE) == null && client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_REDIRECT_ATTRIBUTE) == null) {
             logger.error("SAML assertion consumer url not set up");

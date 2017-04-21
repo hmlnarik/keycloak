@@ -1022,6 +1022,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         }
 
         SamlService samlService = new SamlService(realmModel, event);
+        ResteasyProviderFactory.getInstance().injectProperties(samlService);
         AuthenticationSessionModel authSession = samlService.getOrCreateLoginSessionForIdpInitiatedSso(session, realmModel, oClient.get(), null);
 
         return ParsedCodeContext.clientSessionCode(new ClientSessionCode<>(session, this.realmModel, authSession));
