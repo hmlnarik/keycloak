@@ -37,8 +37,8 @@ import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.keys.RsaKeyMetadata;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -283,7 +283,7 @@ public class SamlService extends AuthorizationEndpointBase {
 
             authSession.setProtocol(SamlProtocol.LOGIN_PROTOCOL);
             authSession.setRedirectUri(redirect);
-            authSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
+            authSession.setAction(AuthenticationSessionModel.Action.AUTHENTICATE.name());
             authSession.setClientNote(SamlProtocol.SAML_BINDING, bindingType);
             authSession.setClientNote(GeneralConstants.RELAY_STATE, relayState);
             authSession.setClientNote(SamlProtocol.SAML_REQUEST_ID, requestAbstractType.getID());
@@ -378,31 +378,22 @@ public class SamlService extends AuthorizationEndpointBase {
                 userSession.setNote(SamlProtocol.SAML_LOGOUT_CANONICALIZATION, samlClient.getCanonicalizationMethod());
                 userSession.setNote(AuthenticationManager.KEYCLOAK_LOGOUT_PROTOCOL, SamlProtocol.LOGIN_PROTOCOL);
                 // remove client from logout requests
-                for (ClientSessionModel clientSession : userSession.getClientSessions()) {
-                    if (clientSession.getClient().getId().equals(client.getId())) {
-                        clientSession.setAction(ClientSessionModel.Action.LOGGED_OUT.name());
-                    }
+                AuthenticatedClientSessionModel clientSession = userSession.getAuthenticatedClientSessions().get(client.getId());
+                if (clientSession != null) {
+                    clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                 }
                 logger.debug("browser Logout");
                 return authManager.browserLogout(session, realm, userSession, uriInfo, clientConnection, headers);
             } else if (logoutRequest.getSessionIndex() != null) {
                 for (String sessionIndex : logoutRequest.getSessionIndex()) {
-                    ClientSessionModel clientSession = session.sessions().getClientSession(realm, sessionIndex);
+
+                    AuthenticatedClientSessionModel clientSession = SamlSessionUtils.getClientSession(session, realm, sessionIndex);
                     if (clientSession == null)
                         continue;
                     UserSessionModel userSession = clientSession.getUserSession();
                     if (clientSession.getClient().getClientId().equals(client.getClientId())) {
                         // remove requesting client from logout
-                        clientSession.setAction(ClientSessionModel.Action.LOGGED_OUT.name());
-
-                        // Remove also other clientSessions of this client as there could be more in this UserSession
-                        if (userSession != null) {
-                            for (ClientSessionModel clientSession2 : userSession.getClientSessions()) {
-                                if (clientSession2.getClient().getId().equals(client.getId())) {
-                                    clientSession2.setAction(ClientSessionModel.Action.LOGGED_OUT.name());
-                                }
-                            }
-                        }
+                        clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                     }
 
                     try {
@@ -654,7 +645,7 @@ public class SamlService extends AuthorizationEndpointBase {
 
         AuthenticationSessionModel authSession = checks.authSession;
         authSession.setProtocol(SamlProtocol.LOGIN_PROTOCOL);
-        authSession.setAction(ClientSessionModel.Action.AUTHENTICATE.name());
+        authSession.setAction(AuthenticationSessionModel.Action.AUTHENTICATE.name());
         authSession.setClientNote(SamlProtocol.SAML_BINDING, SamlProtocol.SAML_POST_BINDING);
         authSession.setClientNote(SamlProtocol.SAML_IDP_INITIATED_LOGIN, "true");
         authSession.setRedirectUri(redirect);

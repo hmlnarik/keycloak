@@ -407,7 +407,9 @@ public class LoginActionsService {
 
 
                 actionRequest = execution != null;
-                authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
+                if (actionRequest) {
+                    authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, execution);
+                }
                 return true;
             }
         }
@@ -429,7 +431,9 @@ public class LoginActionsService {
                 return false;
             }
 
-            if (!isActionActive(ClientSessionCode.ActionType.USER)) return false;
+            if (!isActionActive(ClientSessionCode.ActionType.USER)) {
+                return false;
+            }
 
             final AuthenticationSessionModel authSession = getAuthenticationSession();
 
@@ -1268,7 +1272,9 @@ public class LoginActionsService {
         Response response;
         provider.processAction(context);
 
-        authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
+        if (action != null) {
+            authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
+        }
 
         if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
             event.clone().success();

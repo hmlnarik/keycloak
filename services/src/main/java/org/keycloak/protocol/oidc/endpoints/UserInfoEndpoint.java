@@ -177,6 +177,10 @@ public class UserInfoEndpoint {
         }
 
         AuthenticatedClientSessionModel clientSession = userSession.getAuthenticatedClientSessions().get(clientModel.getId());
+        if (clientSession == null) {
+            event.error(Errors.SESSION_EXPIRED);
+            throw new ErrorResponseException(OAuthErrorException.INVALID_TOKEN, "Client session expired", Response.Status.UNAUTHORIZED);
+        }
 
         AccessToken userInfo = new AccessToken();
         tokenManager.transformUserInfoAccessToken(session, userInfo, realm, clientModel, userModel, userSession, clientSession);

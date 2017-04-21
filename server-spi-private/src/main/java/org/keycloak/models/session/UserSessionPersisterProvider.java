@@ -43,7 +43,7 @@ public interface UserSessionPersisterProvider extends Provider {
     void removeUserSession(String userSessionId, boolean offline);
 
     // Called during revoke. It will remove userSession too if this was last clientSession attached to it
-    void removeClientSession(String clientSessionId, boolean offline);
+    void removeClientSession(String userSessionId, String clientUUID, boolean offline);
 
     void onRealmRemoved(RealmModel realm);
     void onClientRemoved(RealmModel realm, ClientModel client);

@@ -17,7 +17,6 @@
 
 package org.keycloak.models;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,9 +54,6 @@ public interface UserSessionModel {
 
     Map<String, AuthenticatedClientSessionModel> getAuthenticatedClientSessions();
 
-    // TODO: Remove
-    List<ClientSessionModel> getClientSessions();
-
     public String getNote(String name);
     public void setNote(String name, String value);
     public void removeNote(String name);
@@ -67,6 +63,9 @@ public interface UserSessionModel {
     void setState(State state);
 
     void setUser(UserModel user);
+
+    // Will completely restart whole state of user session. It will just keep same ID.
+    void restartSession(RealmModel realm, UserModel user, String loginUsername, String ipAddress, String authMethod, boolean rememberMe, String brokerSessionId, String brokerUserId);
 
     public static enum State {
         LOGGING_IN, // TODO:mposolda Maybe state "LOGGING_IN" is useless now once userSession is attached after requiredActions

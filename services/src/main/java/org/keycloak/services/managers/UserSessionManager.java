@@ -104,8 +104,8 @@ public class UserSessionManager {
                             user.getUsername(), client.getClientId());
                 }
 
-                userSession.getAuthenticatedClientSessions().remove(client.getClientId());
-                persister.removeClientSession(clientSession.getId(), true);
+                clientSession.setUserSession(null);
+                persister.removeClientSession(userSession.getId(), client.getId(), true);
                 checkOfflineUserSessionHasClientSessions(realm, user, userSession);
                 anyRemoved = true;
             }
@@ -148,8 +148,7 @@ public class UserSessionManager {
                     clientSession.getId(), offlineUserSession.getId(), user.getUsername(), clientSession.getClient().getClientId());
         }
 
-        AuthenticatedClientSessionModel offlineClientSession = kcSession.sessions().createOfflineClientSession(clientSession);
-        offlineUserSession.getAuthenticatedClientSessions().put(clientSession.getClient().getId(), offlineClientSession);
+        kcSession.sessions().createOfflineClientSession(clientSession, offlineUserSession);
         persister.createClientSession(offlineUserSession, clientSession, true);
     }
 
