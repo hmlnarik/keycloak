@@ -33,6 +33,7 @@ import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.services.managers.RealmManager;
 import org.keycloak.testsuite.pages.IdpConfirmLinkPage;
 import org.keycloak.testsuite.pages.IdpLinkEmailPage;
+import org.keycloak.testsuite.pages.LoginExpiredPage;
 import org.keycloak.testsuite.pages.LoginPasswordUpdatePage;
 import org.keycloak.testsuite.pages.LoginUpdateProfileEditUsernameAllowedPage;
 import org.keycloak.testsuite.rule.KeycloakRule;
@@ -70,6 +71,9 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
 
     @WebResource
     protected LoginPasswordUpdatePage passwordUpdatePage;
+
+    @WebResource
+    protected LoginExpiredPage loginExpiredPage;
 
 
 
@@ -340,6 +344,101 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         // Use bad password first
         this.loginPage.login("password1");
         Assert.assertEquals("Invalid username or password.", this.loginPage.getError());
+
+        // Use correct password now
+        this.loginPage.login("password");
+
+        // authenticated and redirected to app. User is linked with identity provider
+        assertFederatedUser("pedroigor", "psilva@redhat.com", "pedroigor");
+
+
+        // Restore smtp config
+        brokerServerRule.update(new KeycloakRule.KeycloakSetup() {
+
+            @Override
+            public void config(RealmManager manager, RealmModel adminstrationRealm, RealmModel realmWithBroker) {
+                realmWithBroker.setSmtpConfig(smtpConfig);
+            }
+
+        }, APP_REALM_ID);
+    }
+
+
+    /**
+     * Variation of previous test, which uses browser buttons (back, refresh etc)
+     */
+    @Test
+    public void testLinkAccountByReauthenticationWithPassword_browserButtons() throws Exception {
+        // Remove smtp config. The reauthentication by username+password screen will be automatically used then
+        final Map<String, String> smtpConfig = new HashMap<>();
+        brokerServerRule.update(new KeycloakRule.KeycloakSetup() {
+
+            @Override
+            public void config(RealmManager manager, RealmModel adminstrationRealm, RealmModel realmWithBroker) {
+                setUpdateProfileFirstLogin(realmWithBroker, IdentityProviderRepresentation.UPFLM_OFF);
+                smtpConfig.putAll(realmWithBroker.getSmtpConfig());
+                realmWithBroker.setSmtpConfig(Collections.<String, String>emptyMap());
+            }
+
+        }, APP_REALM_ID);
+
+
+        // Use invalid username for the first time
+        loginIDP("foo");
+        assertTrue(driver.getCurrentUrl().startsWith("http://localhost:8082/auth/"));
+        this.loginPage.login("pedroigor", "password");
+
+
+        this.idpConfirmLinkPage.assertCurrent();
+        Assert.assertEquals("User with email psilva@redhat.com already exists. How do you want to continue?", this.idpConfirmLinkPage.getMessage());
+
+        // Click browser 'back' and then 'forward' and then continue
+        driver.navigate().back();
+        Assert.assertTrue(driver.getPageSource().contains("You are already logged in."));
+        driver.navigate().forward();
+        this.loginExpiredPage.assertCurrent();
+        this.loginExpiredPage.clickLoginContinueLink();
+        this.idpConfirmLinkPage.assertCurrent();
+
+        // Click browser 'back' on review profile page
+        this.idpConfirmLinkPage.clickReviewProfile();
+        this.updateProfilePage.assertCurrent();
+        driver.navigate().back();
+        this.loginExpiredPage.assertCurrent();
+        this.loginExpiredPage.clickLoginContinueLink();
+        this.updateProfilePage.assertCurrent();
+        this.updateProfilePage.update("Pedro", "Igor", "psilva@redhat.com");
+
+        this.idpConfirmLinkPage.assertCurrent();
+        this.idpConfirmLinkPage.clickLinkAccount();
+
+        // Login screen shown. Username is prefilled and disabled. Registration link and social buttons are not shown
+        Assert.assertEquals("Log in to " + APP_REALM_ID, this.driver.getTitle());
+        Assert.assertEquals("pedroigor", this.loginPage.getUsername());
+        Assert.assertFalse(this.loginPage.isUsernameInputEnabled());
+
+        Assert.assertEquals("Authenticate as pedroigor to link your account with " + getProviderId(), this.loginPage.getInfoMessage());
+
+        try {
+            this.loginPage.findSocialButton(getProviderId());
+            Assert.fail("Not expected to see social button with " + getProviderId());
+        } catch (NoSuchElementException expected) {
+        }
+
+        try {
+            this.loginPage.clickRegister();
+            Assert.fail("Not expected to see register link");
+        } catch (NoSuchElementException expected) {
+        }
+
+        // Use bad password first
+        this.loginPage.login("password1");
+        Assert.assertEquals("Invalid username or password.", this.loginPage.getError());
+
+        // Click browser 'back' and then continue
+        this.driver.navigate().back();
+        this.loginExpiredPage.assertCurrent();
+        this.loginExpiredPage.clickLoginContinueLink();
 
         // Use correct password now
         this.loginPage.login("password");

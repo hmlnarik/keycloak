@@ -75,6 +75,7 @@ import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.BruteForceProtector;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
+import org.keycloak.services.util.BrowserHistoryHelper;
 import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.services.validation.Validation;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -961,43 +962,39 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
     }
 
     private ParsedCodeContext parseClientSessionCode(String code) {
-        ClientSessionCode.ParseResult<AuthenticationSessionModel> parseResult = ClientSessionCode.parseResult(code, this.session, this.realmModel, AuthenticationSessionModel.class);
-        ClientSessionCode<AuthenticationSessionModel> clientCode = parseResult.getCode();
-
-        if (clientCode != null) {
-            AuthenticationSessionModel authenticationSession = clientCode.getClientSession();
-
-            ClientModel client = authenticationSession.getClient();
-
-            if (client != null) {
-
-                logger.debugf("Got authorization code from client [%s].", client.getClientId());
-                this.event.client(client);
-                this.session.getContext().setClient(client);
-
-                if (!clientCode.isValid(AuthenticationSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
-                    logger.debugf("Authorization code is not valid. Client session ID: %s, Client session's action: %s", authenticationSession.getId(), authenticationSession.getAction());
-
-                    // Check if error happened during login or during linking from account management
-                    Response accountManagementFailedLinking = checkAccountManagementFailedLinking(clientCode.getClientSession(), Messages.STALE_CODE_ACCOUNT);
-                    Response staleCodeError = (accountManagementFailedLinking != null) ? accountManagementFailedLinking : redirectToErrorPage(Messages.STALE_CODE);
-
-
-                    return ParsedCodeContext.response(staleCodeError);
-                }
-
-                if (isDebugEnabled()) {
-                    logger.debugf("Authorization code is valid.");
-                }
-
-                return ParsedCodeContext.clientSessionCode(clientCode);
-            }
+        if (code == null) {
+            logger.debugf("Invalid request. Authorization code was null");
+            Response staleCodeError = redirectToErrorPage(Messages.INVALID_REQUEST);
+            return ParsedCodeContext.response(staleCodeError);
         }
 
-        // TODO:mposolda rather some different page? Maybe "PageExpired" page?
-        logger.debugf("Authorization code is not valid. Code: %s", code);
-        Response staleCodeError = redirectToErrorPage(Messages.STALE_CODE);
-        return ParsedCodeContext.response(staleCodeError);
+        SessionCodeChecks checks = new SessionCodeChecks(realmModel, uriInfo, clientConnection, session, event, code, null, LoginActionsService.AUTHENTICATE_PATH);
+        checks.initialVerify();
+        if (!checks.verifyActiveAndValidAction(AuthenticationSessionModel.Action.AUTHENTICATE.name(), ClientSessionCode.ActionType.LOGIN)) {
+
+            AuthenticationSessionModel authSession = checks.getAuthenticationSession();
+            if (authSession != null) {
+                // Check if error happened during login or during linking from account management
+                Response accountManagementFailedLinking = checkAccountManagementFailedLinking(authSession, Messages.STALE_CODE_ACCOUNT);
+                if (accountManagementFailedLinking != null) {
+                    return ParsedCodeContext.response(accountManagementFailedLinking);
+                } else {
+                    Response errorResponse = checks.getResponse();
+
+                    // Remove "code" from browser history
+                    errorResponse = BrowserHistoryHelper.getInstance().saveResponseAndRedirect(session, authSession, errorResponse, true);
+                    return ParsedCodeContext.response(errorResponse);
+                }
+            } else {
+                return ParsedCodeContext.response(checks.getResponse());
+            }
+        } else {
+            if (isDebugEnabled()) {
+                logger.debugf("Authorization code is valid.");
+            }
+
+            return ParsedCodeContext.clientSessionCode(checks.getClientCode());
+        }
     }
 
     /**
@@ -1092,16 +1089,6 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         return Response.status(302).location(UriBuilder.fromUri(authSession.getRedirectUri()).build()).build();
     }
 
-    private Response redirectToLoginPage(Throwable t, ClientSessionCode<AuthenticationSessionModel> clientCode) {
-        String message = t.getMessage();
-
-        if (message == null) {
-            message = Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR;
-        }
-
-        fireErrorEvent(message);
-        return browserAuthentication(clientCode.getClientSession(), message);
-    }
 
     protected Response browserAuthentication(AuthenticationSessionModel authSession, String errorMessage) {
         this.event.event(EventType.LOGIN);

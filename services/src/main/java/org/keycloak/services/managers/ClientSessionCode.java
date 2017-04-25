@@ -168,8 +168,12 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
 
 
     public Set<RoleModel> getRequestedRoles() {
+        return getRequestedRoles(commonLoginSession, realm);
+    }
+
+    public static Set<RoleModel> getRequestedRoles(CommonClientSessionModel clientSession, RealmModel realm) {
         Set<RoleModel> requestedRoles = new HashSet<>();
-        for (String roleId : commonLoginSession.getRoles()) {
+        for (String roleId : clientSession.getRoles()) {
             RoleModel role = realm.getRoleById(roleId);
             if (role != null) {
                 requestedRoles.add(role);
