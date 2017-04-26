@@ -68,7 +68,6 @@ public interface UserSessionModel {
     void restartSession(RealmModel realm, UserModel user, String loginUsername, String ipAddress, String authMethod, boolean rememberMe, String brokerSessionId, String brokerUserId);
 
     public static enum State {
-        LOGGING_IN, // TODO:mposolda Maybe state "LOGGING_IN" is useless now once userSession is attached after requiredActions
         LOGGED_IN,
         LOGGING_OUT,
         LOGGED_OUT

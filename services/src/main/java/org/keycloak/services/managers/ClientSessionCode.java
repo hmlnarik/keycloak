@@ -112,11 +112,6 @@ public class ClientSessionCode<CLIENT_SESSION extends CommonClientSessionModel> 
         CommonClientSessionModel clientSessionn = CodeGenerateUtil.getParser(sessionClass).parseSession(code, session, realm);;
         CLIENT_SESSION clientSession = sessionClass.cast(clientSessionn);
 
-        // TODO:mposolda Move this to somewhere else? Maybe LoginActionsService.sessionCodeChecks should be somehow even for non-action URLs...
-        if (clientSession != null) {
-            session.getContext().setClient(clientSession.getClient());
-        }
-
         return clientSession;
     }
 

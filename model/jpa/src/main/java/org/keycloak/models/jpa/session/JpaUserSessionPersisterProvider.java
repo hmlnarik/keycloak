@@ -69,7 +69,7 @@ public class JpaUserSessionPersisterProvider implements UserSessionPersisterProv
     }
 
     @Override
-    public void createClientSession(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession, boolean offline) {
+    public void createClientSession(AuthenticatedClientSessionModel clientSession, boolean offline) {
         PersistentAuthenticatedClientSessionAdapter adapter = new PersistentAuthenticatedClientSessionAdapter(clientSession);
         PersistentClientSessionModel model = adapter.getUpdatedModel();
 

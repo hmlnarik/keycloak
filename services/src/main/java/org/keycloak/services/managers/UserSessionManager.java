@@ -149,7 +149,7 @@ public class UserSessionManager {
         }
 
         kcSession.sessions().createOfflineClientSession(clientSession, offlineUserSession);
-        persister.createClientSession(offlineUserSession, clientSession, true);
+        persister.createClientSession(clientSession, true);
     }
 
     // Check if userSession has any offline clientSessions attached to it. Remove userSession if not

@@ -47,7 +47,6 @@ import org.keycloak.services.messages.Messages;
 import org.keycloak.services.util.BrowserHistoryHelper;
 import org.keycloak.services.util.PageExpiredRedirect;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.sessions.CommonClientSessionModel;
 
 
 public class SessionCodeChecks {
@@ -208,7 +207,7 @@ public class SessionCodeChecks {
 
             // Check if we transitted between flows (eg. clicking "register" on login screen)
             if (execution==null && !flowPath.equals(lastFlow)) {
-                logger.infof("Transition between flows! Current flow: %s, Previous flow: %s", flowPath, lastFlow);
+                logger.debugf("Transition between flows! Current flow: %s, Previous flow: %s", flowPath, lastFlow);
 
                 if (lastFlow == null || LoginActionsService.isFlowTransitionAllowed(flowPath, lastFlow)) {
                     authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
@@ -236,7 +235,7 @@ public class SessionCodeChecks {
                     String latestFlowPath = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
                     URI redirectUri = getLastExecutionUrl(latestFlowPath, execution);
 
-                    logger.infof("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
+                    logger.debugf("Invalid action code, but execution matches. So just redirecting to %s", redirectUri);
                     authSession.setAuthNote(LoginActionsService.FORWARDED_ERROR_MESSAGE_NOTE, Messages.EXPIRED_ACTION);
                     response = Response.status(Response.Status.FOUND).location(redirectUri).build();
                 } else {
@@ -267,12 +266,10 @@ public class SessionCodeChecks {
         if (!clientCode.isValidAction(expectedAction)) {
             AuthenticationSessionModel authSession = getAuthenticationSession();
             if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(authSession.getAction())) {
-                // TODO:mposolda debug or trace
-                logger.info("Incorrect flow '%s' . User authenticated already.");
+                logger.debug("Incorrect flow '%s' . User authenticated already.");
                 response = showPageExpired(authSession);
                 return false;
             } else {
-                // TODO:mposolda could this happen? Doublecheck if we use other AuthenticationSession.Action besides AUTHENTICATE and REQUIRED_ACTIONS
                 logger.errorf("Bad action. Expected action '%s', current action '%s'", expectedAction, authSession.getAction());
                 response = ErrorPage.error(session, Messages.EXPIRED_CODE);
                 return false;
@@ -289,13 +286,10 @@ public class SessionCodeChecks {
 
             AuthenticationProcessor.resetFlow(authSession, LoginActionsService.AUTHENTICATE_PATH);
 
-            // TODO:mposolda Check it's better to put it to AuthenticationProcessor.resetFlow (with consider of brokering)
-            authSession.setAction(CommonClientSessionModel.Action.AUTHENTICATE.name());
-
             authSession.setAuthNote(LoginActionsService.FORWARDED_ERROR_MESSAGE_NOTE, Messages.LOGIN_TIMEOUT);
 
             URI redirectUri = getLastExecutionUrl(LoginActionsService.AUTHENTICATE_PATH, null);
-            logger.infof("Flow restart after timeout. Redirecting to %s", redirectUri);
+            logger.debugf("Flow restart after timeout. Redirecting to %s", redirectUri);
             response = Response.status(Response.Status.FOUND).location(redirectUri).build();
             return false;
         }
@@ -309,8 +303,7 @@ public class SessionCodeChecks {
         }
 
         if (!clientCode.isValidAction(ClientSessionModel.Action.REQUIRED_ACTIONS.name())) {
-            // TODO:mposolda debug or trace
-            logger.infof("Expected required action, but session action is '%s' . Showing expired page now.", authSession.getAction());
+            logger.debugf("Expected required action, but session action is '%s' . Showing expired page now.", authSession.getAction());
             event.error(Errors.INVALID_CODE);
 
             response = showPageExpired(authSession);
@@ -335,7 +328,7 @@ public class SessionCodeChecks {
 
 
     private Response restartAuthenticationSessionFromCookie() {
-        logger.info("Authentication session not found. Trying to restart from cookie.");
+        logger.debug("Authentication session not found. Trying to restart from cookie.");
         AuthenticationSessionModel authSession = null;
         try {
             authSession = RestartLoginCookie.restartSession(session, realm);
@@ -358,7 +351,7 @@ public class SessionCodeChecks {
             }
 
             URI redirectUri = getLastExecutionUrl(flowPath, null);
-            logger.infof("Authentication session restart from cookie succeeded. Redirecting to %s", redirectUri);
+            logger.debugf("Authentication session restart from cookie succeeded. Redirecting to %s", redirectUri);
             return Response.status(Response.Status.FOUND).location(redirectUri).build();
         } else {
             // Finally need to show error as all the fallbacks failed

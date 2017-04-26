@@ -193,4 +193,12 @@ public class AuthenticatedClientSessionAdapter implements AuthenticatedClientSes
         copy.putAll(entity.getNotes());
         return copy;
     }
+
+    @Override
+    public void clearNotes() {
+        if (entity.getNotes() != null) {
+            entity.getNotes().clear();
+            update();
+        }
+    }
 }

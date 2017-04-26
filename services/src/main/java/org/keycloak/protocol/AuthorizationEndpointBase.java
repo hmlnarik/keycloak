@@ -159,7 +159,7 @@ public abstract class AuthorizationEndpointBase {
             ClientSessionCode<AuthenticationSessionModel> check = new ClientSessionCode<>(session, realm, authSession);
             if (!check.isActionActive(ClientSessionCode.ActionType.LOGIN)) {
 
-                logger.infof("Authentication session '%s' exists, but is expired. Restart existing authentication session", authSession.getId());
+                logger.debugf("Authentication session '%s' exists, but is expired. Restart existing authentication session", authSession.getId());
                 authSession.restartSession(realm, client);
                 return new AuthorizationEndpointChecks(authSession);
 
@@ -167,10 +167,10 @@ public abstract class AuthorizationEndpointBase {
                 // Check if we have lastProcessedExecution and restart the session just if yes. Otherwise update just client information from the AuthorizationEndpoint request.
                 // This difference is needed, because of logout from JS applications in multiple browser tabs.
                 if (hasProcessedExecution(authSession)) {
-                    logger.info("New request from application received, but authentication session already exists. Restart existing authentication session");
+                    logger.debug("New request from application received, but authentication session already exists. Restart existing authentication session");
                     authSession.restartSession(realm, client);
                 } else {
-                    logger.info("New request from application received, but authentication session already exists. Update client information in existing authentication session");
+                    logger.debug("New request from application received, but authentication session already exists. Update client information in existing authentication session");
                     authSession.clearClientNotes(); // update client data
                     authSession.updateClient(client);
                 }
@@ -178,7 +178,7 @@ public abstract class AuthorizationEndpointBase {
                 return new AuthorizationEndpointChecks(authSession);
 
             } else {
-                logger.info("Re-sent some previous request to Authorization endpoint. Likely browser 'back' or 'refresh' button.");
+                logger.debug("Re-sent some previous request to Authorization endpoint. Likely browser 'back' or 'refresh' button.");
 
                 // See if we have lastProcessedExecution note. If yes, we are expired. Also if we are in different flow than initial one. Otherwise it is browser refresh of initial username/password form
                 if (!shouldShowExpirePage(authSession)) {
@@ -196,11 +196,11 @@ public abstract class AuthorizationEndpointBase {
         UserSessionModel userSession = authSessionId==null ? null : session.sessions().getUserSession(realm, authSessionId);
 
         if (userSession != null) {
-            logger.infof("Sent request to authz endpoint. We don't have authentication session with ID '%s' but we have userSession. Will re-create authentication session with same ID", authSessionId);
+            logger.debugf("Sent request to authz endpoint. We don't have authentication session with ID '%s' but we have userSession. Will re-create authentication session with same ID", authSessionId);
             authSession = session.authenticationSessions().createAuthenticationSession(authSessionId, realm, client);
         } else {
             authSession = manager.createAuthenticationSession(realm, client, true);
-            logger.infof("Sent request to authz endpoint. Created new authentication session with ID '%s'", authSession.getId());
+            logger.debugf("Sent request to authz endpoint. Created new authentication session with ID '%s'", authSession.getId());
         }
 
         return new AuthorizationEndpointChecks(authSession);
@@ -226,7 +226,7 @@ public abstract class AuthorizationEndpointBase {
         String lastFlow = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
         // Check if we transitted between flows (eg. clicking "register" on login screen)
         if (!initialFlow.equals(lastFlow)) {
-            logger.infof("Transition between flows! Current flow: %s, Previous flow: %s", initialFlow, lastFlow);
+            logger.debugf("Transition between flows! Current flow: %s, Previous flow: %s", initialFlow, lastFlow);
 
             if (lastFlow == null || LoginActionsService.isFlowTransitionAllowed(initialFlow, lastFlow)) {
                 authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, initialFlow);

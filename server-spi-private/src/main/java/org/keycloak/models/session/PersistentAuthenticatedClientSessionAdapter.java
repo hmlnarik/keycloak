@@ -190,7 +190,7 @@ public class PersistentAuthenticatedClientSessionAdapter implements Authenticate
     public void setNote(String name, String value) {
         PersistentClientSessionData entity = getData();
         if (entity.getNotes() == null) {
-            entity.setNotes(new HashMap<String, String>());
+            entity.setNotes(new HashMap<>());
         }
         entity.getNotes().put(name, value);
     }
@@ -210,6 +210,13 @@ public class PersistentAuthenticatedClientSessionAdapter implements Authenticate
         return entity.getNotes();
     }
 
+    @Override
+    public void clearNotes() {
+        PersistentClientSessionData entity = getData();
+        if (entity.getNotes() != null) {
+            entity.getNotes().clear();
+        }
+    }
 
     @Override
     public boolean equals(Object o) {

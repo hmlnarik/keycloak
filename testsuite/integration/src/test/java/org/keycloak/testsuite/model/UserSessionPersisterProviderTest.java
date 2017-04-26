@@ -185,13 +185,13 @@ public class UserSessionPersisterProviderTest {
         try {
             persistedSession.setLastSessionRefresh(Time.currentTime());
             persistedSession.setNote("foo", "bar");
-            persistedSession.setState(UserSessionModel.State.LOGGING_IN);
+            persistedSession.setState(UserSessionModel.State.LOGGED_IN);
             persister.updateUserSession(persistedSession, true);
 
             // create new clientSession
             AuthenticatedClientSessionModel clientSession = createClientSession(realm.getClientByClientId("third-party"), session.sessions().getUserSession(realm, persistedSession.getId()),
                     "http://redirect", "state", new HashSet<String>(), new HashSet<String>());
-            persister.createClientSession(userSession, clientSession, true);
+            persister.createClientSession(clientSession, true);
 
             resetSession();
 
@@ -200,7 +200,7 @@ public class UserSessionPersisterProviderTest {
             persistedSession = loadedSessions.get(0);
             UserSessionProviderTest.assertSession(persistedSession, session.users().getUserByUsername("user1", realm), "127.0.0.2", started, started+10, "test-app", "third-party");
             Assert.assertEquals("bar", persistedSession.getNote("foo"));
-            Assert.assertEquals(UserSessionModel.State.LOGGING_IN, persistedSession.getState());
+            Assert.assertEquals(UserSessionModel.State.LOGGED_IN, persistedSession.getState());
 
             // Remove clientSession
             persister.removeClientSession(userSession.getId(), realm.getClientByClientId("third-party").getId(), true);
@@ -397,7 +397,7 @@ public class UserSessionPersisterProviderTest {
     private void persistUserSession(UserSessionModel userSession, boolean offline) {
         persister.createUserSession(userSession, offline);
         for (AuthenticatedClientSessionModel clientSession : userSession.getAuthenticatedClientSessions().values()) {
-            persister.createClientSession(userSession, clientSession, offline);
+            persister.createClientSession(clientSession, offline);
         }
     }
 

@@ -30,8 +30,9 @@ public interface AuthenticatedClientSessionModel extends CommonClientSessionMode
     void setUserSession(UserSessionModel userSession);
     UserSessionModel getUserSession();
 
-    public String getNote(String name);
-    public void setNote(String name, String value);
-    public void removeNote(String name);
-    public Map<String, String> getNotes();
+    String getNote(String name);
+    void setNote(String name, String value);
+    void removeNote(String name);
+    Map<String, String> getNotes();
+    void clearNotes();
 }

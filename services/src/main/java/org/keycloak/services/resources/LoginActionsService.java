@@ -36,14 +36,12 @@ import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAu
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.VerificationException;
-import org.keycloak.common.util.ObjectUtil;
 import org.keycloak.common.util.Time;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.exceptions.TokenNotActiveException;
-import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
@@ -55,13 +53,10 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserConsentModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.models.UserModel.RequiredAction;
-import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.protocol.AuthorizationEndpointBase;
 import org.keycloak.protocol.LoginProtocol;
 import org.keycloak.protocol.LoginProtocol.Error;
-import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.utils.OIDCResponseMode;
 import org.keycloak.protocol.oidc.utils.OIDCResponseType;
@@ -77,7 +72,6 @@ import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.services.util.PageExpiredRedirect;
 import org.keycloak.services.util.BrowserHistoryHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.sessions.CommonClientSessionModel;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -246,11 +240,8 @@ public class LoginActionsService {
 
         AuthenticationProcessor.resetFlow(authSession, flowPath);
 
-        // TODO:mposolda Check it's better to put it to AuthenticationProcessor.resetFlow (with consider of brokering)
-        authSession.setAction(CommonClientSessionModel.Action.AUTHENTICATE.name());
-
         URI redirectUri = getLastExecutionUrl(flowPath, null);
-        logger.infof("Flow restart requested. Redirecting to %s", redirectUri);
+        logger.debugf("Flow restart requested. Redirecting to %s", redirectUri);
         return Response.status(Response.Status.FOUND).location(redirectUri).build();
     }
 
@@ -312,6 +303,9 @@ public class LoginActionsService {
             } else {
                 response = processor.authenticate();
             }
+        } catch (WebApplicationException e) {
+            response = e.getResponse();
+            authSession = processor.getAuthenticationSession();
         } catch (Exception e) {
             response = processor.handleBrowserException(e);
             authSession = processor.getAuthenticationSession(); // Could be changed (eg. Forked flow)

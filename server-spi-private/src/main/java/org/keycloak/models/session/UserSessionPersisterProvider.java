@@ -35,7 +35,7 @@ public interface UserSessionPersisterProvider extends Provider {
     void createUserSession(UserSessionModel userSession, boolean offline);
 
     // Assuming that corresponding userSession is already persisted
-    void createClientSession(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession, boolean offline);
+    void createClientSession(AuthenticatedClientSessionModel clientSession, boolean offline);
 
     void updateUserSession(UserSessionModel userSession, boolean offline);
 
