@@ -28,6 +28,7 @@ import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.TokenVerifier;
 import org.keycloak.authentication.actiontoken.*;
+import org.keycloak.authentication.actiontoken.resetcred.ResetCredentialsActionTokenHandler;
 import org.keycloak.authentication.authenticators.broker.AbstractIdpAuthenticator;
 import org.keycloak.authentication.authenticators.broker.util.PostBrokerLoginConstants;
 import org.keycloak.authentication.authenticators.broker.util.SerializedBrokeredIdentityContext;
@@ -590,30 +591,7 @@ public class LoginActionsService {
     }
 
     protected Response processResetCredentials(boolean actionRequest, String execution, AuthenticationSessionModel authSession) {
-        AuthenticationProcessor authProcessor = new AuthenticationProcessor() {
-
-            @Override
-            protected Response authenticationComplete() {
-                boolean firstBrokerLoginInProgress = (authenticationSession.getAuthNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) != null);
-                if (firstBrokerLoginInProgress) {
-
-                    UserModel linkingUser = AbstractIdpAuthenticator.getExistingUser(session, realm, authenticationSession);
-                    if (!linkingUser.getId().equals(authenticationSession.getAuthenticatedUser().getId())) {
-                        return ErrorPage.error(session, Messages.IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE, authenticationSession.getAuthenticatedUser().getUsername(), linkingUser.getUsername());
-                    }
-
-                    SerializedBrokeredIdentityContext serializedCtx = SerializedBrokeredIdentityContext.readFromAuthenticationSession(authSession, AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE);
-                    authSession.setAuthNote(AbstractIdpAuthenticator.FIRST_BROKER_LOGIN_SUCCESS, serializedCtx.getIdentityProviderId());
-
-                    logger.debugf("Forget-password flow finished when authenticated user '%s' after first broker login with identity provider '%s'.",
-                            linkingUser.getUsername(), serializedCtx.getIdentityProviderId());
-
-                    return redirectToAfterBrokerLoginEndpoint(authSession, true);
-                } else {
-                    return super.authenticationComplete();
-                }
-            }
-        };
+        AuthenticationProcessor authProcessor = new ResetCredentialsActionTokenHandler.ResetCredsAuthenticationProcessor();
 
         return processFlow(actionRequest, execution, authSession, RESET_CREDENTIALS_PATH, realm.getResetCredentialsFlow(), null, authProcessor);
     }
@@ -758,6 +736,10 @@ public class LoginActionsService {
     }
 
     private Response redirectToAfterBrokerLoginEndpoint(AuthenticationSessionModel authSession, boolean firstBrokerLogin) {
+        return redirectToAfterBrokerLoginEndpoint(session, realm, uriInfo, authSession, firstBrokerLogin);
+    }
+
+    public static Response redirectToAfterBrokerLoginEndpoint(KeycloakSession session, RealmModel realm, UriInfo uriInfo, AuthenticationSessionModel authSession, boolean firstBrokerLogin) {
         ClientSessionCode<AuthenticationSessionModel> accessCode = new ClientSessionCode<>(session, realm, authSession);
         authSession.setTimestamp(Time.currentTime());
 
