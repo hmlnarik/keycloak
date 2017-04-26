@@ -88,6 +88,8 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Providers;
 import java.net.URI;
+import java.util.Map;
+
 import javax.ws.rs.core.*;
 import static org.keycloak.authentication.actiontoken.DefaultActionToken.ACTION_TOKEN_BASIC_CHECKS;
 
@@ -866,11 +868,12 @@ public class LoginActionsService {
         }
         event.detail(Details.REMEMBER_ME, rememberMe);
 
-        // TODO:mposolda Fix if this is called at firstBroker or postBroker login
-        /*
-                .detail(Details.IDENTITY_PROVIDER, userSession.getNote(Details.IDENTITY_PROVIDER))
-                .detail(Details.IDENTITY_PROVIDER_USERNAME, userSession.getNote(Details.IDENTITY_PROVIDER_USERNAME));
-                */
+        Map<String, String> userSessionNotes = authSession.getUserSessionNotes();
+        String identityProvider = userSessionNotes.get(Details.IDENTITY_PROVIDER);
+        if (identityProvider != null) {
+            event.detail(Details.IDENTITY_PROVIDER, identityProvider)
+                    .detail(Details.IDENTITY_PROVIDER_USERNAME, userSessionNotes.get(Details.IDENTITY_PROVIDER_USERNAME));
+        }
     }
 
     @Path(REQUIRED_ACTION)

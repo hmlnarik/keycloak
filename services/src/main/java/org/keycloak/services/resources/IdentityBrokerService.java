@@ -211,6 +211,8 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
             throw new ErrorPageException(session, Messages.INVALID_REQUEST);
         }
 
+        event.detail(Details.REDIRECT_URI, redirectUri);
+
         if (nonce == null || hash == null) {
             event.error(Errors.INVALID_REDIRECT_URI);
             throw new ErrorPageException(session, Messages.INVALID_REQUEST);
@@ -240,7 +242,10 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
             return Response.status(302).location(builder.build()).build();
         }
 
-
+        cookieResult.getSession();
+        event.session(cookieResult.getSession());
+        event.user(cookieResult.getUser());
+        event.detail(Details.USERNAME, cookieResult.getUser().getUsername());
 
         AuthenticatedClientSessionModel clientSession = null;
         for (AuthenticatedClientSessionModel cs : cookieResult.getSession().getAuthenticatedClientSessions().values()) {
@@ -265,7 +270,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
             throw new ErrorPageException(session, Messages.INVALID_REQUEST);
         }
 
-
+        event.detail(Details.IDENTITY_PROVIDER, providerId);
 
         ClientModel accountService = this.realmModel.getClientByClientId(Constants.ACCOUNT_MANAGEMENT_CLIENT_ID);
         if (!accountService.getId().equals(client.getId())) {
@@ -308,6 +313,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         authSession.setClientNote(OIDCLoginProtocol.STATE_PARAM, UUID.randomUUID().toString());
         authSession.setAuthNote(LINKING_IDENTITY_PROVIDER, cookieResult.getSession().getId() + clientId + providerId);
 
+        event.detail(Details.CODE_ID, userSession.getId());
         event.success();
 
         try {
@@ -509,6 +515,7 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
 
         this.event.event(EventType.IDENTITY_PROVIDER_LOGIN)
                 .detail(Details.REDIRECT_URI, authenticationSession.getRedirectUri())
+                .detail(Details.IDENTITY_PROVIDER, providerId)
                 .detail(Details.IDENTITY_PROVIDER_USERNAME, context.getUsername());
 
         UserModel federatedUser = this.session.users().getUserByFederatedIdentity(federatedIdentityModel, this.realmModel);
@@ -786,6 +793,9 @@ public class IdentityBrokerService implements IdentityProvider.AuthenticationCal
         context.getIdp().authenticationFinished(authSession, context);
         authSession.setUserSessionNote(Details.IDENTITY_PROVIDER, providerId);
         authSession.setUserSessionNote(Details.IDENTITY_PROVIDER_USERNAME, context.getUsername());
+
+        event.detail(Details.IDENTITY_PROVIDER, providerId)
+                .detail(Details.IDENTITY_PROVIDER_USERNAME, context.getUsername());
 
         if (isDebugEnabled()) {
             logger.debugf("Performing local authentication for user [%s].", federatedUser);
