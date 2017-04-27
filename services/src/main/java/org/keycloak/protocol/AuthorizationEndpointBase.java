@@ -223,17 +223,13 @@ public abstract class AuthorizationEndpointBase {
         }
 
         String lastFlow = authSession.getAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH);
-        // Check if we transitted between flows (eg. clicking "register" on login screen)
-        if (!initialFlow.equals(lastFlow)) {
+        // Check if we transitted between flows (eg. clicking "register" on login screen and then clicking browser 'back', which showed this page)
+        if (!initialFlow.equals(lastFlow) && AuthenticationSessionModel.Action.AUTHENTICATE.toString().equals(authSession.getAction())) {
             logger.debugf("Transition between flows! Current flow: %s, Previous flow: %s", initialFlow, lastFlow);
 
-            if (lastFlow == null || LoginActionsService.isFlowTransitionAllowed(initialFlow, lastFlow)) {
-                authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, initialFlow);
-                authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
-                return false;
-            } else {
-                return true;
-            }
+            authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, initialFlow);
+            authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
+            return false;
         }
 
         return false;

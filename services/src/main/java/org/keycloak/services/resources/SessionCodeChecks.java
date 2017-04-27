@@ -209,7 +209,8 @@ public class SessionCodeChecks {
             if (execution==null && !flowPath.equals(lastFlow)) {
                 logger.debugf("Transition between flows! Current flow: %s, Previous flow: %s", flowPath, lastFlow);
 
-                if (lastFlow == null || LoginActionsService.isFlowTransitionAllowed(flowPath, lastFlow)) {
+                // Don't allow moving to different flow if I am on requiredActions already
+                if (ClientSessionModel.Action.AUTHENTICATE.name().equals(authSession.getAction())) {
                     authSession.setAuthNote(AuthenticationProcessor.CURRENT_FLOW_PATH, flowPath);
                     authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
                     lastExecFromSession = null;
@@ -266,7 +267,7 @@ public class SessionCodeChecks {
         if (!clientCode.isValidAction(expectedAction)) {
             AuthenticationSessionModel authSession = getAuthenticationSession();
             if (ClientSessionModel.Action.REQUIRED_ACTIONS.name().equals(authSession.getAction())) {
-                logger.debug("Incorrect flow '%s' . User authenticated already.");
+                logger.debugf("Incorrect action '%s' . User authenticated already.", authSession.getAction());
                 response = showPageExpired(authSession);
                 return false;
             } else {

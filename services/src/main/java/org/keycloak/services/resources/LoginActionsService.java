@@ -187,32 +187,6 @@ public class LoginActionsService {
     }
 
 
-    public static boolean isFlowTransitionAllowed(String currentFlow, String previousFlow) {
-        if (currentFlow.equals(AUTHENTICATE_PATH) && (previousFlow.equals(REGISTRATION_PATH) || previousFlow.equals(RESET_CREDENTIALS_PATH))) {
-            return true;
-        }
-
-        if (currentFlow.equals(REGISTRATION_PATH) && (previousFlow.equals(AUTHENTICATE_PATH))) {
-            return true;
-        }
-
-        if (currentFlow.equals(RESET_CREDENTIALS_PATH) && (previousFlow.equals(AUTHENTICATE_PATH) || previousFlow.equals(FIRST_BROKER_LOGIN_PATH))) {
-            return true;
-        }
-
-        if (currentFlow.equals(FIRST_BROKER_LOGIN_PATH) && (previousFlow.equals(AUTHENTICATE_PATH) || previousFlow.equals(POST_BROKER_LOGIN_PATH))) {
-            return true;
-        }
-
-        if (currentFlow.equals(POST_BROKER_LOGIN_PATH) && (previousFlow.equals(AUTHENTICATE_PATH) || previousFlow.equals(FIRST_BROKER_LOGIN_PATH))) {
-            return true;
-        }
-
-        return false;
-    }
-
-
-
     protected URI getLastExecutionUrl(String flowPath, String executionId) {
         return new AuthenticationFlowURLHelper(session, realm, uriInfo)
                 .getLastExecutionUrl(flowPath, executionId);
