@@ -143,20 +143,6 @@ class CodeGenerateUtil {
             sb.append('.');
             sb.append(clientUUID);
 
-            // TODO:mposolda codeChallengeMethod is not used anywhere. Not sure if it's bug of PKCE contribution. Doublecheck the PKCE specification what should be done regarding code
-            // https://tools.ietf.org/html/rfc7636#section-4
-            String codeChallenge = clientSession.getNote(OAuth2Constants.CODE_CHALLENGE);
-            String codeChallengeMethod = clientSession.getNote(OAuth2Constants.CODE_CHALLENGE_METHOD);
-            if (codeChallenge != null) {
-                logger.debugf("PKCE received codeChallenge = %s", codeChallenge);
-                if (codeChallengeMethod == null) {
-                    logger.debug("PKCE not received codeChallengeMethod, treating plain");
-                    codeChallengeMethod = OAuth2Constants.PKCE_METHOD_PLAIN;
-                } else {
-                    logger.debugf("PKCE received codeChallengeMethod = %s", codeChallengeMethod);
-                }
-            }
-
             return sb.toString();
         }
 
