@@ -21,7 +21,6 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.common.ClientConnection;
-import org.keycloak.common.util.ObjectUtil;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.AuthenticationFlowModel;
@@ -35,7 +34,7 @@ import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.resources.LoginActionsService;
 import org.keycloak.services.util.CacheControlUtil;
-import org.keycloak.services.util.PageExpiredRedirect;
+import org.keycloak.services.util.AuthenticationFlowURLHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.core.Context;
@@ -186,7 +185,7 @@ public abstract class AuthorizationEndpointBase {
                 } else {
                     CacheControlUtil.noBackButtonCacheControlHeader();
 
-                    Response response = new PageExpiredRedirect(session, realm, uriInfo)
+                    Response response = new AuthenticationFlowURLHelper(session, realm, uriInfo)
                             .showPageExpired(authSession);
                     return new AuthorizationEndpointChecks(response);
                 }

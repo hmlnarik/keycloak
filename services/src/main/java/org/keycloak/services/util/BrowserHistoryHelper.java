@@ -77,7 +77,7 @@ public abstract class BrowserHistoryHelper {
                 if (entity instanceof String) {
                     String responseString = (String) entity;
 
-                    URI lastExecutionURL = new PageExpiredRedirect(session, session.getContext().getRealm(), session.getContext().getUri()).getLastExecutionUrl(authSession);
+                    URI lastExecutionURL = new AuthenticationFlowURLHelper(session, session.getContext().getRealm(), session.getContext().getUri()).getLastExecutionUrl(authSession);
 
                     // Inject javascript for history "replaceState"
                     String responseWithJavascript = responseWithJavascript(responseString, lastExecutionURL.toString());
@@ -124,7 +124,7 @@ public abstract class BrowserHistoryHelper {
     }
 
 
-    // This impl is limited ATM. Saved request doesn't save response HTTP headers, so they are not correctly restored..
+    // This impl is limited ATM. Saved request doesn't save response HTTP headers, so they may not be fully restored..
     private static class RedirectAfterPostHelper extends BrowserHistoryHelper {
 
         private static final String CACHED_RESPONSE = "cached.response";
@@ -142,7 +142,7 @@ public abstract class BrowserHistoryHelper {
                     String responseString = (String) entity;
                     authSession.setAuthNote(CACHED_RESPONSE, responseString);
 
-                    URI lastExecutionURL = new PageExpiredRedirect(session, session.getContext().getRealm(), session.getContext().getUri()).getLastExecutionUrl(authSession);
+                    URI lastExecutionURL = new AuthenticationFlowURLHelper(session, session.getContext().getRealm(), session.getContext().getUri()).getLastExecutionUrl(authSession);
 
                     if (logger.isTraceEnabled()) {
                         logger.tracef("Saved response challenge and redirect to %s", lastExecutionURL);

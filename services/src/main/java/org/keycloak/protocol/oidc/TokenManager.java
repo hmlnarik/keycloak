@@ -358,7 +358,6 @@ public class TokenManager {
         clientSession.setRoles(authSession.getRoles());
         clientSession.setProtocolMappers(authSession.getProtocolMappers());
 
-        clientSession.clearNotes();
         Map<String, String> transferredNotes = authSession.getClientNotes();
         for (Map.Entry<String, String> entry : transferredNotes.entrySet()) {
             clientSession.setNote(entry.getKey(), entry.getValue());

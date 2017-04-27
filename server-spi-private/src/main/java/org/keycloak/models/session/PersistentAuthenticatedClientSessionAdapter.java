@@ -211,14 +211,6 @@ public class PersistentAuthenticatedClientSessionAdapter implements Authenticate
     }
 
     @Override
-    public void clearNotes() {
-        PersistentClientSessionData entity = getData();
-        if (entity.getNotes() != null) {
-            entity.getNotes().clear();
-        }
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || !(o instanceof AuthenticatedClientSessionModel)) return false;

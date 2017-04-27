@@ -52,7 +52,7 @@ import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.LoginActionsService;
 import org.keycloak.services.util.CacheControlUtil;
-import org.keycloak.services.util.PageExpiredRedirect;
+import org.keycloak.services.util.AuthenticationFlowURLHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.sessions.CommonClientSessionModel;
 
@@ -724,7 +724,7 @@ public class AuthenticationProcessor {
 
 
     public Response redirectToFlow() {
-        URI redirect = new PageExpiredRedirect(session, realm, uriInfo).getLastExecutionUrl(authenticationSession);
+        URI redirect = new AuthenticationFlowURLHelper(session, realm, uriInfo).getLastExecutionUrl(authenticationSession);
 
         logger.debug("Redirecting to URL: " + redirect.toString());
 
@@ -779,7 +779,7 @@ public class AuthenticationProcessor {
         String current = authenticationSession.getAuthNote(CURRENT_AUTHENTICATION_EXECUTION);
         if (execution == null || !execution.equals(current)) {
             logger.debug("Current execution does not equal executed execution.  Might be a page refresh");
-            return new PageExpiredRedirect(session, realm, uriInfo).showPageExpired(authenticationSession);
+            return new AuthenticationFlowURLHelper(session, realm, uriInfo).showPageExpired(authenticationSession);
         }
         UserModel authUser = authenticationSession.getAuthenticatedUser();
         validateUser(authUser);

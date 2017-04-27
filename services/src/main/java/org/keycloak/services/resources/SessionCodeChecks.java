@@ -45,7 +45,7 @@ import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.util.BrowserHistoryHelper;
-import org.keycloak.services.util.PageExpiredRedirect;
+import org.keycloak.services.util.AuthenticationFlowURLHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 
@@ -374,13 +374,13 @@ public class SessionCodeChecks {
 
 
     private URI getLastExecutionUrl(String flowPath, String executionId) {
-        return new PageExpiredRedirect(session, realm, uriInfo)
+        return new AuthenticationFlowURLHelper(session, realm, uriInfo)
                 .getLastExecutionUrl(flowPath, executionId);
     }
 
 
     private Response showPageExpired(AuthenticationSessionModel authSession) {
-        return new PageExpiredRedirect(session, realm, uriInfo)
+        return new AuthenticationFlowURLHelper(session, realm, uriInfo)
                 .showPageExpired(authSession);
     }
 

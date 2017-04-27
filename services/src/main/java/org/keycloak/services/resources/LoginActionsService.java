@@ -69,7 +69,7 @@ import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.LoginActionsServiceChecks.RestartFlowException;
 import org.keycloak.services.util.CacheControlUtil;
-import org.keycloak.services.util.PageExpiredRedirect;
+import org.keycloak.services.util.AuthenticationFlowURLHelper;
 import org.keycloak.services.util.BrowserHistoryHelper;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
@@ -214,7 +214,7 @@ public class LoginActionsService {
 
 
     protected URI getLastExecutionUrl(String flowPath, String executionId) {
-        return new PageExpiredRedirect(session, realm, uriInfo)
+        return new AuthenticationFlowURLHelper(session, realm, uriInfo)
                 .getLastExecutionUrl(flowPath, executionId);
     }
 

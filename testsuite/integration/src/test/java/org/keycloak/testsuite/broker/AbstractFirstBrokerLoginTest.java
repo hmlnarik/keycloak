@@ -33,13 +33,16 @@ import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.services.managers.RealmManager;
 import org.keycloak.testsuite.pages.IdpConfirmLinkPage;
 import org.keycloak.testsuite.pages.IdpLinkEmailPage;
+import org.keycloak.testsuite.pages.InfoPage;
 import org.keycloak.testsuite.pages.LoginExpiredPage;
 import org.keycloak.testsuite.pages.LoginPasswordUpdatePage;
 import org.keycloak.testsuite.pages.LoginUpdateProfileEditUsernameAllowedPage;
 import org.keycloak.testsuite.rule.KeycloakRule;
 import org.keycloak.testsuite.rule.WebResource;
+import org.keycloak.testsuite.rule.WebRule;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import javax.mail.internet.MimeMessage;
@@ -503,6 +506,93 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
 
         // authenticated and redirected to app. User is linked with identity provider
         assertFederatedUser("pedroigor", "psilva@redhat.com", "pedroigor");
+
+        brokerServerRule.update(new KeycloakRule.KeycloakSetup() {
+
+            @Override
+            public void config(RealmManager manager, RealmModel adminstrationRealm, RealmModel realmWithBroker) {
+                setExecutionRequirement(realmWithBroker, DefaultAuthenticationFlows.FIRST_BROKER_LOGIN_HANDLE_EXISTING_SUBFLOW,
+                        IdpEmailVerificationAuthenticatorFactory.PROVIDER_ID, AuthenticationExecutionModel.Requirement.ALTERNATIVE);
+
+            }
+
+        }, APP_REALM_ID);
+    }
+
+
+    /**
+     * Same like above, but "forget password" link is opened in different browser
+     */
+    @Test
+    public void testLinkAccountByReauthentication_forgetPassword_differentBrowser() throws Throwable {
+        brokerServerRule.update(new KeycloakRule.KeycloakSetup() {
+
+            @Override
+            public void config(RealmManager manager, RealmModel adminstrationRealm, RealmModel realmWithBroker) {
+                setExecutionRequirement(realmWithBroker, DefaultAuthenticationFlows.FIRST_BROKER_LOGIN_HANDLE_EXISTING_SUBFLOW,
+                        IdpEmailVerificationAuthenticatorFactory.PROVIDER_ID, AuthenticationExecutionModel.Requirement.DISABLED);
+
+                setUpdateProfileFirstLogin(realmWithBroker, IdentityProviderRepresentation.UPFLM_OFF);
+            }
+
+        }, APP_REALM_ID);
+
+        loginIDP("pedroigor");
+
+        this.idpConfirmLinkPage.assertCurrent();
+        Assert.assertEquals("User with email psilva@redhat.com already exists. How do you want to continue?", this.idpConfirmLinkPage.getMessage());
+        this.idpConfirmLinkPage.clickLinkAccount();
+
+        // Click "Forget password" on login page. Email sent directly because username is known
+        Assert.assertEquals("Log in to " + APP_REALM_ID, this.driver.getTitle());
+        this.loginPage.resetPassword();
+
+        Assert.assertEquals("Log in to " + APP_REALM_ID, this.driver.getTitle());
+        Assert.assertEquals("You should receive an email shortly with further instructions.", this.loginPage.getSuccessMessage());
+
+        // Click on link from email
+        Assert.assertEquals(1, greenMail.getReceivedMessages().length);
+        MimeMessage message = greenMail.getReceivedMessages()[0];
+        String linkFromMail = getVerificationEmailLink(message);
+
+        // Simulate 2nd browser
+        WebRule webRule2 = new WebRule(this);
+        webRule2.before();
+
+        WebDriver driver2 = webRule2.getDriver();
+        LoginPasswordUpdatePage passwordUpdatePage2 = webRule2.getPage(LoginPasswordUpdatePage.class);
+        InfoPage infoPage2 = webRule2.getPage(InfoPage.class);
+
+        driver2.navigate().to(linkFromMail.trim());
+
+        // Need to update password now
+        passwordUpdatePage2.assertCurrent();
+        passwordUpdatePage2.changePassword("password", "password");
+
+        // authenticated, but not redirected to app. Just seeing info page.
+        infoPage2.assertCurrent();
+        Assert.assertEquals("Your account has been updated.", infoPage2.getInfo());
+
+        // User is not yet linked with identity provider. He needs to authenticate again in 1st browser
+        RealmModel realmWithBroker = getRealm();
+        Set<FederatedIdentityModel> federatedIdentities = this.session.users().getFederatedIdentities(this.session.users().getUserByUsername("pedroigor", realmWithBroker), realmWithBroker);
+        assertEquals(0, federatedIdentities.size());
+
+        // Continue with 1st browser
+        loginIDP("pedroigor");
+
+        this.idpConfirmLinkPage.assertCurrent();
+        Assert.assertEquals("User with email psilva@redhat.com already exists. How do you want to continue?", this.idpConfirmLinkPage.getMessage());
+        this.idpConfirmLinkPage.clickLinkAccount();
+
+        Assert.assertEquals("Log in to " + APP_REALM_ID, this.driver.getTitle());
+        this.loginPage.login("password");
+
+        // authenticated and redirected to app. User is linked with identity provider
+        assertFederatedUser("pedroigor", "psilva@redhat.com", "pedroigor");
+
+        // Revert everything
+        webRule2.after();
 
         brokerServerRule.update(new KeycloakRule.KeycloakSetup() {
 

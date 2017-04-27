@@ -34,5 +34,4 @@ public interface AuthenticatedClientSessionModel extends CommonClientSessionMode
     void setNote(String name, String value);
     void removeNote(String name);
     Map<String, String> getNotes();
-    void clearNotes();
 }
