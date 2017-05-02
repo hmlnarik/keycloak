@@ -31,7 +31,6 @@ import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.*;
 import org.keycloak.models.UserModel.RequiredAction;
-import org.keycloak.models.utils.HmacOTP;
 import org.keycloak.services.Urls;
 import org.keycloak.services.validation.Validation;
 
@@ -151,10 +150,5 @@ public class VerifyEmail implements RequiredActionProvider, RequiredActionFactor
         }
 
         return forms.createResponse(UserModel.RequiredAction.VERIFY_EMAIL);
-    }
-
-    public static void setupKey(AuthenticationSessionModel session) {
-        String secret = HmacOTP.generateSecret(10);
-        session.setAuthNote(Constants.VERIFY_EMAIL_KEY, secret);
     }
 }
