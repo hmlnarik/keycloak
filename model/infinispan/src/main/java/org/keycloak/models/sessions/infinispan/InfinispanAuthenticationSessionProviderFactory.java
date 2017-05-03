@@ -30,6 +30,7 @@ import org.keycloak.sessions.AuthenticationSessionProvider;
 import org.keycloak.sessions.AuthenticationSessionProviderFactory;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import org.jboss.logging.Logger;
 
 /**
@@ -39,7 +40,6 @@ public class InfinispanAuthenticationSessionProviderFactory implements Authentic
 
     private static final Logger log = Logger.getLogger(InfinispanAuthenticationSessionProviderFactory.class);
 
-    // TODO:hmlnarik we rely on non-concurrent behaviour here. Rework to use CacheManager for auth sessions instead
     private volatile Cache<String, AuthenticationSessionEntity> authSessionsCache;
 
     @Override
@@ -53,7 +53,6 @@ public class InfinispanAuthenticationSessionProviderFactory implements Authentic
         return new InfinispanAuthenticationSessionProvider(session, authSessionsCache);
     }
 
-    // TODO:hmlnarik we rely on non-concurrent behaviour here. Rework to use CacheManager for auth sessions instead
     private void updateAuthNotes(ClusterEvent clEvent) {
         if (! (clEvent instanceof AuthenticationSessionAuthNoteUpdateEvent)) {
             return;
@@ -66,6 +65,10 @@ public class InfinispanAuthenticationSessionProviderFactory implements Authentic
 
     private static void updateAuthSession(AuthenticationSessionEntity authSession, Map<String, String> authNotesFragment) {
         if (authSession != null) {
+            if (authSession.getAuthNotes() == null) {
+                authSession.setAuthNotes(new ConcurrentHashMap<>());
+            }
+
             for (Entry<String, String> me : authNotesFragment.entrySet()) {
                 String value = me.getValue();
                 if (value == null) {
