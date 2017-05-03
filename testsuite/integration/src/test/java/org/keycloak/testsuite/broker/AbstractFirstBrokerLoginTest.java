@@ -402,6 +402,45 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         Assert.assertTrue(user.isEmailVerified());
     }
 
+    @Test
+    public void testLinkAccountByEmailVerificationResendEmail() throws Exception, Throwable {
+        setUpdateProfileFirstLogin(IdentityProviderRepresentation.UPFLM_OFF);
+
+        loginIDP("pedroigor");
+
+        this.idpConfirmLinkPage.assertCurrent();
+        Assert.assertEquals("User with email psilva@redhat.com already exists. How do you want to continue?", this.idpConfirmLinkPage.getMessage());
+        this.idpConfirmLinkPage.clickLinkAccount();
+
+        // Confirm linking account by email
+        this.idpLinkEmailPage.assertCurrent();
+        Assert.assertThat(
+          this.idpLinkEmailPage.getMessage(),
+          is("An email with instructions to link " + ObjectUtil.capitalize(getProviderId()) + " account pedroigor with your " + APP_REALM_ID + " account has been sent to you.")
+        );
+
+        this.idpLinkEmailPage.clickResendEmail();
+
+        this.idpLinkEmailPage.assertCurrent();
+        Assert.assertThat(
+          this.idpLinkEmailPage.getMessage(),
+          is("An email with instructions to link " + ObjectUtil.capitalize(getProviderId()) + " account pedroigor with your " + APP_REALM_ID + " account has been sent to you.")
+        );
+
+        Assert.assertEquals(2, greenMail.getReceivedMessages().length);
+        MimeMessage message = greenMail.getReceivedMessages()[0];
+        String linkFromMail = getVerificationEmailLink(message);
+
+        driver.navigate().to(linkFromMail.trim());
+
+        // authenticated and redirected to app. User is linked with identity provider
+        assertFederatedUser("pedroigor", "psilva@redhat.com", "pedroigor");
+
+        // Assert user's email is verified now
+        UserModel user = getFederatedUser();
+        Assert.assertTrue(user.isEmailVerified());
+    }
+
 
     /**
      * Tests that duplication is detected and user wants to link federatedIdentity with existing account. He will confirm link by reauthentication (confirm password on login screen)

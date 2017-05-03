@@ -36,9 +36,11 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.services.ServicesLogger;
 import org.keycloak.services.Urls;
+import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
+import java.net.URI;
 import java.util.Objects;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -84,11 +86,11 @@ public class IdpEmailVerificationAuthenticator extends AbstractIdpAuthenticator 
 
     @Override
     protected void actionImpl(AuthenticationFlowContext context, SerializedBrokeredIdentityContext serializedCtx, BrokeredIdentityContext brokerContext) {
-        ServicesLogger.LOGGER.keyParamDoesNotMatch();
-        Response challengeResponse = context.form()
-                .setError(Messages.INVALID_ACCESS_CODE)
-                .createErrorPage();
-        context.failureChallenge(AuthenticationFlowError.IDENTITY_PROVIDER_ERROR, challengeResponse);
+        logger.debugf("Re-sending email requested for user, details follow");
+
+        // This will allow user to re-send email again
+        context.getAuthenticationSession().removeAuthNote(VERIFY_ACCOUNT_IDP_USERNAME);
+        authenticateImpl(context, serializedCtx, brokerContext);
     }
 
     @Override
@@ -144,9 +146,13 @@ public class IdpEmailVerificationAuthenticator extends AbstractIdpAuthenticator 
             return;
         }
 
+        String accessCode = context.generateAccessCode();
+        URI action = context.getActionUrl(accessCode);
+
         Response challenge = context.form()
                 .setStatus(Response.Status.OK)
                 .setAttribute(LoginFormsProvider.IDENTITY_PROVIDER_BROKER_CONTEXT, brokerContext)
+                .setActionUri(action)
                 .createIdpLinkEmailPage();
         context.forceChallenge(challenge);
     }

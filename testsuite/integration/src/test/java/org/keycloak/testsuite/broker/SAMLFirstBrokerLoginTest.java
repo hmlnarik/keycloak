@@ -55,10 +55,4 @@ public class SAMLFirstBrokerLoginTest extends AbstractFirstBrokerLoginTest {
     protected String getProviderId() {
         return "kc-saml-idp-basic";
     }
-
-    @Override
-    @Test
-    public void testLinkAccountByEmailVerificationTwice() throws Exception {
-        super.testLinkAccountByEmailVerificationTwice(); //To change body of generated methods, choose Tools | Templates.
-    }
 }
