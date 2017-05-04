@@ -883,7 +883,7 @@ public class UsersResource {
 
         long relativeExpiration = realm.getAccessCodeLifespanUserAction();
         int expiration = Time.currentTime() + realm.getAccessCodeLifespanUserAction();
-        ExecuteActionsActionToken token = new ExecuteActionsActionToken(id, expiration, UUID.randomUUID(), actions, redirectUri, clientId);
+        ExecuteActionsActionToken token = new ExecuteActionsActionToken(id, expiration, actions, redirectUri, clientId);
 
         try {
             UriBuilder builder = LoginActionsService.actionTokenProcessor(uriInfo);

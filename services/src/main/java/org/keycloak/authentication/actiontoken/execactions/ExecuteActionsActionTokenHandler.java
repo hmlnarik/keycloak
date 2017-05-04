@@ -48,7 +48,7 @@ public class ExecuteActionsActionTokenHandler extends AbstractActionTokenHander<
     public Predicate<? super ExecuteActionsActionToken>[] getVerifiers(ActionTokenContext<ExecuteActionsActionToken> tokenContext) {
         return TokenUtils.predicates(
           TokenUtils.checkThat(
-            // either redirect URI is not specified or must be valid for the cllient
+            // either redirect URI is not specified or must be valid for the client
             t -> t.getRedirectUri() == null
                  || RedirectUtils.verifyRedirectUri(tokenContext.getUriInfo(), t.getRedirectUri(),
                       tokenContext.getRealm(), tokenContext.getAuthenticationSession().getClient()) != null,

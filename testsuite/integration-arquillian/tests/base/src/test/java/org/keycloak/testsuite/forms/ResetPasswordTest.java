@@ -190,18 +190,17 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
 
     public void assertSecondPasswordResetFails(String changePasswordUrl, String clientId) {
         // TODO:hmlnarik uncomment when single-use cache is implemented
-//        driver.navigate().to(changePasswordUrl.trim());
-//
-//        errorPage.assertCurrent();
-//        assertEquals("An error occurred, please login again through your application.", errorPage.getError());
-//
-//        events.expect(EventType.RESET_PASSWORD)
-//          .client((String) null)
-//          .session((String) null)
-//          .user(userId)
-//          .detail(Details.USERNAME, "login-test")
-//          .error(Errors.EXPIRED_CODE)
-//          .assertEvent();
+        driver.navigate().to(changePasswordUrl.trim());
+
+        errorPage.assertCurrent();
+        assertEquals("Action expired. Please continue with login now.", errorPage.getError());
+
+        events.expect(EventType.RESET_PASSWORD)
+          .client("account")
+          .session((String) null)
+          .user(userId)
+          .error(Errors.EXPIRED_CODE)
+          .assertEvent();
     }
 
     @Test
