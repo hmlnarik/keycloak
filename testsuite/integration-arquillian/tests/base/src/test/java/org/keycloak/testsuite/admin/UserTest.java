@@ -546,8 +546,7 @@ public class UserTest extends AbstractAdminTest {
 
         driver.navigate().to(link);
 
-// TODO:hmlnarik - return back once single-use cache would be implemented
-//        assertEquals("We're sorry...", driver.getTitle());
+        assertEquals("We're sorry...", driver.getTitle());
     }
 
     @Test
@@ -608,8 +607,7 @@ public class UserTest extends AbstractAdminTest {
 
         driver.navigate().to(link);
 
-// TODO:hmlnarik - return back once single-use cache would be implemented
-//        assertEquals("We're sorry...", driver.getTitle());
+        assertEquals("We're sorry...", driver.getTitle());
     }
 
     @Test
@@ -674,8 +672,7 @@ public class UserTest extends AbstractAdminTest {
 
         driver.navigate().to(link);
 
-// TODO:hmlnarik - return back once single-use cache would be implemented
-//        assertEquals("We're sorry...", driver.getTitle());
+        assertEquals("We're sorry...", driver.getTitle());
     }
 
 
@@ -733,6 +730,11 @@ public class UserTest extends AbstractAdminTest {
 
         driver.navigate().to(link);
 
+        Assert.assertEquals("Your account has been updated.", infoPage.getInfo());
+
+        driver.navigate().to("about:blank");
+
+        driver.navigate().to(link); // It should be possible to use the same action token multiple times
         Assert.assertEquals("Your account has been updated.", infoPage.getInfo());
     }
 

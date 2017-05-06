@@ -189,7 +189,6 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
     }
 
     public void assertSecondPasswordResetFails(String changePasswordUrl, String clientId) {
-        // TODO:hmlnarik uncomment when single-use cache is implemented
         driver.navigate().to(changePasswordUrl.trim());
 
         errorPage.assertCurrent();
