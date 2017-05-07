@@ -85,7 +85,7 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
             return;
         }
 
-        int validityInSecs = context.getRealm().getAccessCodeLifespanUserAction();
+        int validityInSecs = context.getRealm().getActionTokenGeneratedByUserLifespan();
         int absoluteExpirationInSecs = Time.currentTime() + validityInSecs;
 
         // We send the secret in the email in a link as a query param.

@@ -108,7 +108,7 @@ public class IdpEmailVerificationAuthenticator extends AbstractIdpAuthenticator 
         UriInfo uriInfo = session.getContext().getUri();
         AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
-        int validityInSecs = realm.getAccessCodeLifespanUserAction();
+        int validityInSecs = realm.getActionTokenGeneratedByAdminLifespan();
         int absoluteExpirationInSecs = Time.currentTime() + validityInSecs;
 
         EventBuilder event = context.getEvent().clone().event(EventType.SEND_IDENTITY_PROVIDER_LINK)

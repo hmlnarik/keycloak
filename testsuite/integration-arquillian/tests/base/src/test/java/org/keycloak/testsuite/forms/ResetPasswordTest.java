@@ -384,8 +384,8 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
         final AtomicInteger originalValue = new AtomicInteger();
 
         RealmRepresentation realmRep = testRealm().toRepresentation();
-        originalValue.set(realmRep.getAccessCodeLifespan());
-        realmRep.setAccessCodeLifespanUserAction(60);
+        originalValue.set(realmRep.getActionTokenGeneratedByUserLifespan());
+        realmRep.setActionTokenGeneratedByUserLifespan(60);
         testRealm().update(realmRep);
 
         try {
@@ -413,7 +413,7 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
         } finally {
             setTimeOffset(0);
 
-            realmRep.setAccessCodeLifespanUserAction(originalValue.get());
+            realmRep.setActionTokenGeneratedByUserLifespan(originalValue.get());
             testRealm().update(realmRep);
         }
     }
