@@ -39,6 +39,7 @@
                         ${adapter.test.props}
                     </property>
                     <property name="javaVmArguments">
+                        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=7900
                         ${app.server.memory.settings}
                         -Djava.net.preferIPv4Stack=true
                     </property>

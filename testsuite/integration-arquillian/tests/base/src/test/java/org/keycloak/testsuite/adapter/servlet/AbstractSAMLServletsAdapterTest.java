@@ -637,9 +637,19 @@ public abstract class AbstractSAMLServletsAdapterTest extends AbstractServletsAd
     }
 
     @Test
-    public void salesPostEncSignedAssertionsAndDocumentTest() throws Exception {
-        ClientRepresentation salesPostEncClient = testRealmResource().clients().findByClientId(SalesPostEncServlet.CLIENT_NAME).get(0);
-        try (Closeable client = new ClientAttributeUpdater(testRealmResource().clients().get(salesPostEncClient.getId()))
+    public void salesPostSignedUnencryptedAssertionsOnlyTest() throws Exception {
+        try (Closeable c = new ClientAttributeUpdater(testRealmResource(), SalesPostEncSignAssertionsOnlyServlet.CLIENT_NAME)
+          .setAttribute(SamlConfigAttributes.SAML_ENCRYPT, "false")
+          .update()) {
+            testSuccessfulAndUnauthorizedLogin(salesPostEncSignAssertionsOnlyServletPage, testRealmSAMLPostLoginPage);
+        } finally {
+            salesPostEncServletPage.logout();
+        }
+    }
+
+    @Test
+    public void salesPostEncSignedEncryptedAssertionsAndDocumentTest() throws Exception {
+        try (Closeable c = new ClientAttributeUpdater(testRealmResource(), SalesPostEncServlet.CLIENT_NAME)
           .setAttribute(SamlConfigAttributes.SAML_ASSERTION_SIGNATURE, "true")
           .setAttribute(SamlConfigAttributes.SAML_SERVER_SIGNATURE, "true")
           .update()) {

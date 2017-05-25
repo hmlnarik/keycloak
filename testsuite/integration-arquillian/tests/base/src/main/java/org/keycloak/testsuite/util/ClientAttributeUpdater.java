@@ -1,10 +1,13 @@
 package org.keycloak.testsuite.util;
 
 import org.keycloak.admin.client.resource.ClientResource;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 import java.io.Closeable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
 
 /**
  *
@@ -21,6 +24,17 @@ public class ClientAttributeUpdater {
     public ClientAttributeUpdater(ClientResource clientResource) {
         this.clientResource = clientResource;
         this.rep = clientResource.toRepresentation();
+        if (this.rep.getAttributes() == null) {
+            this.rep.setAttributes(new HashMap<>());
+        }
+    }
+
+    public ClientAttributeUpdater(RealmResource realmResource, String clientId) {
+        List<ClientRepresentation> findByClientId = realmResource.clients().findByClientId(clientId);
+        Assert.assertFalse("Client not found: " + clientId, findByClientId.isEmpty());
+
+        this.rep = findByClientId.get(0);
+        this.clientResource = realmResource.clients().get(rep.getId());
         if (this.rep.getAttributes() == null) {
             this.rep.setAttributes(new HashMap<>());
         }
