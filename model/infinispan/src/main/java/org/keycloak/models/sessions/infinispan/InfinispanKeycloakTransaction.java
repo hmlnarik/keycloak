@@ -155,7 +155,9 @@ public class InfinispanKeycloakTransaction implements KeycloakTransaction {
             theTaskKey = taskKey + "-" + (i++);
         }
 
-        tasks.put(taskKey, () -> clusterProvider.notify(taskKey, event, ignoreSender));
+        tasks.put(taskKey, 
+          () -> clusterProvider.notify(taskKey, event, ignoreSender)
+        );
     }
 
     public <K, V> void remove(Cache<K, V> cache, K key) {

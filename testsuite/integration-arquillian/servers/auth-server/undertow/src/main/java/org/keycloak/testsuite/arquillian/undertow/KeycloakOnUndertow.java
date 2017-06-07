@@ -75,6 +75,9 @@ public class KeycloakOnUndertow implements DeployableContainer<KeycloakOnUnderto
         di.setContextPath("/auth");
         di.setDeploymentName("Keycloak");
         di.addInitParameter(KeycloakApplication.KEYCLOAK_EMBEDDED, "true");
+        if (configuration.getKeycloakConfigFileLocation() != null) {
+            di.addInitParameter(KeycloakApplication.SERVER_CONTEXT_CONFIG_FILE, configuration.getKeycloakConfigFileLocation());
+        }
 
         di.setDefaultServletConfig(new DefaultServletConfig(true));
         di.addWelcomePage("theme/keycloak/welcome/resources/index.html");
@@ -176,8 +179,7 @@ public class KeycloakOnUndertow implements DeployableContainer<KeycloakOnUnderto
             log.info("Using route: " + configuration.getRoute());
         }
 
-        SetSystemProperty setRouteProperty = new SetSystemProperty(InfinispanConnectionProvider.JBOSS_NODE_NAME, configuration.getRoute());
-        try {
+        try (SetSystemProperty route = new SetSystemProperty(InfinispanConnectionProvider.JBOSS_NODE_NAME, configuration.getRoute())) {
             DeploymentInfo di = createAuthServerDeploymentInfo();
             undertow.deploy(di);
             ResteasyDeployment deployment = (ResteasyDeployment) di.getServletContextAttributes().get(ResteasyDeployment.class.getName());
@@ -186,8 +188,6 @@ public class KeycloakOnUndertow implements DeployableContainer<KeycloakOnUnderto
             setupDevConfig();
 
             log.info("Auth server started in " + (System.currentTimeMillis() - start) + " ms\n");
-        } finally {
-            setRouteProperty.revert();
         }
     }
 

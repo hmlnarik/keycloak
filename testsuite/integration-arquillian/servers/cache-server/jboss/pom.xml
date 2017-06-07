@@ -58,7 +58,7 @@
                                 <configuration>
                                     <rules>
                                         <requireProperty>
-                                            <property>cache.server.jboss</property>
+                                            <property>cache.server</property>
                                             <property>cache.server.jboss.groupId</property>
                                             <property>cache.server.jboss.artifactId</property>
                                             <property>cache.server.jboss.version</property>

@@ -30,7 +30,9 @@
     <name>Cache Server - JBoss - Infinispan</name>
     
     <properties>
-        <cache.server.jboss>infinispan</cache.server.jboss>
+        <cache.server>infinispan</cache.server>
+        <cache.server.container>cache-server-${cache.server}</cache.server.container>
+        <cache.server.home>${containers.home}/${cache.server.container}</cache.server.home>
         
         <cache.server.jboss.groupId>org.infinispan.server</cache.server.jboss.groupId>
         <cache.server.jboss.artifactId>infinispan-server</cache.server.jboss.artifactId>

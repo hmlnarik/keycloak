@@ -29,6 +29,8 @@ public class KeycloakOnUndertowConfiguration extends UndertowContainerConfigurat
     private String resourcesHome;
     private boolean remoteMode;
     private String route;
+    private String jgroupsUdpMcastAddr;
+    private String keycloakConfigFileLocation;
 
     private int bindHttpPortOffset = 0;
 
@@ -70,6 +72,22 @@ public class KeycloakOnUndertowConfiguration extends UndertowContainerConfigurat
 
     public void setRemoteMode(boolean remoteMode) {
         this.remoteMode = remoteMode;
+    }
+
+    public String getJgroupsUdpMcastAddr() {
+        return jgroupsUdpMcastAddr;
+    }
+
+    public void setJgroupsUdpMcastAddr(String jgroupsUdpMcastAddr) {
+        this.jgroupsUdpMcastAddr = jgroupsUdpMcastAddr;
+    }
+
+    public String getKeycloakConfigFileLocation() {
+        return keycloakConfigFileLocation;
+    }
+
+    public void setKeycloakConfigFileLocation(String keycloakConfigFileLocation) {
+        this.keycloakConfigFileLocation = keycloakConfigFileLocation;
     }
 
     @Override

@@ -88,6 +88,8 @@ public class KeycloakApplication extends Application {
 
     public static final String KEYCLOAK_EMBEDDED = "keycloak.embedded";
 
+    public static final String SERVER_CONTEXT_CONFIG_FILE = "keycloak.server.context.config.file";
+
     private static final Logger logger = Logger.getLogger(KeycloakApplication.class);
 
     protected boolean embedded = false;
@@ -262,7 +264,7 @@ public class KeycloakApplication extends Application {
     public static void loadConfig(ServletContext context) {
         try {
             JsonNode node = null;
-            
+
             String dmrConfig = loadDmrConfig(context);
             if (dmrConfig != null) {
                 node = new ObjectMapper().readTree(dmrConfig);
@@ -279,7 +281,11 @@ public class KeycloakApplication extends Application {
             }
 
             if (node == null) {
-                URL resource = Thread.currentThread().getContextClassLoader().getResource("META-INF/keycloak-server.json");
+                String keycloakConfigFile = context.getInitParameter(SERVER_CONTEXT_CONFIG_FILE);
+                if (keycloakConfigFile == null) {
+                    keycloakConfigFile = "META-INF/keycloak-server.json";
+                }
+                URL resource = Thread.currentThread().getContextClassLoader().getResource(keycloakConfigFile);
                 if (resource != null) {
                     ServicesLogger.LOGGER.loadingFrom(resource);
                     node = new ObjectMapper().readTree(resource);
