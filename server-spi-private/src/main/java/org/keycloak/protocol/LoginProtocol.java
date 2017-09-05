@@ -28,6 +28,8 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -70,9 +72,9 @@ public interface LoginProtocol extends Provider {
 
     Response sendError(AuthenticationSessionModel authSession, Error error);
 
-    void backchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession);
-    Response frontchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession);
-    Response finishLogout(UserSessionModel userSession);
+    void backchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession);
+    Response frontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession);
+    Response finishLogout(UserSessionModelReadOnly userSession);
 
     /**
      * @param userSession

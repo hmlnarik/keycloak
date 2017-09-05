@@ -29,6 +29,7 @@ import org.keycloak.models.UserSessionModel;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -109,7 +110,7 @@ public class EventBuilder {
         return this;
     }
 
-    public EventBuilder session(UserSessionModel session) {
+    public EventBuilder session(UserSessionModelReadOnly session) {
         event.setSessionId(session.getId());
         return this;
     }

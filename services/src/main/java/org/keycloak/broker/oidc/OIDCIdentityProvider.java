@@ -60,6 +60,7 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.security.PublicKey;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author Pedro Igor
@@ -122,14 +123,14 @@ public class OIDCIdentityProvider extends AbstractOAuth2IdentityProvider<OIDCIde
     }
 
     @Override
-    public void backchannelLogout(KeycloakSession session, UserSessionModel userSession, UriInfo uriInfo, RealmModel realm) {
+    public void backchannelLogout(KeycloakSession session, UserSessionModelReadOnly userSession, UriInfo uriInfo, RealmModel realm) {
         if (getConfig().getLogoutUrl() == null || getConfig().getLogoutUrl().trim().equals("") || !getConfig().isBackchannelSupported()) return;
         String idToken = getIDTokenForLogout(session, userSession);
         if (idToken == null) return;
         backchannelLogout(userSession, idToken);
     }
 
-    protected void backchannelLogout(UserSessionModel userSession, String idToken) {
+    protected void backchannelLogout(UserSessionModelReadOnly userSession, String idToken) {
         String sessionId = userSession.getId();
         UriBuilder logoutUri = UriBuilder.fromUri(getConfig().getLogoutUrl())
                 .queryParam("state", sessionId);
@@ -176,7 +177,7 @@ public class OIDCIdentityProvider extends AbstractOAuth2IdentityProvider<OIDCIde
      * @param userSession
      * @return
      */
-    public String refreshTokenForLogout(KeycloakSession session, UserSessionModel userSession) {
+    public String refreshTokenForLogout(KeycloakSession session, UserSessionModelReadOnly userSession) {
         String refreshToken = userSession.getNote(FEDERATED_REFRESH_TOKEN);
         try {
             return SimpleHttp.doPost(getConfig().getTokenUrl(), session)
@@ -189,7 +190,7 @@ public class OIDCIdentityProvider extends AbstractOAuth2IdentityProvider<OIDCIde
         }
     }
 
-    private String getIDTokenForLogout(KeycloakSession session, UserSessionModel userSession) {
+    private String getIDTokenForLogout(KeycloakSession session, UserSessionModelReadOnly userSession) {
         long exp = Long.parseLong(userSession.getNote(FEDERATED_TOKEN_EXPIRATION));
         int currentTime = Time.currentTime();
         if (exp > 0 && currentTime > exp) {

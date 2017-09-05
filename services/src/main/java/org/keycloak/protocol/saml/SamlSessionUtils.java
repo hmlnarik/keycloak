@@ -25,6 +25,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.services.managers.UserSessionCrossDCManager;
+import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
@@ -37,8 +39,8 @@ public class SamlSessionUtils {
     private static final Pattern PATTERN = Pattern.compile(DELIMITER);
 
 
-    public static String getSessionIndex(AuthenticatedClientSessionModel clientSession) {
-        UserSessionModel userSession = clientSession.getUserSession();
+    public static String getSessionIndex(AuthenticatedClientSessionModelReadOnly clientSession) {
+        UserSessionModelReadOnly userSession = clientSession.getUserSession();
         ClientModel client = clientSession.getClient();
 
         return userSession.getId() + DELIMITER + client.getId();

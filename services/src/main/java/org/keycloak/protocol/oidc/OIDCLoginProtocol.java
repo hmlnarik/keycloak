@@ -29,7 +29,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.LoginProtocol;
-import org.keycloak.protocol.RestartLoginCookie;
 import org.keycloak.protocol.oidc.utils.OIDCRedirectUriBuilder;
 import org.keycloak.protocol.oidc.utils.OIDCResponseMode;
 import org.keycloak.protocol.oidc.utils.OIDCResponseType;
@@ -47,6 +46,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
+import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -261,19 +262,19 @@ public class OIDCLoginProtocol implements LoginProtocol {
     }
 
     @Override
-    public void backchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
+    public void backchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession) {
         ClientModel client = clientSession.getClient();
         new ResourceAdminManager(session).logoutClientSession(uriInfo.getRequestUri(), realm, client, clientSession);
     }
 
     @Override
-    public Response frontchannelLogout(UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
+    public Response frontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession) {
         // todo oidc redirect support
         throw new RuntimeException("NOT IMPLEMENTED");
     }
 
     @Override
-    public Response finishLogout(UserSessionModel userSession) {
+    public Response finishLogout(UserSessionModelReadOnly userSession) {
         String redirectUri = userSession.getNote(OIDCLoginProtocol.LOGOUT_REDIRECT_URI);
         String state = userSession.getNote(OIDCLoginProtocol.LOGOUT_STATE_PARAM);
         event.event(EventType.LOGOUT);

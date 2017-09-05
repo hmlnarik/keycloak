@@ -99,7 +99,7 @@ public class AuthenticationManager {
     public static final String KEYCLOAK_REMEMBER_ME = "KEYCLOAK_REMEMBER_ME";
     public static final String KEYCLOAK_LOGOUT_PROTOCOL = "KEYCLOAK_LOGOUT_PROTOCOL";
 
-    public static boolean isSessionValid(RealmModel realm, UserSessionModel userSession) {
+    public static boolean isSessionValid(RealmModel realm, UserSessionModelReadOnly userSession) {
         if (userSession == null) {
             logger.debug("No user session");
             return false;
@@ -109,7 +109,7 @@ public class AuthenticationManager {
         return userSession.getLastSessionRefresh() + realm.getSsoSessionIdleTimeout() > currentTime && max > currentTime;
     }
 
-    public static boolean isOfflineSessionValid(RealmModel realm, UserSessionModel userSession) {
+    public static boolean isOfflineSessionValid(RealmModel realm, UserSessionModelReadOnly userSession) {
         if (userSession == null) {
             logger.debug("No offline user session");
             return false;
@@ -118,7 +118,7 @@ public class AuthenticationManager {
         return userSession.getLastSessionRefresh() + realm.getOfflineSessionIdleTimeout() > currentTime;
     }
 
-    public static void expireUserSessionCookie(KeycloakSession session, UserSessionModel userSession, RealmModel realm, UriInfo uriInfo, HttpHeaders headers, ClientConnection connection) {
+    public static void expireUserSessionCookie(KeycloakSession session, UserSessionModelReadOnly userSession, RealmModel realm, UriInfo uriInfo, HttpHeaders headers, ClientConnection connection) {
         try {
             // check to see if any identity cookie is set with the same session and expire it if necessary
             Cookie cookie = headers.getCookies().get(KEYCLOAK_IDENTITY_COOKIE);
@@ -134,7 +134,7 @@ public class AuthenticationManager {
             SecretKey secretKey = session.keys().getHmacSecretKey(realm, kid);
 
             AccessToken token = verifier.secretKey(secretKey).verify().getToken();
-            UserSessionModel cookieSession = session.sessions().getUserSession(realm, token.getSessionState());
+            UserSessionModelReadOnly cookieSession = session.sessions().getUserSession(realm, token.getSessionState());
             if (cookieSession == null || !cookieSession.getId().equals(userSession.getId())) return;
             expireIdentityCookie(realm, uriInfo, connection);
         } catch (Exception e) {
@@ -209,7 +209,7 @@ public class AuthenticationManager {
     }
 
     private static void backchannelLogoutAll(KeycloakSession session, RealmModel realm,
-      UserSessionModel userSession, AuthenticationSessionModel logoutAuthSession, UriInfo uriInfo,
+      UserSessionModelReadOnly userSession, AuthenticationSessionModel logoutAuthSession, UriInfo uriInfo,
       HttpHeaders headers, boolean logoutBroker) {
         userSession.getAuthenticatedClientSessions().values().forEach(
           clientSession -> backchannelLogoutClientSession(session, realm, clientSession, logoutAuthSession, uriInfo, headers)
@@ -236,13 +236,13 @@ public class AuthenticationManager {
      * @return {@code true} when all clients have been logged out, {@code false} otherwise
      */
     private static boolean checkUserSessionOnlyHasLoggedOutClients(RealmModel realm,
-      UserSessionModel userSession, AuthenticationSessionModel logoutAuthSession) {
-        final Map<String, AuthenticatedClientSessionModel> acs = userSession.getAuthenticatedClientSessions();
-        Set<AuthenticatedClientSessionModel> notLoggedOutSessions = acs.entrySet().stream()
+      UserSessionModelReadOnly userSession, AuthenticationSessionModel logoutAuthSession) {
+        final Map<String, ? extends AuthenticatedClientSessionModelReadOnly> acs = userSession.getAuthenticatedClientSessions();
+        Set<AuthenticatedClientSessionModelReadOnly> notLoggedOutSessions = acs.entrySet().stream()
           .filter(me -> ! Objects.equals(AuthenticationSessionModel.Action.LOGGED_OUT, getClientLogoutAction(logoutAuthSession, me.getKey())))
           .filter(me -> ! Objects.equals(AuthenticationSessionModel.Action.LOGGED_OUT.name(), me.getValue().getAction()))
           .filter(me -> Objects.nonNull(me.getValue().getProtocol()))   // Keycloak service-like accounts
-          .map(Map.Entry::getValue)
+          .map(me -> (AuthenticatedClientSessionModelReadOnly) me.getValue())
           .collect(Collectors.toSet());
 
         boolean allClientsLoggedOut = notLoggedOutSessions.isEmpty();
@@ -251,7 +251,7 @@ public class AuthenticationManager {
             logger.warnf("Some clients have been not been logged out for user %s in %s realm: %s",
               userSession.getUser().getUsername(), realm.getName(),
               notLoggedOutSessions.stream()
-                .map(AuthenticatedClientSessionModel::getClient)
+                .map(AuthenticatedClientSessionModelReadOnly::getClient)
                 .map(ClientModel::getClientId)
                 .sorted()
                 .collect(Collectors.joining(", "))
@@ -275,9 +275,9 @@ public class AuthenticationManager {
      * @return {@code true} if the client was or is already being logged out, {@code false} if logout failed or it is not known how to log it out.
      */
     private static boolean backchannelLogoutClientSession(KeycloakSession session, RealmModel realm,
-      AuthenticatedClientSessionModel clientSession, AuthenticationSessionModel logoutAuthSession,
+      AuthenticatedClientSessionModelReadOnly clientSession, AuthenticationSessionModel logoutAuthSession,
       UriInfo uriInfo, HttpHeaders headers) {
-        UserSessionModel userSession = clientSession.getUserSession();
+        UserSessionModelReadOnly userSession = clientSession.getUserSession();
         ClientModel client = clientSession.getClient();
 
         if (client.isFrontchannelLogout() || AuthenticationSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) {
@@ -313,9 +313,9 @@ public class AuthenticationManager {
     }
 
     private static Response frontchannelLogoutClientSession(KeycloakSession session, RealmModel realm,
-      AuthenticatedClientSessionModel clientSession, AuthenticationSessionModel logoutAuthSession,
+      AuthenticatedClientSessionModelReadOnly clientSession, AuthenticationSessionModel logoutAuthSession,
       UriInfo uriInfo, HttpHeaders headers) {
-        UserSessionModel userSession = clientSession.getUserSession();
+        UserSessionModelReadOnly userSession = clientSession.getUserSession();
         ClientModel client = clientSession.getClient();
 
         if (! client.isFrontchannelLogout() || AuthenticationSessionModel.Action.LOGGED_OUT.name().equals(clientSession.getAction())) {
@@ -436,17 +436,18 @@ public class AuthenticationManager {
         return finishBrowserLogout(session, realm, userSession, uriInfo, connection, headers);
     }
 
-    private static Response browserLogoutAllClients(UserSessionModel userSession, KeycloakSession session, RealmModel realm, HttpHeaders headers, UriInfo uriInfo, AuthenticationSessionModel logoutAuthSession) {
-        Map<Boolean, List<AuthenticatedClientSessionModel>> acss = userSession.getAuthenticatedClientSessions().values().stream()
+    private static Response browserLogoutAllClients(UserSessionModelReadOnly userSession, KeycloakSession session, RealmModel realm, HttpHeaders headers, UriInfo uriInfo, AuthenticationSessionModel logoutAuthSession) {
+        Map<Boolean, List<AuthenticatedClientSessionModelReadOnly>> acss = userSession.getAuthenticatedClientSessions().values().stream()
           .filter(clientSession -> ! Objects.equals(AuthenticationSessionModel.Action.LOGGED_OUT.name(), clientSession.getAction()))
           .filter(clientSession -> clientSession.getProtocol() != null)
+          .map(clientSession -> (AuthenticatedClientSessionModelReadOnly) clientSession)
           .collect(Collectors.partitioningBy(clientSession -> clientSession.getClient().isFrontchannelLogout()));
 
-        final List<AuthenticatedClientSessionModel> backendLogoutSessions = acss.get(false) == null ? Collections.emptyList() : acss.get(false);
+        final List<AuthenticatedClientSessionModelReadOnly> backendLogoutSessions = acss.get(false) == null ? Collections.emptyList() : acss.get(false);
         backendLogoutSessions.forEach(acs -> backchannelLogoutClientSession(session, realm, acs, logoutAuthSession, uriInfo, headers));
 
-        final List<AuthenticatedClientSessionModel> redirectClients = acss.get(true) == null ? Collections.emptyList() : acss.get(true);
-        for (AuthenticatedClientSessionModel nextRedirectClient : redirectClients) {
+        final List<AuthenticatedClientSessionModelReadOnly> redirectClients = acss.get(true) == null ? Collections.emptyList() : acss.get(true);
+        for (AuthenticatedClientSessionModelReadOnly nextRedirectClient : redirectClients) {
             Response response = frontchannelLogoutClientSession(session, realm, nextRedirectClient, logoutAuthSession, uriInfo, headers);
             if (response != null) {
                 return response;
@@ -477,7 +478,7 @@ public class AuthenticationManager {
     }
 
 
-    public static AccessToken createIdentityToken(RealmModel realm, UserModel user, UserSessionModel session, String issuer) {
+    public static AccessToken createIdentityToken(RealmModel realm, UserModel user, UserSessionModelReadOnly session, String issuer) {
         AccessToken token = new AccessToken();
         token.id(KeycloakModelUtils.generateId());
         token.issuedNow();
@@ -492,7 +493,7 @@ public class AuthenticationManager {
         return token;
     }
 
-    public static void createLoginCookie(KeycloakSession keycloakSession, RealmModel realm, UserModel user, UserSessionModel session, UriInfo uriInfo, ClientConnection connection) {
+    public static void createLoginCookie(KeycloakSession keycloakSession, RealmModel realm, UserModel user, UserSessionModelReadOnly session, UriInfo uriInfo, ClientConnection connection) {
         String cookiePath = getIdentityCookiePath(realm, uriInfo);
         String issuer = Urls.realmIssuer(uriInfo.getBaseUri(), realm.getName());
         AccessToken identityToken = createIdentityToken(realm, user, session, issuer);

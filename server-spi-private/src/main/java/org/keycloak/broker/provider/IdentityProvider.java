@@ -28,6 +28,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author Pedro Igor
@@ -81,7 +82,7 @@ public interface IdentityProvider<C extends IdentityProviderModel> extends Provi
      */
     Response retrieveToken(KeycloakSession session, FederatedIdentityModel identity);
 
-    void backchannelLogout(KeycloakSession session, UserSessionModel userSession, UriInfo uriInfo, RealmModel realm);
+    void backchannelLogout(KeycloakSession session, UserSessionModelReadOnly userSession, UriInfo uriInfo, RealmModel realm);
 
     /**
      * Called when a Keycloak application initiates a logout through the browser.  This is expected to do a logout

@@ -22,33 +22,7 @@ import java.util.Map;
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
-public interface UserSessionModel {
-
-    String getId();
-    RealmModel getRealm();
-
-    /**
-     * If created via a broker external login, this is an identifier that can be
-     * used to match external broker backchannel logout requests to a UserSession
-     *
-     * @return
-     */
-    String getBrokerSessionId();
-    String getBrokerUserId();
-
-    UserModel getUser();
-
-    String getLoginUsername();
-
-    String getIpAddress();
-
-    String getAuthMethod();
-
-    boolean isRememberMe();
-
-    int getStarted();
-
-    int getLastSessionRefresh();
+public interface UserSessionModel extends UserSessionModelReadOnly {
 
     void setLastSessionRefresh(int seconds);
 
@@ -64,21 +38,12 @@ public interface UserSessionModel {
     void removeAuthenticatedClientSessions(Iterable<String> removedClientUUIDS);
 
 
-    public String getNote(String name);
     public void setNote(String name, String value);
     public void removeNote(String name);
     public Map<String, String> getNotes();
 
-    State getState();
     void setState(State state);
 
     // Will completely restart whole state of user session. It will just keep same ID.
     void restartSession(RealmModel realm, UserModel user, String loginUsername, String ipAddress, String authMethod, boolean rememberMe, String brokerSessionId, String brokerUserId);
-
-    public static enum State {
-        LOGGED_IN,
-        LOGGING_OUT,
-        LOGGED_OUT
-    }
-
 }

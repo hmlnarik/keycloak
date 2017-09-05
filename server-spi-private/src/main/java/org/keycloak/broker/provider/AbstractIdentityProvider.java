@@ -37,6 +37,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author Pedro Igor
@@ -82,7 +83,7 @@ public abstract class AbstractIdentityProvider<C extends IdentityProviderModel> 
     }
 
     @Override
-    public void backchannelLogout(KeycloakSession session, UserSessionModel userSession, UriInfo uriInfo, RealmModel realm) {
+    public void backchannelLogout(KeycloakSession session, UserSessionModelReadOnly userSession, UriInfo uriInfo, RealmModel realm) {
 
     }
 

@@ -17,7 +17,6 @@
 
 package org.keycloak.sessions;
 
-import java.util.Map;
 import java.util.Set;
 
 import org.keycloak.models.ClientModel;
@@ -28,17 +27,41 @@ import org.keycloak.models.RealmModel;
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface CommonClientSessionModel extends CommonClientSessionModelReadOnly {
+public interface CommonClientSessionModelReadOnly {
 
-    public void setRedirectUri(String uri);
+    public String getRedirectUri();
 
-    public void setTimestamp(int timestamp);
+    public String getId();
+    public RealmModel getRealm();
+    public ClientModel getClient();
 
-    public void setAction(String action);
+    public int getTimestamp();
 
-    public void setProtocol(String method);
+    public String getAction();
 
-    public void setRoles(Set<String> roles);
+    public String getProtocol();
 
-    public void setProtocolMappers(Set<String> protocolMappers);
+    // TODO: Not needed here...?
+    public Set<String> getRoles();
+
+    // TODO: Not needed here...?
+    public Set<String> getProtocolMappers();
+
+    public static enum Action {
+        OAUTH_GRANT,
+        CODE_TO_TOKEN,
+        AUTHENTICATE,
+        LOGGED_OUT,
+        LOGGING_OUT,
+        REQUIRED_ACTIONS
+    }
+
+    public enum ExecutionStatus {
+        FAILED,
+        SUCCESS,
+        SETUP_REQUIRED,
+        ATTEMPTED,
+        SKIPPED,
+        CHALLENGED
+    }
 }

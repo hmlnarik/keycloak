@@ -17,18 +17,18 @@
 
 package org.keycloak.models;
 
-import org.keycloak.sessions.CommonClientSessionModel;
+
+import java.util.Map;
+
+import org.keycloak.sessions.CommonClientSessionModelReadOnly;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public interface AuthenticatedClientSessionModel extends CommonClientSessionModel, AuthenticatedClientSessionModelReadOnly {
+public interface AuthenticatedClientSessionModelReadOnly extends CommonClientSessionModelReadOnly {
 
-    @Override
-    UserSessionModel getUserSession();
+    UserSessionModelReadOnly getUserSession();
 
-    void setUserSession(UserSessionModel userSession);
-
-    void setNote(String name, String value);
-    void removeNote(String name);
+    String getNote(String name);
+    Map<String, String> getNotes();
 }

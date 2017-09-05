@@ -30,6 +30,8 @@ import javax.ws.rs.core.UriInfo;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Set;
+import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 public class DockerAuthV2Protocol implements LoginProtocol {
     protected static final Logger logger = Logger.getLogger(DockerEndpoint.class);
@@ -152,18 +154,18 @@ public class DockerAuthV2Protocol implements LoginProtocol {
     }
 
     @Override
-    public void backchannelLogout(final UserSessionModel userSession, final AuthenticatedClientSessionModel clientSession) {
+    public void backchannelLogout(final UserSessionModelReadOnly userSession, final AuthenticatedClientSessionModelReadOnly clientSession) {
         errorResponse(userSession, "backchannelLogout");
 
     }
 
     @Override
-    public Response frontchannelLogout(final UserSessionModel userSession, final AuthenticatedClientSessionModel clientSession) {
+    public Response frontchannelLogout(final UserSessionModelReadOnly userSession, final AuthenticatedClientSessionModelReadOnly clientSession) {
         return errorResponse(userSession, "frontchannelLogout");
     }
 
     @Override
-    public Response finishLogout(final UserSessionModel userSession) {
+    public Response finishLogout(final UserSessionModelReadOnly userSession) {
         return errorResponse(userSession, "finishLogout");
     }
 
@@ -172,7 +174,7 @@ public class DockerAuthV2Protocol implements LoginProtocol {
         return true;
     }
 
-    private Response errorResponse(final UserSessionModel userSession, final String methodName) {
+    private Response errorResponse(final UserSessionModelReadOnly userSession, final String methodName) {
         logger.errorv("User {0} attempted to invoke unsupported method {1} on docker protocol.", userSession.getUser().getUsername(), methodName);
         throw new ErrorResponseException("invalid_request", String.format("Attempted to invoke unsupported docker method %s", methodName), Response.Status.BAD_REQUEST);
     }

@@ -57,6 +57,7 @@ import org.keycloak.keys.KeyMetadata;
 import org.keycloak.keys.KeyMetadata.Status;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.models.UserSessionModelReadOnly;
 
 /**
  * @author Pedro Igor
@@ -154,7 +155,7 @@ public class SAMLIdentityProvider extends AbstractIdentityProvider<SAMLIdentityP
     }
 
     @Override
-    public void backchannelLogout(KeycloakSession session, UserSessionModel userSession, UriInfo uriInfo, RealmModel realm) {
+    public void backchannelLogout(KeycloakSession session, UserSessionModelReadOnly userSession, UriInfo uriInfo, RealmModel realm) {
         String singleLogoutServiceUrl = getConfig().getSingleLogoutServiceUrl();
         if (singleLogoutServiceUrl == null || singleLogoutServiceUrl.trim().equals("") || !getConfig().isBackchannelSupported()) return;
         SAML2LogoutRequestBuilder logoutBuilder = buildLogoutRequest(userSession, uriInfo, realm, singleLogoutServiceUrl);
@@ -196,7 +197,7 @@ public class SAMLIdentityProvider extends AbstractIdentityProvider<SAMLIdentityP
         }
     }
 
-    protected SAML2LogoutRequestBuilder buildLogoutRequest(UserSessionModel userSession, UriInfo uriInfo, RealmModel realm, String singleLogoutServiceUrl) {
+    protected SAML2LogoutRequestBuilder buildLogoutRequest(UserSessionModelReadOnly userSession, UriInfo uriInfo, RealmModel realm, String singleLogoutServiceUrl) {
         SAML2LogoutRequestBuilder logoutBuilder = new SAML2LogoutRequestBuilder()
                 .assertionExpiration(realm.getAccessCodeLifespan())
                 .issuer(getEntityId(uriInfo, realm))
@@ -206,7 +207,7 @@ public class SAMLIdentityProvider extends AbstractIdentityProvider<SAMLIdentityP
         return logoutBuilder;
     }
 
-    private JaxrsSAML2BindingBuilder buildLogoutBinding(KeycloakSession session, UserSessionModel userSession, RealmModel realm) {
+    private JaxrsSAML2BindingBuilder buildLogoutBinding(KeycloakSession session, UserSessionModelReadOnly userSession, RealmModel realm) {
         JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder()
                 .relayState(userSession.getId());
         if (getConfig().isWantAuthnRequestsSigned()) {
