@@ -29,7 +29,6 @@ import org.keycloak.saml.processing.web.util.RedirectBindingUtil;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -38,10 +37,15 @@ import org.keycloak.dom.saml.v2.SAML2Object;
 import org.keycloak.dom.saml.v2.protocol.ExtensionsType;
 import org.keycloak.dom.saml.v2.protocol.RequestAbstractType;
 import org.keycloak.dom.saml.v2.protocol.StatusResponseType;
+import org.keycloak.models.RealmModel;
 import org.keycloak.rotation.HardcodedKeyLocator;
 import org.keycloak.rotation.KeyLocator;
+import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
+import org.keycloak.services.resources.RealmsResource;
+import java.net.URI;
+import java.util.Objects;
 import org.w3c.dom.Element;
 
 /**
@@ -195,4 +199,30 @@ public class SamlProtocolUtils {
 
         return null;
     }
+
+    /**
+     * Returns {@code true} iff the {@code response} contains status message that is {@link JBossSAMLURIConstants#STATUS_SUCCESS}.
+     * @param response Response object. Can be {@code null}
+     * @return
+     */
+    public static boolean isSuccessfulSamlResponse(StatusResponseType response) {
+        final URI status = getStatusFromSamlResponse(response);
+        return status != null && Objects.equals(status.toString(), JBossSAMLURIConstants.STATUS_SUCCESS.get());
+    }
+
+    /**
+     * Returns SAML status from the {@code response} if defined, otherwise returns {@code null}.
+     * @param response Response object. Can be {@code null}
+     * @return
+     */
+    public static URI getStatusFromSamlResponse(StatusResponseType response) {
+        return response != null && response.getStatus() != null && response.getStatus().getStatusCode() != null
+          ? response.getStatus().getStatusCode().getValue()
+          : null;
+    }
+
+    public static String getResponseIssuer(RealmModel realm, UriInfo uriInfo) {
+        return RealmsResource.realmBaseUrl(uriInfo).build(realm.getName()).toString();
+    }
+
 }

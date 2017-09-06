@@ -59,6 +59,7 @@ public interface Constants {
     String SKIP_LINK = "skipLink";
     String TEMPLATE_ATTR_ACTION_URI = "actionUri";
     String TEMPLATE_ATTR_REQUIRED_ACTIONS = "requiredActions";
+    String TEMPLATE_ATTR_CLIENT_LOGOUT_GENERATOR_URI = "clientLogoutGeneratorUri";
 
     // Prefix for user attributes used in various "context"data maps
     String USER_ATTRIBUTES_PREFIX = "user.attributes.";

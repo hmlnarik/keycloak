@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.Set;
 import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
 import org.keycloak.models.UserSessionModelReadOnly;
+import java.net.URI;
 
 public class DockerAuthV2Protocol implements LoginProtocol {
     protected static final Logger logger = Logger.getLogger(DockerEndpoint.class);
@@ -162,6 +163,12 @@ public class DockerAuthV2Protocol implements LoginProtocol {
     @Override
     public Response frontchannelLogout(final UserSessionModelReadOnly userSession, final AuthenticatedClientSessionModelReadOnly clientSession) {
         return errorResponse(userSession, "frontchannelLogout");
+    }
+
+    @Override
+    public URI generateUriForSingleClientFrontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession) {
+        errorResponse(userSession, "generateUriForSingleClientFrontchannelLogout");
+        return null;
     }
 
     @Override

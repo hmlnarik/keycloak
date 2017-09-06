@@ -53,6 +53,8 @@ public interface LoginFormsProvider extends Provider {
 
     public Response createLogin();
 
+    public Response createLogoutFrontchannel();
+
     public Response createPasswordReset();
 
     public Response createLoginTotp();

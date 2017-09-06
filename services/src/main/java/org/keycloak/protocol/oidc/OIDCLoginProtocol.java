@@ -48,6 +48,7 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
 import org.keycloak.models.UserSessionModelReadOnly;
+import java.net.URI;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -269,6 +270,12 @@ public class OIDCLoginProtocol implements LoginProtocol {
 
     @Override
     public Response frontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession) {
+        // todo oidc redirect support
+        throw new RuntimeException("NOT IMPLEMENTED");
+    }
+
+    @Override
+    public URI generateUriForSingleClientFrontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession) {
         // todo oidc redirect support
         throw new RuntimeException("NOT IMPLEMENTED");
     }

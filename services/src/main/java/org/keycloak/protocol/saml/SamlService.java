@@ -80,13 +80,23 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.keycloak.common.util.StringPropertyReplacer;
 import org.keycloak.dom.saml.v2.metadata.KeyTypes;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.keys.KeyMetadata;
+import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
+import org.keycloak.models.Constants;
 import org.keycloak.rotation.HardcodedKeyLocator;
 import org.keycloak.rotation.KeyLocator;
+import org.keycloak.saml.SAML2LogoutRequestBuilder;
 import org.keycloak.saml.SPMetadataDescriptor;
+import org.keycloak.saml.common.exceptions.ConfigurationException;
+import org.keycloak.saml.common.exceptions.ParsingException;
+import org.keycloak.saml.common.exceptions.ProcessingException;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
+import org.keycloak.services.managers.AuthenticationSessionManager;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.sessions.CommonClientSessionModelReadOnly.Action;
 import java.util.Map;
+import static org.keycloak.protocol.saml.SamlProtocol.SAML_POST_BINDING;
 
 /**
  * Resource class for the saml connect token service
@@ -100,6 +110,13 @@ public class SamlService extends AuthorizationEndpointBase {
 
     private final Map<String, Integer> knownPorts;
     private final Map<Integer, String> knownProtocols;
+
+    public static URI postLogoutGeneratorUrl(UriInfo uriInfo, RealmModel realm, AuthenticatedClientSessionModelReadOnly session) {
+        return RealmsResource.protocolUrl(uriInfo)
+          .path(SamlService.class, "generatePostLogout")
+          .queryParam(GeneralConstants.RELAY_STATE, RelayStateHolder.from(session).toRelayStateParameter())
+          .build(realm.getName(), SamlProtocol.LOGIN_PROTOCOL);
+    }
 
     public SamlService(RealmModel realm, EventBuilder event, Map<String, Integer> knownPorts, Map<Integer, String> knownProtocols) {
         super(realm, event);
@@ -170,7 +187,44 @@ public class SamlService extends AuthorizationEndpointBase {
                 return ErrorPage.error(session, Messages.INVALID_REQUEST);
             }
             logger.debug("logout response");
-            Response response = authManager.browserLogout(session, realm, userSession, uriInfo, clientConnection, headers);
+
+            final Response response;
+            RelayStateHolder<UserSessionModel, AuthenticatedClientSessionModel> rsh = RelayStateHolder.from(session, realm, relayState);
+
+            // Now that we ATM don't care about unsuccessful logouts (user session is destroyed regardless),
+            // hence we could ignore the result completely
+            if (rsh.hasClientSession()) {
+                // If client session is defined, it is logout response from iframe that logs out single
+                // client only, hence do not continue with logging out other clients
+
+                if (! Objects.equals(rsh.getUserSession().getId(), userSession.getId())
+                  || ! SamlProtocolUtils.isSuccessfulSamlResponse(statusResponse)) {
+                    logger.warn("SAML response indicates not-a-success.");
+                    event.event(EventType.LOGOUT)
+                      .client(rsh.getClientSession().getClient())
+                      .detail(Details.REASON, String.valueOf(SamlProtocolUtils.getStatusFromSamlResponse(statusResponse)))
+                      .error(Errors.INVALID_SAML_LOGOUT_RESPONSE);
+                    return ErrorPage.error(session, Messages.FAILED_LOGOUT_FOR_CLIENT, rsh.getClientSession().getClient().getClientId());
+                }
+
+                boolean res = AuthenticationManager.finishBrowserLogoutForClientSession(session, realm, userSession, rsh.getClientSession(), uriInfo, clientConnection, headers);
+
+                if (! res) {
+                    logger.warn("Unexpected SAML logout response for a client.");
+                    event.event(EventType.LOGOUT)
+                      .client(rsh.getClientSession().getClient())
+                      .error(Errors.INVALID_SAML_LOGOUT_RESPONSE);
+                    return ErrorPage.error(session, Messages.FAILED_LOGOUT_FOR_CLIENT, rsh.getClientSession().getClient().getClientId());
+                }
+
+                response = session.getProvider(LoginFormsProvider.class)
+                  .setAttribute(Constants.SKIP_LINK, true)
+                  .setInfo(Messages.SUCCESSFUL_LOGOUT_FOR_CLIENT, rsh.getClientSession().getClient().getClientId())
+                  .createInfoPage();
+            } else {
+                response = authManager.browserLogout(session, realm, userSession, uriInfo, clientConnection, headers);
+            }
+
             event.success();
             return response;
         }
@@ -405,27 +459,25 @@ public class SamlService extends AuthorizationEndpointBase {
                     clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                 }
                 logger.debug("browser Logout");
-                return authManager.browserLogout(session, realm, userSession, uriInfo, clientConnection, headers);
+                return AuthenticationManager.browserLogout(session, realm, userSession, uriInfo, clientConnection, headers);
             } else if (logoutRequest.getSessionIndex() != null) {
-                for (String sessionIndex : logoutRequest.getSessionIndex()) {
-
-                    AuthenticatedClientSessionModel clientSession = SamlSessionUtils.getClientSession(session, realm, sessionIndex);
-                    if (clientSession == null)
-                        continue;
-                    UserSessionModel userSession = clientSession.getUserSession();
+                logoutRequest.getSessionIndex().stream()
+                  .map(sessionIndex -> SamlSessionUtils.getClientSession(session, realm, sessionIndex))
+                  .filter(Objects::nonNull)
+                  .forEach(clientSession -> {
                     if (clientSession.getClient().getClientId().equals(client.getClientId())) {
                         // remove requesting client from logout
                         clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                     }
 
                     try {
-                        authManager.backchannelLogout(session, realm, userSession, uriInfo, clientConnection, headers, true);
+                        UserSessionModel userSession = clientSession.getUserSession();
+                        AuthenticationManager.backchannelLogout(session, realm, userSession, uriInfo, clientConnection, headers, true);
                     } catch (Exception e) {
                         logger.warn("Failure with backchannel logout", e);
                     }
 
-                }
-
+                });
             }
 
             // default
@@ -547,6 +599,73 @@ public class SamlService extends AuthorizationEndpointBase {
         logger.debug("SAML GET");
         CacheControlUtil.noBackButtonCacheControlHeader();
         return new RedirectBindingProtocol().execute(samlRequest, samlResponse, relayState);
+    }
+
+    /**
+     */
+    @GET
+    @NoCache
+    @Path("post-logout-generator")
+    public Response generatePostLogout(@QueryParam(GeneralConstants.RELAY_STATE) String relayState) {
+        logger.debug("SAML Logout form generator");
+
+        event.event(EventType.LOGOUT);
+        CacheControlUtil.noBackButtonCacheControlHeader();
+        RelayStateHolder<UserSessionModel, AuthenticatedClientSessionModel> rsh = RelayStateHolder.from(session, realm, relayState);
+        if (! rsh.hasClientSession() || ! rsh.hasUserSession()) {
+            event.error(Errors.INVALID_REQUEST);
+            return ErrorPage.error(session, Messages.INVALID_REQUEST);
+        }
+
+        final AuthenticationSessionManager asm = new AuthenticationSessionManager(session);
+        AuthenticationSessionModel logoutAuthSession = asm.getCurrentAuthenticationSession(realm);
+
+        final AuthenticatedClientSessionModel clientSession = rsh.getClientSession();
+        final ClientModel client = clientSession.getClient();
+        String clientUuid = client == null ? null : client.getId();
+        if (! Objects.equals(AuthenticationManager.getClientLogoutAction(logoutAuthSession, clientUuid), Action.LOGGING_OUT)) {
+            event
+              .detail(Details.ACTION, clientSession.getAction())
+              .detail(Details.REASON, "invalid_action")
+              .error(Errors.INVALID_REQUEST);
+            return ErrorPage.error(session, Messages.INVALID_REQUEST);
+        }
+
+        event.client(client);
+        boolean postBinding = SamlProtocol.isLogoutPostBindingForClient(clientSession);
+
+        if (! postBinding) {
+            event
+              .detail(Details.REASON, "invalid_binding")
+              .error(Errors.INVALID_REQUEST);
+            return ErrorPage.error(session, Messages.INVALID_REQUEST);
+        }
+
+        String bindingUri = SamlProtocol.getLogoutServiceUrl(uriInfo, client, SAML_POST_BINDING);
+        if (bindingUri == null) {
+            logger.warnf("No POST SAML logout endpoint defined for client %s", client.getClientId());
+            event.error(Errors.INVALID_REQUEST);
+            return ErrorPage.error(session, Messages.INVALID_REQUEST);
+        }
+
+        SAML2LogoutRequestBuilder logoutBuilder = SamlProtocol.createLogoutRequest(bindingUri, clientSession, uriInfo);
+        SamlClient samlClient = new SamlClient(client);
+        JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient).relayState(relayState);
+        try {
+            return binding.postBinding(logoutBuilder.buildDocument()).request(bindingUri);
+        } catch (ProcessingException | ConfigurationException | ParsingException | IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private JaxrsSAML2BindingBuilder createBindingBuilder(SamlClient samlClient) {
+        JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder();
+        if (samlClient.requiresRealmSignature()) {
+            KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
+            String keyName = samlClient.getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
+            binding.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signDocument();
+        }
+        return binding;
     }
 
     /**

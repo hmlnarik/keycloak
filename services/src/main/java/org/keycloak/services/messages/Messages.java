@@ -210,6 +210,10 @@ public class Messages {
 
     public static final String FAILED_LOGOUT = "failedLogout";
 
+    public static final String FAILED_LOGOUT_FOR_CLIENT = "failedLogoutForClient";
+
+    public static final String SUCCESSFUL_LOGOUT_FOR_CLIENT = "successfulLogoutForClient";
+
     public static final String CONSENT_DENIED="consentDenied";
 
     public static final String ALREADY_LOGGED_IN="alreadyLoggedIn";

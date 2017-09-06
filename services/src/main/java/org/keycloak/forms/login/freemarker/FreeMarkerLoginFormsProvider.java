@@ -282,6 +282,9 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
         try {
             String result = freeMarker.processTemplate(attributes, Templates.getTemplate(page), theme);
             Response.ResponseBuilder builder = Response.status(status).type(MediaType.TEXT_HTML_UTF_8).entity(result);
+
+            // TODO: UPDATE Content-Security-Policy header to allow HTTP traffic within IFRAME
+
             BrowserSecurityHeaderSetup.headers(builder, realm);
             for (Map.Entry<String, String> entry : httpResponseHeaders.entrySet()) {
                 builder.header(entry.getKey(), entry.getValue());
@@ -402,6 +405,11 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
     @Override
     public Response createLogin() {
         return createResponse(LoginFormsPages.LOGIN);
+    }
+
+    @Override
+    public Response createLogoutFrontchannel() {
+        return createResponse(LoginFormsPages.LOGOUT_FRONTCHANNEL);
     }
 
     @Override

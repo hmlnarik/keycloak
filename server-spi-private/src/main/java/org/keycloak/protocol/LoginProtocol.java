@@ -30,6 +30,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import org.keycloak.models.AuthenticatedClientSessionModelReadOnly;
 import org.keycloak.models.UserSessionModelReadOnly;
+import java.net.URI;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -73,6 +74,14 @@ public interface LoginProtocol extends Provider {
     Response sendError(AuthenticationSessionModel authSession, Error error);
 
     void backchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession);
+
+    /**
+     * Generates a URI that generates HTTP response which logs out only a single {@code clientSession}.
+     * @param userSession
+     * @param clientSession
+     * @return Generated URI or {@code null} if the URI cannot be generated/determined.
+     */
+    URI generateUriForSingleClientFrontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession);
     Response frontchannelLogout(UserSessionModelReadOnly userSession, AuthenticatedClientSessionModelReadOnly clientSession);
     Response finishLogout(UserSessionModelReadOnly userSession);
 
