@@ -720,7 +720,7 @@ public class UserResource {
             return Response.ok().build();
         } catch (EmailException e) {
             ServicesLogger.LOGGER.failedToSendActionsEmail(e);
-            return ErrorResponse.error("Failed to send execute actions email", Status.INTERNAL_SERVER_ERROR);
+            return ErrorResponse.error("Failed to send execute actions email", Status.BAD_REQUEST);
         }
     }
 

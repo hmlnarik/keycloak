@@ -458,7 +458,7 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
     @Override
     public Response createErrorPage() {
         if (status == null) {
-            status = Response.Status.INTERNAL_SERVER_ERROR;
+            status = Response.Status.BAD_REQUEST;
         }
         return createResponse(LoginFormsPages.ERROR);
     }

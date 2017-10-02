@@ -122,7 +122,9 @@ public class PolicyEvaluationService {
         CloseableKeycloakIdentity identity = createIdentity(evaluationRequest);
         try {
             return Response.ok(PolicyEvaluationResponseBuilder.build(evaluate(evaluationRequest, createEvaluationContext(evaluationRequest, identity)), resourceServer, authorization, identity)).build();
-        } catch (Exception e) {
+        } catch (ErrorResponseException cause) {
+            throw cause;
+        } catch (RuntimeException e) {
             throw new ErrorResponseException(OAuthErrorException.SERVER_ERROR, "Error while evaluating permissions.", Status.INTERNAL_SERVER_ERROR);
         } finally {
             identity.close();

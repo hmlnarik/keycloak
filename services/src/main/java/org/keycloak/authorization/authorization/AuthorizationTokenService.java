@@ -124,7 +124,9 @@ public class AuthorizationTokenService {
                         .allowedMethods("POST")
                         .exposedHeaders(Cors.ACCESS_CONTROL_ALLOW_METHODS).build();
             }
-        } catch (Exception cause) {
+        } catch (ErrorResponseException cause) {
+            throw cause;
+        } catch (RuntimeException cause) {
             logger.error(cause);
             throw new ErrorResponseException(OAuthErrorException.SERVER_ERROR, "Error while evaluating permissions.", Status.INTERNAL_SERVER_ERROR);
         }

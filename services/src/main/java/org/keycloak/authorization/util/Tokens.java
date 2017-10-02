@@ -60,7 +60,7 @@ public class Tokens {
             PublicKey publicKey = keycloakSession.keys().getRsaPublicKey(realm, jws.getHeader().getKeyId());
             return RSAProvider.verify(jws, publicKey);
         } catch (Exception e) {
-            throw new ErrorResponseException("invalid_signature", "Unexpected error while validating signature.", Status.INTERNAL_SERVER_ERROR);
+            throw new ErrorResponseException("invalid_signature", "Unexpected error while validating signature.", Status.BAD_REQUEST);
         }
     }
 }

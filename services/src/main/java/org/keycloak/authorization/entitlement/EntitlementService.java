@@ -169,7 +169,9 @@ public class EntitlementService {
             if (!entitlements.isEmpty()) {
                 return Cors.add(request, Response.ok().entity(new EntitlementResponse(createRequestingPartyToken(entitlements, identity.getAccessToken(), resourceServer)))).allowedOrigins(identity.getAccessToken()).allowedMethods("GET").exposedHeaders(Cors.ACCESS_CONTROL_ALLOW_METHODS).build();
             }
-        } catch (Exception cause) {
+        } catch (ErrorResponseException cause) {
+            throw cause;
+        } catch (RuntimeException cause) {
             logger.error(cause);
             throw new ErrorResponseException(OAuthErrorException.SERVER_ERROR, "Error while evaluating permissions.", Status.INTERNAL_SERVER_ERROR);
         }

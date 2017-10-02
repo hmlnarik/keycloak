@@ -418,6 +418,49 @@ public class ResetPasswordTest extends AbstractTestRealmKeycloakTest {
         }
     }
 
+    @Test
+    public void resetPasswordExpiredCodeShortDifferentBrowser() throws IOException, MessagingException, InterruptedException {
+        final AtomicInteger originalValue = new AtomicInteger();
+
+        RealmRepresentation realmRep = testRealm().toRepresentation();
+        originalValue.set(realmRep.getActionTokenGeneratedByUserLifespan());
+        realmRep.setActionTokenGeneratedByUserLifespan(60);
+        testRealm().update(realmRep);
+
+        try {
+            initiateResetPasswordFromResetPasswordPage("login-test");
+
+            events.expectRequiredAction(EventType.SEND_RESET_PASSWORD)
+                    .session((String)null)
+                    .user(userId).detail(Details.USERNAME, "login-test").detail(Details.EMAIL, "login@test.com").assertEvent();
+
+            assertEquals(1, greenMail.getReceivedMessages().length);
+
+            MimeMessage message = greenMail.getReceivedMessages()[0];
+
+            String changePasswordUrl = getPasswordResetEmailLink(message);
+
+            setTimeOffset(70);
+
+            String resetUri = oauth.AUTH_SERVER_ROOT + "/realms/test/login-actions/reset-credentials";
+            driver.navigate().to(resetUri); // This is necessary to delete KC_RESTART cookie that is restricted to /auth/realms/test path
+            driver.manage().deleteAllCookies();
+
+            driver.navigate().to(changePasswordUrl.trim());
+
+            errorPage.assertCurrent();
+
+            assertEquals("Action expired.", errorPage.getError());
+
+            events.expectRequiredAction(EventType.EXECUTE_ACTION_TOKEN_ERROR).error("expired_code").client((String) null).user(userId).session((String) null).clearDetails().detail(Details.ACTION, ResetCredentialsActionToken.TOKEN_TYPE).assertEvent();
+        } finally {
+            setTimeOffset(0);
+
+            realmRep.setActionTokenGeneratedByUserLifespan(originalValue.get());
+            testRealm().update(realmRep);
+        }
+    }
+
     // KEYCLOAK-4016
     @Test
     public void resetPasswordExpiredCodeAndAuthSession() throws IOException, MessagingException, InterruptedException {
