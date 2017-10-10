@@ -1065,8 +1065,10 @@ module.controller('RealmIdentityProviderExportCtrl', function(realm, identityPro
     }
 });
 
-module.controller('RealmTokenDetailCtrl', function($scope, Realm, realm, $http, $location, $route, Dialog, Notifications, TimeUnit, TimeUnit2) {
+module.controller('RealmTokenDetailCtrl', function($scope, Realm, realm, $http, $location, $route, Dialog, Notifications, TimeUnit, TimeUnit2, serverInfo) {
     $scope.realm = realm;
+    $scope.serverInfo = serverInfo;
+    $scope.actionTokenProviders = $scope.serverInfo.providers.actionTokenHandler.providers;
 
     $scope.realm.accessTokenLifespan = TimeUnit2.asUnit(realm.accessTokenLifespan);
     $scope.realm.accessTokenLifespanForImplicitFlow = TimeUnit2.asUnit(realm.accessTokenLifespanForImplicitFlow);
@@ -1078,6 +1080,7 @@ module.controller('RealmTokenDetailCtrl', function($scope, Realm, realm, $http, 
     $scope.realm.accessCodeLifespanUserAction = TimeUnit2.asUnit(realm.accessCodeLifespanUserAction);
     $scope.realm.actionTokenGeneratedByAdminLifespan = TimeUnit2.asUnit(realm.actionTokenGeneratedByAdminLifespan);
     $scope.realm.actionTokenGeneratedByUserLifespan = TimeUnit2.asUnit(realm.actionTokenGeneratedByUserLifespan);
+    $scope.realm.actionTokenGeneratedByUserLifespans = {};
 
     var oldCopy = angular.copy($scope.realm);
     $scope.changed = false;
@@ -1104,11 +1107,17 @@ module.controller('RealmTokenDetailCtrl', function($scope, Realm, realm, $http, 
         $scope.realm.actionTokenGeneratedByAdminLifespan = $scope.realm.actionTokenGeneratedByAdminLifespan.toSeconds();
         $scope.realm.actionTokenGeneratedByUserLifespan = $scope.realm.actionTokenGeneratedByUserLifespan.toSeconds();
 
+        // TODO Convert all $scope.realm.actionTokenGeneratedByUserLifespans to seconds
+
         Realm.update($scope.realm, function () {
             $route.reload();
             Notifications.success("The changes have been saved to the realm.");
         });
     };
+    
+    $scope.unsetDefaultToken = function (actionTokenId) {
+        delete $scope.realm.actionTokenGeneratedByUserLifespans[actionTokenId];
+    }
 
     $scope.reset = function() {
         $route.reload();

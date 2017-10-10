@@ -170,6 +170,25 @@
             </kc-tooltip>
         </div>
 
+        <div class="form-group" ng-repeat="(actionTokenId, value) in actionTokenProviders">
+            <label class="col-md-2 control-label" for="{{ 'actionTokenGeneratedByUserLifespan.' + actionTokenId}}" class="two-lines">{{:: 'action-token-generated-by-user-lifespan.' + actionTokenId | translate}}</label>
+
+            <div class="col-md-6 time-selector">
+                <input class="form-control" type="number" required min="1" max="31536000" data-ng-model="realm.actionTokenGeneratedByUserLifespans[actionTokenId].time"
+                       id="{{ 'actionTokenGeneratedByUserLifespan.' + actionTokenId}}" name="{{ 'actionTokenGeneratedByUserLifespan.' + actionTokenId}}">
+                <select class="form-control" name="{{ 'actionTokenGeneratedByUserLifespanUnit.' + actionTokenId}}" data-ng-model="realm.actionTokenGeneratedByUserLifespans[actionTokenId].unit">
+                    <option value="Minutes">{{:: 'minutes' | translate}}</option>
+                    <option value="Hours">{{:: 'hours' | translate}}</option>
+                    <option value="Days">{{:: 'days' | translate}}</option>
+                </select>
+                
+                <button data-ng-click="unsetDefaultToken(actionTokenId)">Unset and use default value</button>
+            </div>
+            <kc-tooltip>
+                {{:: ('action-token-generated-by-user-override-lifespan.' + actionTokenId + '.tooltip') | translate}}
+            </kc-tooltip>
+        </div>
+
         <div class="form-group">
             <label class="col-md-2 control-label" for="actionTokenGeneratedByAdminLifespan" class="two-lines">{{:: 'action-token-generated-by-admin-lifespan' | translate}}</label>
 
