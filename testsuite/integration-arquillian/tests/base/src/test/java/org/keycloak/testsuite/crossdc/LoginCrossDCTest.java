@@ -50,6 +50,7 @@ public class LoginCrossDCTest extends AbstractAdminCrossDCTest {
                 //assertNotNull(testingClient.testApp().getAdminLogoutAction());
             }
 
+
             log.infof("Iteration %d finished", i);
         }
     }
