@@ -617,4 +617,49 @@ public class RequiredActionEmailVerificationTest extends AbstractTestRealmKeyclo
         }
     }
 
+    @Test
+    public void verifyEmailDuringAuthFlow() throws IOException, MessagingException {
+        try (Closeable u = new UserAttributeUpdater(testRealm().users().get(testUserId))
+          .setEmailVerified(false)
+          .setRequiredActions(RequiredAction.VERIFY_EMAIL)
+          .update()) {
+            accountPage.setAuthRealm(testRealm().toRepresentation().getRealm());
+            accountPage.navigateTo();
+
+            loginPage.assertCurrent();
+            loginPage.login("test-user@localhost", "password");
+
+            verifyEmailPage.assertCurrent();
+
+            Assert.assertEquals(1, greenMail.getReceivedMessages().length);
+            MimeMessage message = greenMail.getLastReceivedMessage();
+
+            String verificationUrl = getPasswordResetEmailLink(message);
+
+            driver.navigate().to(verificationUrl.trim());
+
+            accountPage.assertCurrent();
+        }
+    }
+
+    @Test
+    public void verifyEmailDuringAuthFlowAfterLogout() throws IOException, MessagingException {
+        try (Closeable u = new UserAttributeUpdater(testRealm().users().get(testUserId))
+          .setEmailVerified(true)
+          .update()) {
+            accountPage.setAuthRealm(testRealm().toRepresentation().getRealm());
+            accountPage.navigateTo();
+
+            loginPage.assertCurrent();
+            loginPage.login("test-user@localhost", "password");
+
+            accountPage.assertCurrent();
+
+            driver.navigate().to(oauth.getLogoutUrl().redirectUri(accountPage.buildUri().toString()).build());
+            loginPage.assertCurrent();
+
+            verifyEmailDuringAuthFlow();
+        }
+    }
+
 }
