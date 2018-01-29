@@ -26,6 +26,8 @@ import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ParsingException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
 
+import org.keycloak.saml.processing.core.parsers.util.HasQName;
+import org.keycloak.saml.processing.core.saml.v2.util.XMLTimeUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -49,8 +51,10 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.xml.datatype.XMLGregorianCalendar;
 
 /**
  * Utility for the stax based parser
@@ -105,6 +109,24 @@ public class StaxParserUtil {
      */
     public static void bypassElementBlock(XMLEventReader xmlEventReader, JBossSAMLConstants tag) throws ParsingException {
         bypassElementBlock(xmlEventReader, tag == null ? null : tag.get());
+    }
+
+    /**
+     * Bypass an entire XML element block from startElement to endElement.
+     * It is expected that the {@code xmlEventReader} is positioned at (has not yet read)
+     * the start element of the block it should bypass.
+     *
+     * @param xmlEventReader
+     * @param tag Tag of the XML element that we need to bypass
+     *
+     * @throws org.keycloak.saml.common.exceptions.ParsingException
+     */
+    public static void bypassElementBlock(XMLEventReader xmlEventReader, QName tag) throws ParsingException {
+        XMLEvent xmlEvent = bypassElementBlock(xmlEventReader);
+
+        if (! (xmlEvent instanceof EndElement) || ! Objects.equals(((EndElement) xmlEvent).getName(), tag)) {
+            throw logger.parserExpectedEndTag(tag.getLocalPart());
+        }
     }
 
     /**
@@ -173,8 +195,13 @@ public class StaxParserUtil {
      * @return
      */
     public static String getAttributeValue(Attribute attribute) {
-        String str = trim(attribute.getValue());
-        return str;
+        if (attribute == null) {
+            return null;
+        }
+
+        final String value = attribute.getValue();
+
+        return value == null ? null : trim(value);
     }
 
     /**
@@ -185,12 +212,90 @@ public class StaxParserUtil {
      *
      * @return
      */
+    @Deprecated
     public static String getAttributeValue(StartElement startElement, String tag) {
-        String result = null;
-        Attribute attr = startElement.getAttributeByName(new QName(tag));
-        if (attr != null)
-            result = getAttributeValue(attr);
-        return result;
+        return getAttributeValue(startElement, new QName(tag));
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static String getAttributeValue(StartElement startElement, HasQName attrName) {
+        return getAttributeValue(startElement, attrName.getQName());
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static String getAttributeValue(StartElement startElement, QName attrQName) {
+        Attribute attr = startElement.getAttributeByName(attrQName);
+        return getAttributeValue(attr);
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static URI getUriAttributeValue(StartElement startElement, HasQName attrName) {
+        Attribute attr = startElement.getAttributeByName(attrName.getQName());
+        String value = getAttributeValue(attr);
+        return value == null ? null : URI.create(value);
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static XMLGregorianCalendar getXmlTimeAttributeValue(StartElement startElement, HasQName attrName) throws ParsingException {
+        Attribute attr = startElement.getAttributeByName(attrName.getQName());
+        String value = getAttributeValue(attr);
+        return value == null ? null : XMLTimeUtil.parse(value);
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static Integer getIntegerAttributeValue(StartElement startElement, HasQName attrName) {
+        Attribute attr = startElement.getAttributeByName(attrName.getQName());
+        String value = getAttributeValue(attr);
+        return value == null ? null : Integer.valueOf(value);
+    }
+
+    /**
+     * Get the Attribute value
+     *
+     * @param startElement
+     * @param tag localpart of the qname of the attribute
+     *
+     * @return
+     */
+    public static Boolean getBooleanAttributeValue(StartElement startElement, HasQName attrName) {
+        Attribute attr = startElement.getAttributeByName(attrName.getQName());
+        String value = getAttributeValue(attr);
+        return value == null ? null : Boolean.valueOf(value);
     }
 
     /**
@@ -201,6 +306,7 @@ public class StaxParserUtil {
      *
      * @return false if attribute not set
      */
+    @Deprecated
     public static boolean getBooleanAttributeValue(StartElement startElement, String tag) {
         return getBooleanAttributeValue(startElement, tag, false);
     }
@@ -213,6 +319,7 @@ public class StaxParserUtil {
      *
      * @return false if attribute not set
      */
+    @Deprecated
     public static boolean getBooleanAttributeValue(StartElement startElement, String tag, boolean defaultValue) {
         String result = null;
         Attribute attr = startElement.getAttributeByName(new QName(tag));
@@ -221,6 +328,16 @@ public class StaxParserUtil {
         if (result == null) return defaultValue;
         return Boolean.valueOf(result);
     }
+
+    public static String getRequiredAttributeValue(StartElement startElement, HasQName attrName) throws ParsingException {
+        final QName qName = attrName.getQName();
+        Attribute attr = startElement.getAttributeByName(qName);
+        if (attr == null)
+            throw logger.parserRequiredAttribute(qName.getLocalPart());
+        return StaxParserUtil.getAttributeValue(attr);
+    }
+
+    private static final String JDK_TRANSFORMER_PROPERTY = "picketlink.jdk.transformer";
 
     /**
      * Given that the {@code XMLEventReader} is in {@code XMLStreamConstants.START_ELEMENT} mode, we parse into a DOM
@@ -233,9 +350,7 @@ public class StaxParserUtil {
      * @throws ParsingException
      */
     public static Element getDOMElement(XMLEventReader xmlEventReader) throws ParsingException {
-        Transformer transformer = null;
-
-        final String JDK_TRANSFORMER_PROPERTY = "picketlink.jdk.transformer";
+        Transformer transformer;
 
         boolean useJDKTransformer = Boolean.parseBoolean(SecurityActions.getSystemProperty(JDK_TRANSFORMER_PROPERTY, "false"));
 
@@ -263,7 +378,9 @@ public class StaxParserUtil {
     }
 
     /**
-     * Get the element text.
+     * Get the element text. Following {@link XMLEventReader#getElementText()}:
+     * Precondition: the current event is START_ELEMENT.
+     * Postcondition: The current event is the corresponding END_ELEMENT.
      *
      * @param xmlEventReader
      *
@@ -411,7 +528,7 @@ public class StaxParserUtil {
      *
      * @return
      */
-    public static String getStartElementName(StartElement startElement) {
+    public static String getElementName(StartElement startElement) {
         return trim(startElement.getName().getLocalPart());
     }
 
@@ -422,7 +539,7 @@ public class StaxParserUtil {
      *
      * @return
      */
-    public static String getEndElementName(EndElement endElement) {
+    public static String getElementName(EndElement endElement) {
         return trim(endElement.getName().getLocalPart());
     }
 
@@ -466,7 +583,7 @@ public class StaxParserUtil {
      * @return boolean if the tags match
      */
     public static boolean matches(StartElement startElement, String tag) {
-        String elementTag = getStartElementName(startElement);
+        String elementTag = StaxParserUtil.getElementName(startElement);
         return tag.equals(elementTag);
     }
 
@@ -479,7 +596,7 @@ public class StaxParserUtil {
      * @return boolean if the tags match
      */
     public static boolean matches(EndElement endElement, String tag) {
-        String elementTag = getEndElementName(endElement);
+        String elementTag = getElementName(endElement);
         return tag.equals(elementTag);
     }
 
@@ -501,6 +618,23 @@ public class StaxParserUtil {
     }
 
     /**
+     * Consume the next event
+     *
+     * @param xmlEventReader
+     *
+     * @return
+     *
+     * @throws ParsingException
+     */
+    public static XMLEvent advance(XMLEventReader xmlEventReader) throws ParsingException {
+        try {
+            return xmlEventReader.nextEvent();
+        } catch (XMLStreamException e) {
+            throw logger.parserException(e);
+        }
+    }
+
+    /**
      * Peek the next {@code StartElement }
      *
      * @param xmlEventReader
@@ -511,14 +645,32 @@ public class StaxParserUtil {
      */
     public static StartElement peekNextStartElement(XMLEventReader xmlEventReader) throws ParsingException {
         try {
-            while (true) {
-                XMLEvent xmlEvent = xmlEventReader.peek();
-
-                if (xmlEvent == null || xmlEvent.isStartElement())
-                    return (StartElement) xmlEvent;
-                else
-                    xmlEvent = xmlEventReader.nextEvent();
+            XMLEvent xmlEvent = xmlEventReader.peek();
+            while (xmlEvent != null && ! xmlEvent.isStartElement()) {
+                xmlEventReader.nextEvent();
+                xmlEvent = xmlEventReader.peek();
             }
+            return (StartElement) xmlEvent;
+        } catch (XMLStreamException e) {
+            throw logger.parserException(e);
+        }
+    }
+
+    /**
+     * Peek the next {@link StartElement} or {@link EndElement}.
+     *
+     * @param xmlEventReader
+     * @return
+     * @throws ParsingException
+     */
+    public static XMLEvent peekNextTag(XMLEventReader xmlEventReader) throws ParsingException {
+        try {
+            XMLEvent xmlEvent = xmlEventReader.peek();
+            while (xmlEvent != null && ! xmlEvent.isStartElement() && ! xmlEvent.isEndElement()) {
+                xmlEventReader.nextEvent();
+                xmlEvent = xmlEventReader.peek();
+            }
+            return xmlEvent;
         } catch (XMLStreamException e) {
             throw logger.parserException(e);
         }
@@ -571,10 +723,26 @@ public class StaxParserUtil {
      *
      * @throws RuntimeException mismatch
      */
+    @Deprecated
     public static void validate(StartElement startElement, String tag) {
-        String foundElementTag = getStartElementName(startElement);
+        String foundElementTag = StaxParserUtil.getElementName(startElement);
         if (!tag.equals(foundElementTag))
             throw logger.parserExpectedTag(tag, foundElementTag);
+    }
+
+    /**
+     * Validate that the start element has the expected tag
+     *
+     * @param startElement
+     * @param tag
+     *
+     * @throws RuntimeException mismatch
+     */
+    public static void validate(StartElement startElement, QName tag) {
+        if (! Objects.equals(startElement.getName(), tag)) {
+            String foundElementTag = StaxParserUtil.getElementName(startElement);
+            throw logger.parserExpectedTag(tag.getLocalPart(), foundElementTag);
+        }
     }
 
     /**
@@ -586,7 +754,7 @@ public class StaxParserUtil {
      * @throws RuntimeException mismatch
      */
     public static void validate(EndElement endElement, String tag) {
-        String elementTag = getEndElementName(endElement);
+        String elementTag = getElementName(endElement);
         if (!tag.equals(elementTag))
             throw new RuntimeException(logger.parserExpectedEndTag("</" + tag + ">.  Found </" + elementTag + ">"));
     }

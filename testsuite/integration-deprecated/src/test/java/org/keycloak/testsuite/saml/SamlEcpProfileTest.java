@@ -138,7 +138,7 @@ public class SamlEcpProfileTest {
 
         SOAPHeader responseMessageHeaders = responseMessage.getSOAPHeader();
 
-        NodeList ecpResponse = responseMessageHeaders.getElementsByTagNameNS(JBossSAMLURIConstants.ECP_PROFILE.get(), JBossSAMLConstants.RESPONSE.get());
+        NodeList ecpResponse = responseMessageHeaders.getElementsByTagNameNS(JBossSAMLURIConstants.ECP_PROFILE.get(), JBossSAMLConstants.RESPONSE__ECP.get());
 
         assertEquals("No ECP Response", 1, ecpResponse.getLength());
 
