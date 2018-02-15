@@ -45,6 +45,7 @@ import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
 import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
 import org.keycloak.dom.saml.v2.protocol.LogoutRequestType;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
+import org.keycloak.dom.saml.v2.protocol.StatusResponseType;
 import org.keycloak.saml.common.exceptions.ParsingException;
 import org.keycloak.saml.processing.core.saml.v2.util.AssertionUtil;
 import org.w3c.dom.Element;
@@ -258,6 +259,24 @@ public class SAMLParserTest {
         try (InputStream st = SAMLParserTest.class.getResourceAsStream("KEYCLOAK-6109-authnrequest-scoping.xml")) {
             Object parsedObject = parser.parse(st);
             assertThat(parsedObject, instanceOf(AuthnRequestType.class));
+        }
+    }
+
+    @Test
+    public void testLogoutResponseStatusDetail() throws Exception {
+        try (InputStream st = SAMLParserTest.class.getResourceAsStream("saml20-logout-response-status-detail.xml")) {
+            Object parsedObject = parser.parse(st);
+            assertThat(parsedObject, instanceOf(StatusResponseType.class));
+
+            StatusResponseType resp = (StatusResponseType) parsedObject;
+
+            assertThat(resp.getIssuer(), notNullValue());
+            assertThat(resp.getIssuer().getValue(), is("http://idp.example.com/metadata.php"));
+
+            assertThat(resp.getStatus(), notNullValue());
+            assertThat(resp.getStatus().getStatusCode(), notNullValue());
+            assertThat(resp.getStatus().getStatusCode().getValue(), notNullValue());
+            assertThat(resp.getStatus().getStatusCode().getValue().toString(), is("urn:oasis:names:tc:SAML:2.0:status:Responder"));
         }
     }
 
