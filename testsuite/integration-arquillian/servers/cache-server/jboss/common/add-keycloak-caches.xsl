@@ -18,7 +18,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:xalan="http://xml.apache.org/xalan"
                 version="2.0"
-                exclude-result-prefixes="xalan">
+                exclude-result-prefixes="xalan #all">
 
     <xsl:output method="xml" version="1.0" encoding="UTF-8" indent="yes" xalan:indent-amount="4" standalone="no"/>
     <xsl:strip-space elements="*"/>
@@ -27,6 +27,8 @@
     <xsl:param name="remote.site" />
 
     <xsl:variable name="nsCacheServer" select="'urn:infinispan:server:core:'"/>
+    <xsl:variable name="nsDomain" select="'urn:jboss:domain:'"/>
+    <xsl:variable name="nsEndpoint" select="'urn:infinispan:server:endpoint:'"/>
     <xsl:variable name="nsJGroups" select="'urn:infinispan:server:jgroups:'"/>
 
     <!-- Configuration of infinispan caches in infinispan-subsystem -->
@@ -34,6 +36,13 @@
                         /*[local-name()='cache-container' and starts-with(namespace-uri(), $nsCacheServer) and @name='clustered']">
         <xsl:copy>
             <xsl:apply-templates select="@* | node()" />
+
+            <security>
+                <authorization>
+                    <identity-role-mapper/>
+                    <role name="___script_manager" permissions="ALL"/>
+                </authorization>
+            </security>
 
             <replicated-cache-configuration name="sessions-cfg" mode="SYNC" start="EAGER" batching="false">
                 <transaction mode="NON_DURABLE_XA" locking="PESSIMISTIC"/>
@@ -54,6 +63,42 @@
             <replicated-cache name="work" configuration="sessions-cfg" />
             <replicated-cache name="employee-distributable-cache.ssoCache" configuration="sessions-cfg"/>
             <replicated-cache name="employee-distributable-cache" configuration="sessions-cfg"/>
+        </xsl:copy>
+    </xsl:template>
+
+    <!-- Add "authentication" into HotRod connector configuration -->
+    <xsl:template match="//*[local-name()='subsystem' and starts-with(namespace-uri(), $nsEndpoint)]
+                        /*[local-name()='hotrod-connector' and starts-with(namespace-uri(), $nsEndpoint) and @cache-container='clustered']">
+        <xsl:copy>
+            <xsl:apply-templates select="@* | node()" />
+
+            <authentication security-realm="AllowScriptManager">
+                <sasl mechanisms="DIGEST-MD5" qop="auth" server-name="keycloak-jdg-server">
+                    <policy>
+                        <no-anonymous value="false" />
+                    </policy>
+                </sasl>
+            </authentication>
+        </xsl:copy>
+    </xsl:template>
+
+    <!-- Add "AllowScriptManager" security-realm -->
+    <xsl:template match="//*[local-name()='management' and starts-with(namespace-uri(), $nsDomain)]
+                        /*[local-name()='security-realms' and starts-with(namespace-uri(), $nsDomain)]">
+        <xsl:copy>
+            <xsl:apply-templates select="@* | node()" />
+
+            <xsl:element name="security-realm" namespace="{namespace-uri()}">
+                <xsl:attribute name="name">AllowScriptManager</xsl:attribute>
+                <xsl:element name="authentication" namespace="{namespace-uri()}">
+                    <xsl:element name="users" namespace="{namespace-uri()}">
+                        <xsl:element name="user" namespace="{namespace-uri()}">
+                            <xsl:attribute name="username">___script_manager</xsl:attribute>
+                            <xsl:element name="password" namespace="{namespace-uri()}">not-so-secret-password</xsl:element>
+                        </xsl:element>
+                    </xsl:element>
+                </xsl:element>
+            </xsl:element>
         </xsl:copy>
     </xsl:template>
 
