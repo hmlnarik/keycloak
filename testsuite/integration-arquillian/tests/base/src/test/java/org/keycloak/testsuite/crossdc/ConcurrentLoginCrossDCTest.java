@@ -17,7 +17,6 @@
 
 package org.keycloak.testsuite.crossdc;
 
-import org.junit.Assert;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import java.util.List;
@@ -36,7 +35,6 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**

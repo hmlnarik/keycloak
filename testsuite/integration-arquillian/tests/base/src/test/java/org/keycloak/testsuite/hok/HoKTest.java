@@ -117,7 +117,7 @@ public class HoKTest extends AbstractTestRealmKeycloakTest {
         for (ClientRepresentation client : testRealm.getClients()) {
             if (client.getClientId().equals(clientId)) {
                 URI baseUri = URI.create(client.getRedirectUris().get(0));
-                URI redir = URI.create("https://localhost:" + System.getProperty("app.server.https.port", "8543") + baseUri.getRawPath());
+                URI redir = URI.create("https://localhost:" + System.getProperty("auth.server.https.port", "8543") + baseUri.getRawPath());
                 client.getRedirectUris().add(redir.toString());
                 break;
             }
@@ -238,7 +238,6 @@ public class HoKTest extends AbstractTestRealmKeycloakTest {
 
         assertEquals(sessionId, token.getSessionState());
 
-        assertEquals(1, token.getRealmAccess().getRoles().size());
         assertTrue(token.getRealmAccess().isUserInRole("user"));
 
         assertEquals(1, token.getResourceAccess(oauth.getClientId()).getRoles().size());
@@ -405,7 +404,6 @@ public class HoKTest extends AbstractTestRealmKeycloakTest {
         assertEquals(findUserByUsername(adminClient.realm("test"), username).getId(), refreshedToken.getSubject());
         Assert.assertNotEquals(username, refreshedToken.getSubject());
 
-        assertEquals(1, refreshedToken.getRealmAccess().getRoles().size());
         Assert.assertTrue(refreshedToken.getRealmAccess().isUserInRole("user"));
 
         assertEquals(1, refreshedToken.getResourceAccess(oauth.getClientId()).getRoles().size());
