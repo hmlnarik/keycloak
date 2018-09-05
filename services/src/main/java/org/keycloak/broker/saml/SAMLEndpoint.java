@@ -87,12 +87,13 @@ import java.util.List;
 import org.keycloak.rotation.HardcodedKeyLocator;
 import org.keycloak.rotation.KeyLocator;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
+import org.keycloak.saml.validators.ConditionsValidator;
 import org.keycloak.saml.validators.DestinationValidator;
 import java.security.cert.CertificateException;
+import java.net.URI;
 import org.w3c.dom.Element;
 
 import java.util.*;
-import javax.security.auth.x500.X500Principal;
 import javax.xml.crypto.dsig.XMLSignature;
 import org.w3c.dom.NodeList;
 
@@ -389,6 +390,21 @@ public class SAMLEndpoint {
                 }
 
                 AssertionType assertion = responseType.getAssertions().get(0).getAssertion();
+
+                ConditionsValidator.Builder cvb = new ConditionsValidator.Builder(assertion.getID(), assertion.getConditions(), destinationValidator);
+                try {
+                    String issuerURL = getEntityId(session.getContext().getUri(), realm);
+                    cvb.addAllowedAudience(URI.create(issuerURL));
+                } catch (IllegalArgumentException ex) {
+                    // warning has been already emitted in DeploymentBuilder
+                }
+                cvb.addAllowedAudience(session.getContext().getUri().getAbsolutePath());
+                if (! cvb.build().isValid()) {
+                    logger.error("Validation failed");
+                    event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
+                    event.error(Errors.INVALID_SAML_RESPONSE);
+                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
+                }
 
                 SubjectType subject = assertion.getSubject();
                 SubjectType.STSubType subType = subject.getSubType();
