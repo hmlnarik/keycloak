@@ -20,6 +20,7 @@ import org.jboss.arquillian.test.spi.execution.ExecutionDecision;
 import org.jboss.arquillian.test.spi.execution.TestExecutionDecider;
 
 import java.lang.reflect.Method;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.jboss.logging.Logger;
 
 /**
@@ -39,11 +40,15 @@ public class MigrationTestExecutionDecider implements TestExecutionDecider {
         Migration migrationAnnotation = method.getAnnotation(Migration.class);
         
          if (migrationTest && migrationAnnotation != null) {
-            log.info("migration from version: " + migratedAuthServerVersion);
+            ComparableVersion cvMigratedAuthServerVersion = new ComparableVersion(migratedAuthServerVersion);
+            log.info("migration from version: " + cvMigratedAuthServerVersion);
             
-            String versionFrom = migrationAnnotation.versionFrom();
-
-            if (migratedAuthServerVersion.contains(versionFrom)) {
+            ComparableVersion cvVersionFrom = new ComparableVersion(migrationAnnotation.versionFrom());
+            ComparableVersion cvVersionFromUpperBound =
+              migrationAnnotation.versionFromUpperBound().isEmpty()
+              ? cvVersionFrom
+              : new ComparableVersion(migrationAnnotation.versionFromUpperBound());
+            if (cvVersionFrom.compareTo(cvMigratedAuthServerVersion) >= 0 && cvVersionFromUpperBound.compareTo(cvMigratedAuthServerVersion) <= 0) {
                 return ExecutionDecision.execute();
             } else {
                 return ExecutionDecision.dontExecute(method.getName() + "doesn't fit with migration version.");

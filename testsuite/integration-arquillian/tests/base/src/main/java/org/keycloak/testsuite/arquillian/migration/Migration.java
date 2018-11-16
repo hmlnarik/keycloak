@@ -32,4 +32,5 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({ElementType.METHOD})
 public @interface Migration {
     String versionFrom();
+    String versionFromUpperBound() default "";
 }

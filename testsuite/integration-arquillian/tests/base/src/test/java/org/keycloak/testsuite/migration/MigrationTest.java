@@ -68,7 +68,7 @@ public class MigrationTest extends AbstractMigrationTest {
     }
 
     @Test
-    @Migration(versionFrom = "3.4.3.Final")
+    @Migration(versionFrom = "3.4.3.Final", versionFromUpperBound = "3.99")
     public void migration3_4_3Test() {
         testMigratedData();
         testMigrationTo4_x();
