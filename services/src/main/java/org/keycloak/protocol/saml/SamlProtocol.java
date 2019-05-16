@@ -47,6 +47,7 @@ import org.keycloak.protocol.ProtocolMapperUtils;
 import org.keycloak.protocol.saml.mappers.SAMLAttributeStatementMapper;
 import org.keycloak.protocol.saml.mappers.SAMLLoginResponseMapper;
 import org.keycloak.protocol.saml.mappers.SAMLRoleListMapper;
+import org.keycloak.protocol.saml.preprocessor.SamlAuthenticationPreprocessor;
 import org.keycloak.saml.SAML2ErrorResponseBuilder;
 import org.keycloak.saml.SAML2LoginResponseBuilder;
 import org.keycloak.saml.SAML2LogoutRequestBuilder;
@@ -78,6 +79,7 @@ import java.net.URI;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -526,6 +528,11 @@ public class SamlProtocol implements LoginProtocol {
         for (ProtocolMapperProcessor<SAMLLoginResponseMapper> processor : mappers) {
             response = processor.mapper.transformLoginResponse(response, processor.model, session, userSession, clientSession);
         }
+
+        for (Iterator<SamlAuthenticationPreprocessor> it = SamlSessionUtils.getSamlAuthenticationPreprocessorIterator(session); it.hasNext(); ) {
+            response = (ResponseType) it.next().beforeSendingResponse(response, clientSession);
+        }
+
         return response;
     }
 
@@ -723,6 +730,10 @@ public class SamlProtocol implements LoginProtocol {
         String sessionIndex = SamlSessionUtils.getSessionIndex(clientSession);
         logoutBuilder.sessionIndex(sessionIndex);
 
+        for (Iterator<SamlAuthenticationPreprocessor> it = SamlSessionUtils.getSamlAuthenticationPreprocessorIterator(session); it.hasNext();) {
+            logoutBuilder = it.next().beforeSendingLogoutRequest(logoutBuilder, clientSession.getUserSession(), clientSession);
+        }
+        
         return logoutBuilder;
     }
 
