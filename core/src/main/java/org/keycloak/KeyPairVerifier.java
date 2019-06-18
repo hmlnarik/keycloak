@@ -43,7 +43,7 @@ public class KeyPairVerifier {
         try {
             publicKey = PemUtils.decodePublicKey(publicKeyPem);
         } catch (Exception e) {
-            throw new VerificationException("Failed to decode public key");
+SYNTAX ERROR!            throw new VerificationException("Failed to decode public key");
         }
 
         try {
