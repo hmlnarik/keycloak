@@ -52,7 +52,7 @@
         <subsystem supplement="ha">keycloak-infinispan.xml</subsystem>
         <subsystem>jaxrs.xml</subsystem>
         <subsystem>jca.xml</subsystem>
-        <subsystem>keycloak-jgroups.xml</subsystem>
+        <subsystem>jgroups.xml</subsystem>
         <subsystem supplement="domain">jmx.xml</subsystem>
         <subsystem>jpa.xml</subsystem>
         <subsystem>mail.xml</subsystem>
