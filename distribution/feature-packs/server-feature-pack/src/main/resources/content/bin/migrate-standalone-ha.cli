@@ -297,8 +297,13 @@ if (outcome == failed) of /subsystem=elytron/:read-resource
 end-if
 
 if (outcome == failed) of /subsystem=ejb3/service=remote/channel-creation-options=READ_TIMEOUT/:read-resource
-    echo Adding channel-creation-options READ_TIMEOUT and MAX_OUTBOUND_MESSAGES to ejb3 remote
+    echo Adding channel-creation-options READ_TIMEOUT to ejb3 remote
     /subsystem=ejb3/service=remote/channel-creation-options=READ_TIMEOUT/:add(value="${prop.remoting-connector.read.timeout:20}",type=xnio)
+    echo
+end-if
+
+if (outcome == failed) of /subsystem=ejb3/service=remote/channel-creation-options=MAX_OUTBOUND_MESSAGES/:read-resource
+    echo Adding channel-creation-options MAX_OUTBOUND_MESSAGES to ejb3 remote
     /subsystem=ejb3/service=remote/channel-creation-options=MAX_OUTBOUND_MESSAGES/:add(value=1234,type=remoting)
     echo
 end-if
@@ -676,13 +681,13 @@ if (outcome == success) of /subsystem=ejb3/service=remote/channel-creation-optio
     echo
 end-if
 
-if (outcome == failed) of /subsystem=infinispan/cache-container=web/local-cache=routing:read-resource
+if (outcome == failed) of /subsystem=infinispan/cache-container=web/distributed-cache=routing:read-resource
     echo Adding distributed cache routing to web cache container to infinispan subsystem
     /subsystem=infinispan/cache-container=web/distributed-cache=routing/:add
     echo
 end-if
 
-if (outcome == failed) of /subsystem=infinispan/cache-container=web/local-cache=sso:read-resource
+if (outcome == failed) of /subsystem=infinispan/cache-container=web/replicated-cache=sso:read-resource
     echo Adding replicated cache sso to web cache container to infinispan subsystem
     /subsystem=infinispan/cache-container=web/replicated-cache=sso/:add
     /subsystem=infinispan/cache-container=web/replicated-cache=sso/component=locking/:add(isolation=REPEATABLE_READ)
