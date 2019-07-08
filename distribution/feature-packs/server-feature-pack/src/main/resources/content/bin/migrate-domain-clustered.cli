@@ -299,8 +299,13 @@ if (outcome == failed) of /profile=$clusteredProfile/subsystem=elytron/:read-res
 end-if
 
 if (outcome == failed) of /profile=$clusteredProfile/subsystem=ejb3/service=remote/channel-creation-options=READ_TIMEOUT/:read-resource
-    echo Adding channel-creation-options READ_TIMEOUT and MAX_OUTBOUND_MESSAGES to ejb3 remote
+    echo Adding channel-creation-options READ_TIMEOUT to ejb3 remote
     /profile=$clusteredProfile/subsystem=ejb3/service=remote/channel-creation-options=READ_TIMEOUT/:add(value="${prop.remoting-connector.read.timeout:20}",type=xnio)
+    echo
+end-if
+
+if (outcome == failed) of /profile=$clusteredProfile/subsystem=ejb3/service=remote/channel-creation-options=MAX_OUTBOUND_MESSAGES/:read-resource
+    echo Adding channel-creation-options MAX_OUTBOUND_MESSAGES to ejb3 remote
     /profile=$clusteredProfile/subsystem=ejb3/service=remote/channel-creation-options=MAX_OUTBOUND_MESSAGES/:add(value=1234,type=remoting)
     echo
 end-if
@@ -361,18 +366,6 @@ end-if
 if (outcome == failed) of /profile=$clusteredProfile/subsystem=undertow/server=default-server/https-listener=https/:read-resource
     echo Adding https-listener
     /profile=$clusteredProfile/subsystem=undertow/server=default-server/https-listener=https/:add(socket-binding=https,security-realm=ApplicationRealm,enable-http2=true)
-    echo
-end-if
-
-if (outcome == success) of /socket-binding-group=ha-sockets/socket-binding=jgroups-tcp-fd/:read-resource
-    echo Removing socket-binding jgroups-tcp-fd
-    /socket-binding-group=ha-sockets/socket-binding=jgroups-tcp-fd/:remove
-    echo
-end-if
-
-if (outcome == success) of /socket-binding-group=ha-sockets/socket-binding=jgroups-udp-fd/:read-resource
-    echo Removing socket-binding jgroups-udp-fd
-    /socket-binding-group=ha-sockets/socket-binding=jgroups-udp-fd/:remove
     echo
 end-if
 
