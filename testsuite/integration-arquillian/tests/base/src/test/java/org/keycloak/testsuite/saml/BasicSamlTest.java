@@ -13,6 +13,7 @@ import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.saml.processing.web.util.RedirectBindingUtil;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.testsuite.util.KeyUtils;
+import org.keycloak.testsuite.util.Matchers;
 import org.keycloak.testsuite.util.SamlClient;
 import org.keycloak.testsuite.util.SamlClient.Binding;
 import org.keycloak.testsuite.util.SamlClient.RedirectStrategyWithSwitchableFollowRedirect;
@@ -176,5 +177,95 @@ public class BasicSamlTest extends AbstractSamlTest {
             assertThat(response, statusCodeIsHC(expectedHttpCode));
             assertThat(EntityUtils.toString(response.getEntity(), "UTF-8"), pageTextMatcher);
         }
+    }
+
+    // KEYCLOAK-10802
+    @Test
+    public void testReAuthnWithForceAuthnNotSet() throws ParsingException, ConfigurationException, ProcessingException {
+        // SSO request
+        AuthnRequestType loginRepSSO = SamlClient.createLoginRequestDocument(AbstractSamlTest.SAML_CLIENT_ID_SALES_POST , AUTH_SERVER_SCHEME + "://localhost:" + AUTH_SERVER_PORT + "/sales-post/saml", null);
+        Document docSSO = SAML2Request.convert(loginRepSSO);
+
+        SAMLDocumentHolder document = new SamlClientBuilder()
+                // First authn
+                .authnRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST, SAML_ASSERTION_CONSUMER_URL_SALES_POST, Binding.POST)
+                .build()
+                .login().user(bburkeUser).build()
+                .processSamlResponse(Binding.POST) // Response from producer IdP
+                .build()
+
+                // Second authn with forceAuth not set (SSO)
+                .authnRequest( getAuthServerSamlEndpoint(REALM_NAME), docSSO, Binding.POST )
+                .transformObject(so -> {
+                    so.setForceAuthn(null);
+                    return so;
+                })
+                .build()
+                .followOneRedirect() // SSO
+
+                .getSamlResponse(Binding.POST);
+
+        assertThat(documentToString(document.getSamlDocument()), not(containsString("InResponseTo=\"" + System.getProperty("java.version") + "\"")));
+
+    }
+    // KEYCLOAK-10802
+    @Test
+    public void testReAuthnWithForceAuthnFalse() throws ParsingException, ConfigurationException, ProcessingException {
+        // SSO request
+        AuthnRequestType loginRepSSO = SamlClient.createLoginRequestDocument(AbstractSamlTest.SAML_CLIENT_ID_SALES_POST , AUTH_SERVER_SCHEME + "://localhost:" + AUTH_SERVER_PORT + "/sales-post/saml", null);
+        Document docSSO = SAML2Request.convert(loginRepSSO);
+
+        SAMLDocumentHolder document = new SamlClientBuilder()
+                // First authn
+                .authnRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST, SAML_ASSERTION_CONSUMER_URL_SALES_POST, Binding.POST)
+                .build()
+                .login().user(bburkeUser).build()
+                .processSamlResponse(Binding.POST) // Response from producer IdP
+                .build()
+
+                // Second authn with forceAuth not set (SSO)
+                .authnRequest( getAuthServerSamlEndpoint(REALM_NAME), docSSO, Binding.POST )
+                .transformObject(so -> {
+                    so.setForceAuthn(false);
+                    return so;
+                })
+                .build()
+                .followOneRedirect() // SSO
+
+                .getSamlResponse(Binding.POST);
+
+        assertThat(documentToString(document.getSamlDocument()), not(containsString("InResponseTo=\"" + System.getProperty("java.version") + "\"")));
+
+    }
+
+    // KEYCLOAK-10802
+    @Test
+    public void testReAuthnWithForceAuthnTrue() throws ParsingException, ConfigurationException, ProcessingException {
+        // SSO request
+        AuthnRequestType loginRepSSO = SamlClient.createLoginRequestDocument(AbstractSamlTest.SAML_CLIENT_ID_SALES_POST , AUTH_SERVER_SCHEME + "://localhost:" + AUTH_SERVER_PORT + "/sales-post/saml", null);
+        Document docSSO = SAML2Request.convert(loginRepSSO);
+
+        SAMLDocumentHolder document = new SamlClientBuilder()
+                // First authn
+                .authnRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST, SAML_ASSERTION_CONSUMER_URL_SALES_POST, Binding.POST)
+                .build()
+                .login().user(bburkeUser).build()
+                .processSamlResponse(Binding.POST) // Response from producer IdP
+                .build()
+
+                // Second authn with forceAuth not set (SSO)
+                .authnRequest( getAuthServerSamlEndpoint(REALM_NAME), docSSO, Binding.POST )
+                .transformObject(so -> {
+                    so.setForceAuthn(true);
+                    return so;
+                })
+                .build()
+
+                .login().user(bburkeUser).build() // seconde authn
+
+                .getSamlResponse(Binding.POST);
+
+        assertThat(documentToString(document.getSamlDocument()), not(containsString("InResponseTo=\"" + System.getProperty("java.version") + "\"")));
+
     }
 }
