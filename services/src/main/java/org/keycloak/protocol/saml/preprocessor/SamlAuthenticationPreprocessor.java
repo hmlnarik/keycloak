@@ -23,8 +23,6 @@ import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
-import org.keycloak.saml.SAML2AuthnRequestBuilder;
-import org.keycloak.saml.SAML2LogoutRequestBuilder;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 /**
@@ -56,9 +54,9 @@ public interface SamlAuthenticationPreprocessor extends Provider, ProviderFactor
     /**
      * Called before a login request is sent.
      */
-    default SAML2AuthnRequestBuilder beforeSendingLoginRequest(SAML2AuthnRequestBuilder loginBuilder,
+    default AuthnRequestType beforeSendingLoginRequest(AuthnRequestType authnRequest,
             AuthenticationSessionModel clientSession) {
-        return loginBuilder;
+        return authnRequest;
     }
 
     /**
@@ -66,9 +64,9 @@ public interface SamlAuthenticationPreprocessor extends Provider, ProviderFactor
      * 
      * @param clientSession can be null if client is not applicable (e.g. when used within identity broker)
      */
-    default SAML2LogoutRequestBuilder beforeSendingLogoutRequest(SAML2LogoutRequestBuilder logoutBuilder,
+    default LogoutRequestType beforeSendingLogoutRequest(LogoutRequestType logoutRequest,
             UserSessionModel authSession, AuthenticatedClientSessionModel clientSession) {
-        return logoutBuilder;
+        return logoutRequest;
     }
 
     /**

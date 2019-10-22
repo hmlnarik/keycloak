@@ -28,6 +28,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.connections.httpclient.HttpClientProvider;
 import org.keycloak.dom.saml.v2.assertion.AssertionType;
 import org.keycloak.dom.saml.v2.assertion.AttributeStatementType;
+import org.keycloak.dom.saml.v2.protocol.LogoutRequestType;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
@@ -52,6 +53,7 @@ import org.keycloak.saml.SAML2ErrorResponseBuilder;
 import org.keycloak.saml.SAML2LoginResponseBuilder;
 import org.keycloak.saml.SAML2LogoutRequestBuilder;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
+import org.keycloak.saml.SamlProtocolExtensionsAwareBuilder.NodeGenerator;
 import org.keycloak.saml.SignatureAlgorithm;
 import org.keycloak.saml.common.constants.GeneralConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
@@ -59,6 +61,7 @@ import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ParsingException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
 import org.keycloak.saml.common.util.XmlKeyInfoKeyNameTransformer;
+import org.keycloak.saml.processing.api.saml.v2.request.SAML2Request;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationSessionManager;
@@ -571,20 +574,23 @@ public class SamlProtocol implements LoginProtocol {
             }
 
             if (postBinding) {
-                SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
+                LogoutRequestType logoutRequest = createLogoutRequest(bindingUri, clientSession, client);
                 // This is POST binding, hence KeyID is included in dsig:KeyInfo/dsig:KeyName, no need to add <samlp:Extensions> element
                 JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
-                return binding.postBinding(logoutBuilder.buildDocument()).request(bindingUri);
+                return binding.postBinding(SAML2Request.convert(logoutRequest)).request(bindingUri);
             } else {
                 logger.debug("frontchannel redirect binding");
-                SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
+                NodeGenerator[] extensions;
                 if (samlClient.requiresRealmSignature() && samlClient.addExtensionsElementWithKeyInfo()) {
                     KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
                     String keyName = samlClient.getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
-                    logoutBuilder.addExtension(new KeycloakKeySamlExtensionGenerator(keyName));
+                    extensions = new NodeGenerator[] { new KeycloakKeySamlExtensionGenerator(keyName) };
+                } else {
+                    extensions = new NodeGenerator[] {};
                 }
+                LogoutRequestType logoutRequest = createLogoutRequest(bindingUri, clientSession, client, extensions);
                 JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
-                return binding.redirectBinding(logoutBuilder.buildDocument()).request(bindingUri);
+                return binding.redirectBinding(SAML2Request.convert(logoutRequest)).request(bindingUri);
             }
         } catch (ConfigurationException e) {
             throw new RuntimeException(e);
@@ -671,13 +677,13 @@ public class SamlProtocol implements LoginProtocol {
             logger.warnf("Can't do backchannel logout. No SingleLogoutService POST Binding registered for client: %s", client.getClientId());
             return;
         }
-        SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(logoutUrl, clientSession, client);
 
         String logoutRequestString = null;
         try {
+            LogoutRequestType logoutRequest = createLogoutRequest(logoutUrl, clientSession, client);
             JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
             // This is POST binding, hence KeyID is included in dsig:KeyInfo/dsig:KeyName, no need to add <samlp:Extensions> element
-            logoutRequestString = binding.postBinding(logoutBuilder.buildDocument()).encoded();
+            logoutRequestString = binding.postBinding(SAML2Request.convert(logoutRequest)).encoded();
         } catch (Exception e) {
             logger.warn("failed to send saml logout", e);
             return;
@@ -722,7 +728,7 @@ public class SamlProtocol implements LoginProtocol {
 
     }
 
-    protected SAML2LogoutRequestBuilder createLogoutRequest(String logoutUrl, AuthenticatedClientSessionModel clientSession, ClientModel client) {
+    protected LogoutRequestType createLogoutRequest(String logoutUrl, AuthenticatedClientSessionModel clientSession, ClientModel client, NodeGenerator... extensions) throws ConfigurationException {
         // build userPrincipal with subject used at login
         SAML2LogoutRequestBuilder logoutBuilder = new SAML2LogoutRequestBuilder().assertionExpiration(realm.getAccessCodeLifespan()).issuer(getResponseIssuer(realm))
                 .userPrincipal(clientSession.getNote(SAML_NAME_ID), clientSession.getNote(SAML_NAME_ID_FORMAT)).destination(logoutUrl);
@@ -730,11 +736,15 @@ public class SamlProtocol implements LoginProtocol {
         String sessionIndex = SamlSessionUtils.getSessionIndex(clientSession);
         logoutBuilder.sessionIndex(sessionIndex);
 
+        for (NodeGenerator extension : extensions) {
+            logoutBuilder.addExtension(extension);
+        }
+        LogoutRequestType logoutRequest = logoutBuilder.createLogoutRequest();
         for (Iterator<SamlAuthenticationPreprocessor> it = SamlSessionUtils.getSamlAuthenticationPreprocessorIterator(session); it.hasNext();) {
-            logoutBuilder = it.next().beforeSendingLogoutRequest(logoutBuilder, clientSession.getUserSession(), clientSession);
+            logoutRequest = it.next().beforeSendingLogoutRequest(logoutRequest, clientSession.getUserSession(), clientSession);
         }
         
-        return logoutBuilder;
+        return logoutRequest;
     }
 
     @Override
