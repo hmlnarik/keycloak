@@ -56,6 +56,14 @@ if declare -f "should-tests-run-$1" > /dev/null && ! eval "should-tests-run-$1";
     exit 0
 fi
 
+git log --oneline --max-count=20
+set
+git remote -v
+if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+    git pull --rebase origin "$TRAVIS_BRANCH"
+fi
+git log --oneline --max-count=20
+
 travis_fold start compile_keycloak
 echo Compiling Keycloak
 ( while : ; do echo "Compiling, please wait..." ; sleep 50 ; done ) &
