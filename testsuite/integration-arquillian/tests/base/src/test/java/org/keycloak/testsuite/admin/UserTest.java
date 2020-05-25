@@ -246,7 +246,7 @@ public class UserTest extends AbstractAdminTest {
         user.setUsername("user2");
         user.setEmail("user1@localhost");
         Response response = realm.users().create(user);
-        assertEquals(409, response.getStatus());
+        assertEquals(200, response.getStatus());
         response.close();
     }
 
