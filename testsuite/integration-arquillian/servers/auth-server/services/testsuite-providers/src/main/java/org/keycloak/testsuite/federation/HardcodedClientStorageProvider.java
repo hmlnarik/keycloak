@@ -59,7 +59,7 @@ public class HardcodedClientStorageProvider implements ClientStorageProvider, Cl
     }
 
     @Override
-    public ClientModel getClientById(String id, RealmModel realm) {
+    public ClientModel getClientById(RealmModel realm, String id) {
         StorageId storageId = new StorageId(id);
         final String clientId = storageId.getExternalId();
         if (this.clientId.equals(clientId)) return new ClientAdapter(realm);
@@ -67,7 +67,7 @@ public class HardcodedClientStorageProvider implements ClientStorageProvider, Cl
     }
 
     @Override
-    public ClientModel getClientByClientId(String clientId, RealmModel realm) {
+    public ClientModel getClientByClientId(RealmModel realm, String clientId) {
         if (this.clientId.equals(clientId)) return new ClientAdapter(realm);
         return null;
     }
@@ -78,7 +78,7 @@ public class HardcodedClientStorageProvider implements ClientStorageProvider, Cl
     }
 
     @Override
-    public List<ClientModel> searchClientsByClientId(String clientId, Integer firstResult, Integer maxResults, RealmModel realm) {
+    public List<ClientModel> searchClientsByClientId(RealmModel realm, String clientId, Integer firstResult, Integer maxResults) {
         if (clientId != null && this.clientId.toLowerCase().contains(clientId.toLowerCase())) {
             return Collections.singletonList(new ClientAdapter(realm));
         }
