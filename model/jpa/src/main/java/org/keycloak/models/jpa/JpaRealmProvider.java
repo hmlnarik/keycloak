@@ -23,6 +23,7 @@ import org.keycloak.connections.jpa.util.JpaUtils;
 import org.keycloak.migration.MigrationModel;
 import org.keycloak.models.ClientInitialAccessModel;
 import org.keycloak.models.ClientModel;
+import org.keycloak.models.ClientProvider;
 import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
@@ -52,7 +53,7 @@ import org.keycloak.models.ModelException;
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
  */
-public class JpaRealmProvider implements RealmProvider {
+public class JpaRealmProvider implements RealmProvider, ClientProvider {
     protected static final Logger logger = Logger.getLogger(JpaRealmProvider.class);
     private final KeycloakSession session;
     protected EntityManager em;
@@ -160,6 +161,10 @@ public class JpaRealmProvider implements RealmProvider {
             // No need to go through cache. Clients were already invalidated
             removeClient(client, adapter);
         }
+        session.clientStorageManager().getClients(adapter).stream()
+          .map(ClientModel::getId)
+          .collect(Collectors.toSet())  // This is necessary to read out all the client IDs before removing the clients
+          .forEach(cid -> session.clientStorageManager().removeClient(cid, adapter));
 
         num = em.createNamedQuery("deleteDefaultClientScopeRealmMappingByRealm")
                 .setParameter("realm", realm).executeUpdate();
@@ -246,11 +251,10 @@ public class JpaRealmProvider implements RealmProvider {
         if (getClientRole(realm, client, name) != null) {
             throw new ModelDuplicateException();
         }
-        ClientEntity clientEntity = em.getReference(ClientEntity.class, client.getId());
         RoleEntity roleEntity = new RoleEntity();
         roleEntity.setId(id);
         roleEntity.setName(name);
-        roleEntity.setClient(clientEntity);
+        roleEntity.setClientId(client.getId());
         roleEntity.setClientRole(true);
         roleEntity.setRealmId(realm.getId());
         em.persist(roleEntity);

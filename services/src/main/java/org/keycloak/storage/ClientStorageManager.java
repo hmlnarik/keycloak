@@ -173,7 +173,15 @@ public class ClientStorageManager implements ClientProvider {
         return session.clientLocalStorage().addClient(realm, id, clientId);
     }
 
+    @Override
+    public boolean removeRole(RealmModel realm, RoleModel role) {
+        return session.clientLocalStorage().removeRole(realm, role);
+    }
 
+    @Override
+    public RoleModel getRoleById(String id, RealmModel realm) {
+        return session.clientLocalStorage().getRoleById(id, realm);
+    }
 
 
     @Override

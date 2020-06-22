@@ -21,10 +21,10 @@ import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.keycloak.models.ClientModel;
+import org.keycloak.models.ClientProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.RealmProvider;
 import org.keycloak.models.UserManager;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
@@ -169,7 +169,7 @@ public class ConcurrentTransactionsTest extends AbstractTestRealmKeycloakTest {
                 String clientDBId = clientDBIdAtomic.get();
 
                 ClientModel clientFromCache = session2.realms().getClientById(clientDBId, realm);
-                ClientModel clientFromDB = session2.getProvider(RealmProvider.class).getClientById(clientDBId, realm);
+                ClientModel clientFromDB = session2.getProvider(ClientProvider.class).getClientById(clientDBId, realm);
 
                 logger.info("SECRET FROM DB : " + clientFromDB.getSecret());
                 logger.info("SECRET FROM CACHE : " + clientFromCache.getSecret());
