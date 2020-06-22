@@ -64,6 +64,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
     private final DefaultKeycloakTransactionManager transactionManager;
     private final Map<String, Object> attributes = new HashMap<>();
     private RealmProvider model;
+    private ClientProvider clientProvider;
     private UserStorageManager userStorageManager;
     private ClientStorageManager clientStorageManager;
     private UserCredentialStoreManager userCredentialStorageManager;
@@ -93,6 +94,16 @@ public class DefaultKeycloakSession implements KeycloakSession {
             return cache;
         } else {
             return getProvider(RealmProvider.class);
+        }
+    }
+
+    private ClientProvider getClientProvider() {
+        // TODO: Extract ClientProvider from CacheRealmProvider and use that instead
+        ClientProvider cache = getProvider(CacheRealmProvider.class);
+        if (cache != null) {
+            return cache;
+        } else {
+            return clientStorageManager();
         }
     }
 
@@ -159,7 +170,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
 
     @Override
     public ClientProvider clientLocalStorage() {
-        return realmLocalStorage();
+        return getProvider(ClientProvider.class);
     }
 
     @Override
@@ -270,6 +281,14 @@ public class DefaultKeycloakSession implements KeycloakSession {
             model = getRealmProvider();
         }
         return model;
+    }
+
+    @Override
+    public ClientProvider clients() {
+        if (clientProvider == null) {
+            clientProvider = getClientProvider();
+        }
+        return clientProvider;
     }
 
 
