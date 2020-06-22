@@ -31,7 +31,9 @@ public interface ClientProvider extends ClientLookupProvider, Provider {
 
     List<ClientModel> getClients(RealmModel realm);
 
-    ClientModel addClient(RealmModel realm, String clientId);
+    default ClientModel addClient(RealmModel realm, String clientId) {
+        return addClient(realm, null, clientId);
+    }
 
     ClientModel addClient(RealmModel realm, String id, String clientId);
 
@@ -44,6 +46,11 @@ public interface ClientProvider extends ClientLookupProvider, Provider {
     Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client);
 
     List<ClientModel> getAlwaysDisplayInConsoleClients(RealmModel realm);
+
+    // TODO - are the following changes really necessary?
+    boolean removeRole(RealmModel realm, RoleModel role);
+
+    RoleModel getRoleById(String id, RealmModel realm);
 
     boolean removeClient(String id, RealmModel realm);
 }
