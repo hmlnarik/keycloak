@@ -159,7 +159,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
 
     @Override
     public ClientProvider clientLocalStorage() {
-        return realmLocalStorage();
+        return getProvider(ClientProvider.class);
     }
 
     @Override

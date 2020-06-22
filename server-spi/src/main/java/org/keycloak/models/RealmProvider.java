@@ -110,4 +110,69 @@ public interface RealmProvider extends Provider, ClientProvider {
     void removeExpiredClientInitialAccess();
     void decreaseRemainingCount(RealmModel realm, ClientInitialAccessModel clientInitialAccess); // Separate provider method to ensure we decrease remainingCount atomically instead of doing classic update
 
+    /** 
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public boolean removeClient(String id, RealmModel realm);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public List<ClientModel> getAlwaysDisplayInConsoleClients(RealmModel realm);
+
+    /**
+     * TODO: To be @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client);
+
+    /**
+     * TODO: To be @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public RoleModel getClientRole(RealmModel realm, ClientModel client, String name);
+
+    /**
+     * TODO: To be @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public RoleModel addClientRole(RealmModel realm, ClientModel client, String id, String name);
+
+    /**
+     * TODO: To be @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public RoleModel addClientRole(RealmModel realm, ClientModel client, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public ClientModel addClient(RealmModel realm, String id, String clientId);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public ClientModel addClient(RealmModel realm, String clientId);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public List<ClientModel> getClients(RealmModel realm);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public List<ClientModel> getClients(RealmModel realm, Integer firstResult, Integer maxResults);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public List<ClientModel> searchClientsByClientId(String clientId, Integer firstResult, Integer maxResults, RealmModel realm);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public ClientModel getClientByClientId(String clientId, RealmModel realm);
+
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    public ClientModel getClientById(String id, RealmModel realm);
+
 }
