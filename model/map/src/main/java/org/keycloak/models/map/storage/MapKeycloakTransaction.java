@@ -14,14 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.keycloak.models.map.transaction;
+package org.keycloak.models.map.storage;
 
 import org.keycloak.models.KeycloakTransaction;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jboss.logging.Logger;
@@ -39,7 +40,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
             protected <K, V> MapTask<K, V> taskFor(K key, V value) {
                 return new MapTaskWithValue<K, V>(value) {
                     @Override
-                    public void execute(ConcurrentMap<K, V> map) {
+                    public void execute(MapStorage<K, V> map) {
                         map.put(key, getValue());
                     }
                 };
@@ -50,7 +51,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
             protected <K, V> MapTask<K, V> taskFor(K key, V value) {
                 return new MapTaskWithValue<K, V>(value) {
                     @Override
-                    public void execute(ConcurrentMap<K, V> map) {
+                    public void execute(MapStorage<K, V> map) {
                         map.putIfAbsent(key, getValue());
                     }
                 };
@@ -59,9 +60,9 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
         REMOVE {
             @Override
             protected <K, V> MapTask<K, V> taskFor(K key, V value) {
-                return new MapTask<K, V>() {
+                return new MapTaskWithValue<K, V>(null) {
                     @Override
-                    public void execute(ConcurrentMap<K, V> map) {
+                    public void execute(MapStorage<K, V> map) {
                         map.remove(key);
                     }
                 };
@@ -72,7 +73,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
             protected <K, V> MapTask<K, V> taskFor(K key, V value) {
                 return new MapTaskWithValue<K, V>(value) {
                     @Override
-                    public void execute(ConcurrentMap<K, V> map) {
+                    public void execute(MapStorage<K, V> map) {
                         map.replace(key, getValue());
                     }
                 };
@@ -87,9 +88,9 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
     private boolean active;
     private boolean rollback;
     private final Map<K, MapTask<K, V>> tasks = new LinkedHashMap<>();
-    private final ConcurrentMap<K, V> map;
+    private final MapStorage<K, V> map;
 
-    public MapKeycloakTransaction(ConcurrentMap<K, V> map) {
+    public MapKeycloakTransaction(MapStorage<K, V> map) {
         this.map = map;
     }
 
@@ -142,7 +143,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
     }
 
     // This is for possibility to lookup for session by id, which was created in this transaction
-    public V get(K key) {
+    public V get(K key, Function<K, V> defaultValueFunc) {
         MapTask current = tasks.get(key);
         if (current != null) {
             if (current instanceof MapTaskWithValue) {
@@ -151,8 +152,19 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
             return null;
         }
 
-        // Should we have per-transaction cache for lookups?
-        return map.get(key);
+        return defaultValueFunc.apply(key);
+    }
+
+    public V getUpdated(Map.Entry<K, V> keyDefaultValue) {
+        MapTask current = tasks.get(keyDefaultValue.getKey());
+        if (current != null) {
+            if (current instanceof MapTaskWithValue) {
+                return ((MapTaskWithValue<K, V>) current).getValue();
+            }
+            return null;
+        }
+
+        return keyDefaultValue.getValue();
     }
 
     public void put(K key, V value) {
@@ -169,7 +181,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
         K taskKey = key;
         MapTaskWithValue<K, V> op = new MapTaskWithValue<K, V>(value) {
             @Override
-            public void execute(ConcurrentMap<K, V> map) {
+            public void execute(MapStorage<K, V> map) {
                 if (shouldPut.test(getValue())) {
                     map.put(key, getValue());
                 }
@@ -194,8 +206,18 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
           .filter(Objects::nonNull);
     }
 
+    public Stream<V> createdValuesStream(Collection<K> existingKeys) {
+        return this.tasks.entrySet().stream()
+          .filter(me -> ! existingKeys.contains(me.getKey()))
+          .map(Map.Entry::getValue)
+          .filter(MapTaskWithValue.class::isInstance)
+          .map(MapTaskWithValue.class::cast)
+          .map(MapTaskWithValue<K,V>::getValue)
+          .filter(Objects::nonNull);
+    }
+
     private interface MapTask<K, V> {
-        void execute(ConcurrentMap<K,V> map);
+        void execute(MapStorage<K,V> map);
     }
 
     private static abstract class MapTaskWithValue<K, V> implements MapTask<K, V> {
@@ -222,7 +244,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
         }
 
         @Override
-        public void execute(ConcurrentMap<K, V> map) {
+        public void execute(MapStorage<K, V> map) {
             oldValue.execute(map);
             value.execute(map);
         }
