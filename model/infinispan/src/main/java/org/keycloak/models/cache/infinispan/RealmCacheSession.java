@@ -495,13 +495,13 @@ public class RealmCacheSession implements CacheRealmProvider {
 
     @Override
     public ClientModel addClient(RealmModel realm, String clientId) {
-        ClientModel client = getRealmDelegate().addClient(realm, clientId);
+        ClientModel client = getClientDelegate().addClient(realm, clientId);
         return addedClient(realm, client);
     }
 
     @Override
     public ClientModel addClient(RealmModel realm, String id, String clientId) {
-        ClientModel client = getRealmDelegate().addClient(realm, id, clientId);
+        ClientModel client = getClientDelegate().addClient(realm, id, clientId);
         return addedClient(realm, client);
     }
 
@@ -575,7 +575,7 @@ public class RealmCacheSession implements CacheRealmProvider {
             }
         }
         
-        return getRealmDelegate().removeClient(id, realm);
+        return getClientDelegate().removeClient(id, realm);
     }
 
 
@@ -1052,7 +1052,7 @@ public class RealmCacheSession implements CacheRealmProvider {
             managedApplications.put(id, adapter);
             return adapter;
         } else if (invalidations.contains(id)) {
-            return getRealmDelegate().getClientById(id, realm);
+            return getClientDelegate().getClientById(id, realm);
         } else if (managedApplications.containsKey(id)) {
             return managedApplications.get(id);
         }
