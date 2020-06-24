@@ -37,7 +37,6 @@ public abstract class MapClientAdapter implements ClientModel {
     private final KeycloakSession session;
     private final RealmModel realm;
     protected final MapClientEntity entity;
-    private final Map<String, Integer> registeredNodes = new HashMap<>();
 
     public MapClientAdapter(KeycloakSession session, RealmModel realm, MapClientEntity entity) {
         Objects.requireNonNull(entity, "entity");

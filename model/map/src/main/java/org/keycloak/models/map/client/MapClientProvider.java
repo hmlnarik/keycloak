@@ -51,7 +51,7 @@ public class MapClientProvider implements ClientProvider {
     protected static final Logger logger = Logger.getLogger(MapClientProvider.class);
     private static final Predicate<MapClientEntity> ALWAYS_FALSE = c -> { return false; };
     private final KeycloakSession session;
-    private final MapKeycloakTransaction<UUID, MapClientEntity> tx;
+    final MapKeycloakTransaction<UUID, MapClientEntity> tx;
     private final ConcurrentMap<UUID, MapClientEntity> clientStore;
     private final ConcurrentMap<UUID, ConcurrentMap<String, Integer>> clientRegisteredNodesStore;
 
@@ -147,9 +147,16 @@ public class MapClientProvider implements ClientProvider {
         return s.collect(Collectors.toList());
     }
 
+    private Stream<MapClientEntity> getNotRemovedUpdatedClientsStream() {
+        Stream<MapClientEntity> updatedAndNotRemovedClientsStream = clientStore.entrySet().stream()
+          .map(tx::getUpdated)    // If the client has been removed, tx.get will return null, otherwise it will return me.getValue()
+          .filter(Objects::nonNull);
+        return Stream.concat(tx.createdValuesStream(clientStore.keySet()), updatedAndNotRemovedClientsStream);
+    }
+
 //    @Override
     public Stream<ClientModel> getClientsStream(RealmModel realm) {
-        return clientStore.values().stream()
+        return getNotRemovedUpdatedClientsStream()
           .filter(entityRealmFilter(realm))
           .sorted(COMPARE_BY_CLIENT_ID)
           .map(entityToAdapterFunc(realm))
@@ -168,7 +175,7 @@ public class MapClientProvider implements ClientProvider {
         entity.setClientId(clientId);
         entity.setEnabled(true);
         entity.setStandardFlowEnabled(true);
-        if (tx.get(entity.getId()) != null) {
+        if (tx.get(entity.getId(), clientStore::get) != null) {
             throw new ModelDuplicateException("Client exists: " + id);
         }
         tx.putIfAbsent(entity.getId(), entity);
@@ -224,7 +231,7 @@ public class MapClientProvider implements ClientProvider {
         if (id == null) {
             return null;
         }
-        MapClientEntity entity = tx.get(UUID.fromString(id));
+        MapClientEntity entity = tx.get(UUID.fromString(id), clientStore::get);
         return (entity == null || ! entityRealmFilter(realm).test(entity))
           ? null
           : entityToAdapterFunc(realm).apply(entity);
@@ -237,7 +244,7 @@ public class MapClientProvider implements ClientProvider {
         }
         String clientIdLower = clientId.toLowerCase();
 
-        return Stream.concat(tx.valuesStream(), clientStore.values().stream())
+        return getNotRemovedUpdatedClientsStream()
           .filter(entityRealmFilter(realm))
           .filter(entity -> entity.getClientId() != null && Objects.equals(entity.getClientId().toLowerCase(), clientIdLower))
           .map(entityToAdapterFunc(realm))
@@ -252,13 +259,19 @@ public class MapClientProvider implements ClientProvider {
             return Collections.EMPTY_LIST;
         }
         String clientIdLower = clientId.toLowerCase();
-
-        return Stream.concat(tx.valuesStream(), clientStore.values().stream())
+        Stream<MapClientEntity> s = getNotRemovedUpdatedClientsStream()
           .filter(entityRealmFilter(realm))
           .filter(entity -> entity.getClientId() != null && entity.getClientId().toLowerCase().contains(clientIdLower))
-          .sorted(COMPARE_BY_CLIENT_ID)
-          .skip(firstResult)
-          .limit(maxResults)
+          .sorted(COMPARE_BY_CLIENT_ID);
+
+        if (firstResult >= 0) {
+            s = s.skip(firstResult);
+        }
+        if (maxResults >= 0) {
+            s = s.limit(maxResults);
+        }
+
+        return s
           .map(entityToAdapterFunc(realm))
           .collect(Collectors.toList())
         ;

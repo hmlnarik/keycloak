@@ -18,6 +18,10 @@
         "provider": "${keycloak.realm.provider:}"
     },
 
+    "client": {
+        "provider": "${keycloak.realm.provider:map}"
+    },
+
     "user": {
         "provider": "${keycloak.user.provider:}"
     },
