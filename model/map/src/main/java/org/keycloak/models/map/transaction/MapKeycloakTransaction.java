@@ -18,10 +18,12 @@ package org.keycloak.models.map.transaction;
 
 import org.keycloak.models.KeycloakTransaction;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jboss.logging.Logger;
@@ -59,7 +61,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
         REMOVE {
             @Override
             protected <K, V> MapTask<K, V> taskFor(K key, V value) {
-                return new MapTask<K, V>() {
+                return new MapTaskWithValue<K, V>(null) {
                     @Override
                     public void execute(ConcurrentMap<K, V> map) {
                         map.remove(key);
@@ -142,7 +144,7 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
     }
 
     // This is for possibility to lookup for session by id, which was created in this transaction
-    public V get(K key) {
+    public V get(K key, Function<K, V> defaultValueFunc) {
         MapTask current = tasks.get(key);
         if (current != null) {
             if (current instanceof MapTaskWithValue) {
@@ -151,8 +153,19 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
             return null;
         }
 
-        // Should we have per-transaction cache for lookups?
-        return map.get(key);
+        return defaultValueFunc.apply(key);
+    }
+
+    public V getUpdated(Map.Entry<K, V> keyDefaultValue) {
+        MapTask current = tasks.get(keyDefaultValue.getKey());
+        if (current != null) {
+            if (current instanceof MapTaskWithValue) {
+                return ((MapTaskWithValue<K, V>) current).getValue();
+            }
+            return null;
+        }
+
+        return keyDefaultValue.getValue();
     }
 
     public void put(K key, V value) {
@@ -188,6 +201,16 @@ public class MapKeycloakTransaction<K, V> implements KeycloakTransaction {
 
     public Stream<V> valuesStream() {
         return this.tasks.values().stream()
+          .filter(MapTaskWithValue.class::isInstance)
+          .map(MapTaskWithValue.class::cast)
+          .map(MapTaskWithValue<K,V>::getValue)
+          .filter(Objects::nonNull);
+    }
+
+    public Stream<V> createdValuesStream(Collection<K> existingKeys) {
+        return this.tasks.entrySet().stream()
+          .filter(me -> ! existingKeys.contains(me.getKey()))
+          .map(Map.Entry::getValue)
           .filter(MapTaskWithValue.class::isInstance)
           .map(MapTaskWithValue.class::cast)
           .map(MapTaskWithValue<K,V>::getValue)
