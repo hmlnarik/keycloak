@@ -163,6 +163,7 @@ public class JpaRealmProvider implements RealmProvider, ClientProvider {
         }
         session.clientStorageManager().getClients(adapter).stream()
           .map(ClientModel::getId)
+          .collect(Collectors.toSet())  // This is necessary to read out all the client IDs before removing the clients
           .forEach(cid -> session.clientStorageManager().removeClient(cid, adapter));
 
         num = em.createNamedQuery("deleteDefaultClientScopeRealmMappingByRealm")
