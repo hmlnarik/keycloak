@@ -7,8 +7,12 @@ package org.keycloak.models.map.client;
 
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
-import org.keycloak.util.JsonSerialization;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,12 +55,12 @@ public class MapClientEntity {
     private boolean fullScopeAllowed;
     private boolean frontchannelLogout;
     private int notBefore;
-    private final Set<String> scope = new HashSet<>();
-    private final Set<String> webOrigins = new HashSet<>();
-    private final Map<UUID, ProtocolMapperModel> protocolMappers = new HashMap<>();
-    private final Map<UUID, Boolean> clientScopes = new HashMap<>();
-    private final Set<UUID> scopeMappings = new LinkedHashSet<>();
-    private final List<String> defaultRoles = new LinkedList<>();
+    private Set<String> scope = new HashSet<>();
+    private Set<String> webOrigins = new HashSet<>();
+    private Map<UUID, ProtocolMapperModel> protocolMappers = new HashMap<>();
+    private Map<UUID, Boolean> clientScopes = new HashMap<>();
+    private Set<UUID> scopeMappings = new LinkedHashSet<>();
+    private List<String> defaultRoles = new LinkedList<>();
     private boolean surrogateAuthRequired;
     private String managementUrl;
     private String rootUrl;
@@ -68,8 +72,6 @@ public class MapClientEntity {
     private boolean directAccessGrantsEnabled;
     private boolean serviceAccountsEnabled;
     private int nodeReRegistrationTimeout;
-    private List<String> defaultClientScopesIds;
-    private List<String> optionalClientScopesIds;
 
     // has any setter been used?
     @JsonIgnore
@@ -85,13 +87,23 @@ public class MapClientEntity {
         this.realmId = realmId;
     }
 
+    public static final ObjectMapper MAPPER = new ObjectMapper();
+
+    static {
+        MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
+        MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        MAPPER.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+        MAPPER.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+    }
+
     public static MapClientEntity from(MapClientEntity orig) {
         if (orig == null) {
             return null;
         }
         try {
             // Naive solution but will do.
-            final MapClientEntity res = JsonSerialization.readValue(JsonSerialization.writeValueAsBytes(orig), MapClientEntity.class);
+            final MapClientEntity res = MAPPER.readValue(MAPPER.writeValueAsBytes(orig), MapClientEntity.class);
             res.updated = false;
             return res;
         } catch (IOException ex) {
@@ -397,24 +409,6 @@ public class MapClientEntity {
     public void setNodeReRegistrationTimeout(int nodeReRegistrationTimeout) {
         this.updated |= Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
         this.nodeReRegistrationTimeout = nodeReRegistrationTimeout;
-    }
-
-    public List<String> getDefaultClientScopesIds() {
-        return defaultClientScopesIds;
-    }
-
-    public void setDefaultClientScopesIds(List<String> defaultClientScopesIds) {
-        this.updated |= Objects.equals(this.defaultClientScopesIds, defaultClientScopesIds);
-        this.defaultClientScopesIds = defaultClientScopesIds;
-    }
-
-    public List<String> getOptionalClientScopesIds() {
-        return optionalClientScopesIds;
-    }
-
-    public void setOptionalClientScopesIds(List<String> optionalClientScopesIds) {
-        this.updated |= Objects.equals(this.optionalClientScopesIds, optionalClientScopesIds);
-        this.optionalClientScopesIds = optionalClientScopesIds;
     }
 
     public void addWebOrigin(String webOrigin) {
