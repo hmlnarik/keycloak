@@ -120,7 +120,7 @@ public class MapClientEntity {
     }
 
     public void setClientId(String clientId) {
-        this.updated |= Objects.equals(this.clientId, clientId);
+        this.updated |= ! Objects.equals(this.clientId, clientId);
         this.clientId = clientId;
     }
 
@@ -129,7 +129,7 @@ public class MapClientEntity {
     }
 
     public void setName(String name) {
-        this.updated |= Objects.equals(this.name, name);
+        this.updated |= ! Objects.equals(this.name, name);
         this.name = name;
     }
 
@@ -138,7 +138,7 @@ public class MapClientEntity {
     }
 
     public void setDescription(String description) {
-        this.updated |= Objects.equals(this.description, description);
+        this.updated |= ! Objects.equals(this.description, description);
         this.description = description;
     }
 
@@ -147,7 +147,7 @@ public class MapClientEntity {
     }
 
     public void setRedirectUris(Set<String> redirectUris) {
-        this.updated |= Objects.equals(this.redirectUris, redirectUris);
+        this.updated |= ! Objects.equals(this.redirectUris, redirectUris);
         this.redirectUris = redirectUris;
     }
 
@@ -156,7 +156,7 @@ public class MapClientEntity {
     }
 
     public void setEnabled(boolean enabled) {
-        this.updated |= Objects.equals(this.enabled, enabled);
+        this.updated |= ! Objects.equals(this.enabled, enabled);
         this.enabled = enabled;
     }
 
@@ -165,7 +165,7 @@ public class MapClientEntity {
     }
 
     public void setAlwaysDisplayInConsole(boolean alwaysDisplayInConsole) {
-        this.updated |= Objects.equals(this.alwaysDisplayInConsole, alwaysDisplayInConsole);
+        this.updated |= ! Objects.equals(this.alwaysDisplayInConsole, alwaysDisplayInConsole);
         this.alwaysDisplayInConsole = alwaysDisplayInConsole;
     }
 
@@ -174,7 +174,7 @@ public class MapClientEntity {
     }
 
     public void setClientAuthenticatorType(String clientAuthenticatorType) {
-        this.updated |= Objects.equals(this.clientAuthenticatorType, clientAuthenticatorType);
+        this.updated |= ! Objects.equals(this.clientAuthenticatorType, clientAuthenticatorType);
         this.clientAuthenticatorType = clientAuthenticatorType;
     }
 
@@ -183,7 +183,7 @@ public class MapClientEntity {
     }
 
     public void setSecret(String secret) {
-        this.updated |= Objects.equals(this.secret, secret);
+        this.updated |= ! Objects.equals(this.secret, secret);
         this.secret = secret;
     }
 
@@ -192,7 +192,7 @@ public class MapClientEntity {
     }
 
     public void setRegistrationToken(String registrationToken) {
-        this.updated |= Objects.equals(this.registrationToken, registrationToken);
+        this.updated |= ! Objects.equals(this.registrationToken, registrationToken);
         this.registrationToken = registrationToken;
     }
 
@@ -201,7 +201,7 @@ public class MapClientEntity {
     }
 
     public void setProtocol(String protocol) {
-        this.updated |= Objects.equals(this.protocol, protocol);
+        this.updated |= ! Objects.equals(this.protocol, protocol);
         this.protocol = protocol;
     }
 
@@ -210,7 +210,7 @@ public class MapClientEntity {
     }
 
     public void setAttributes(Map<String, String> attributes) {
-        this.updated |= Objects.equals(this.attributes, attributes);
+        this.updated |= ! Objects.equals(this.attributes, attributes);
         this.attributes = attributes;
     }
 
@@ -219,7 +219,7 @@ public class MapClientEntity {
     }
 
     public void setAuthFlowBindings(Map<String, String> authFlowBindings) {
-        this.updated |= Objects.equals(this.authFlowBindings, authFlowBindings);
+        this.updated |= ! Objects.equals(this.authFlowBindings, authFlowBindings);
         this.authFlowBindings = authFlowBindings;
     }
 
@@ -228,7 +228,7 @@ public class MapClientEntity {
     }
 
     public void setPublicClient(boolean publicClient) {
-        this.updated |= Objects.equals(this.publicClient, publicClient);
+        this.updated |= ! Objects.equals(this.publicClient, publicClient);
         this.publicClient = publicClient;
     }
 
@@ -237,7 +237,7 @@ public class MapClientEntity {
     }
 
     public void setFullScopeAllowed(boolean fullScopeAllowed) {
-        this.updated |= Objects.equals(this.fullScopeAllowed, fullScopeAllowed);
+        this.updated |= ! Objects.equals(this.fullScopeAllowed, fullScopeAllowed);
         this.fullScopeAllowed = fullScopeAllowed;
     }
 
@@ -246,7 +246,7 @@ public class MapClientEntity {
     }
 
     public void setFrontchannelLogout(boolean frontchannelLogout) {
-        this.updated |= Objects.equals(this.frontchannelLogout, frontchannelLogout);
+        this.updated |= ! Objects.equals(this.frontchannelLogout, frontchannelLogout);
         this.frontchannelLogout = frontchannelLogout;
     }
 
@@ -255,7 +255,7 @@ public class MapClientEntity {
     }
 
     public void setNotBefore(int notBefore) {
-        this.updated |= Objects.equals(this.notBefore, notBefore);
+        this.updated |= ! Objects.equals(this.notBefore, notBefore);
         this.notBefore = notBefore;
     }
 
@@ -264,7 +264,7 @@ public class MapClientEntity {
     }
 
     public void setScope(Set<String> scope) {
-        this.updated |= Objects.equals(this.scope, scope);
+        this.updated |= ! Objects.equals(this.scope, scope);
         this.scope.clear();
         this.scope.addAll(scope);
     }
@@ -274,7 +274,7 @@ public class MapClientEntity {
     }
 
     public void setWebOrigins(Set<String> webOrigins) {
-        this.updated |= Objects.equals(this.webOrigins, webOrigins);
+        this.updated |= ! Objects.equals(this.webOrigins, webOrigins);
         this.webOrigins.clear();
         this.webOrigins.addAll(webOrigins);
     }
@@ -284,7 +284,7 @@ public class MapClientEntity {
     }
 
     public void setProtocolMappers(Collection<ProtocolMapperModel> protocolMappers) {
-        this.updated |= Objects.equals(this.protocolMappers, protocolMappers);
+        this.updated |= ! Objects.equals(this.protocolMappers, protocolMappers);
         this.protocolMappers.clear();
         this.protocolMappers.putAll(protocolMappers.stream().collect(Collectors.toMap(m -> UUID.fromString(m.getId()), Function.identity())));
     }
@@ -294,7 +294,7 @@ public class MapClientEntity {
     }
 
     public void setSurrogateAuthRequired(boolean surrogateAuthRequired) {
-        this.updated |= Objects.equals(this.surrogateAuthRequired, surrogateAuthRequired);
+        this.updated |= ! Objects.equals(this.surrogateAuthRequired, surrogateAuthRequired);
         this.surrogateAuthRequired = surrogateAuthRequired;
     }
 
@@ -303,7 +303,7 @@ public class MapClientEntity {
     }
 
     public void setManagementUrl(String managementUrl) {
-        this.updated |= Objects.equals(this.managementUrl, managementUrl);
+        this.updated |= ! Objects.equals(this.managementUrl, managementUrl);
         this.managementUrl = managementUrl;
     }
 
@@ -312,7 +312,7 @@ public class MapClientEntity {
     }
 
     public void setRootUrl(String rootUrl) {
-        this.updated |= Objects.equals(this.rootUrl, rootUrl);
+        this.updated |= ! Objects.equals(this.rootUrl, rootUrl);
         this.rootUrl = rootUrl;
     }
 
@@ -321,7 +321,7 @@ public class MapClientEntity {
     }
 
     public void setBaseUrl(String baseUrl) {
-        this.updated |= Objects.equals(this.baseUrl, baseUrl);
+        this.updated |= ! Objects.equals(this.baseUrl, baseUrl);
         this.baseUrl = baseUrl;
     }
 
@@ -330,7 +330,7 @@ public class MapClientEntity {
     }
 
     public void setDefaultRoles(Collection<String> defaultRoles) {
-        this.updated |= Objects.equals(this.defaultRoles, defaultRoles);
+        this.updated |= ! Objects.equals(this.defaultRoles, defaultRoles);
         this.defaultRoles.clear();
         this.defaultRoles.addAll(defaultRoles);
     }
@@ -353,7 +353,7 @@ public class MapClientEntity {
     }
 
     public void setBearerOnly(boolean bearerOnly) {
-        this.updated |= Objects.equals(this.bearerOnly, bearerOnly);
+        this.updated |= ! Objects.equals(this.bearerOnly, bearerOnly);
         this.bearerOnly = bearerOnly;
     }
 
@@ -362,7 +362,7 @@ public class MapClientEntity {
     }
 
     public void setConsentRequired(boolean consentRequired) {
-        this.updated |= Objects.equals(this.consentRequired, consentRequired);
+        this.updated |= ! Objects.equals(this.consentRequired, consentRequired);
         this.consentRequired = consentRequired;
     }
 
@@ -371,7 +371,7 @@ public class MapClientEntity {
     }
 
     public void setStandardFlowEnabled(boolean standardFlowEnabled) {
-        this.updated |= Objects.equals(this.standardFlowEnabled, standardFlowEnabled);
+        this.updated |= ! Objects.equals(this.standardFlowEnabled, standardFlowEnabled);
         this.standardFlowEnabled = standardFlowEnabled;
     }
 
@@ -380,7 +380,7 @@ public class MapClientEntity {
     }
 
     public void setImplicitFlowEnabled(boolean implicitFlowEnabled) {
-        this.updated |= Objects.equals(this.implicitFlowEnabled, implicitFlowEnabled);
+        this.updated |= ! Objects.equals(this.implicitFlowEnabled, implicitFlowEnabled);
         this.implicitFlowEnabled = implicitFlowEnabled;
     }
 
@@ -389,7 +389,7 @@ public class MapClientEntity {
     }
 
     public void setDirectAccessGrantsEnabled(boolean directAccessGrantsEnabled) {
-        this.updated |= Objects.equals(this.directAccessGrantsEnabled, directAccessGrantsEnabled);
+        this.updated |= ! Objects.equals(this.directAccessGrantsEnabled, directAccessGrantsEnabled);
         this.directAccessGrantsEnabled = directAccessGrantsEnabled;
     }
 
@@ -398,7 +398,7 @@ public class MapClientEntity {
     }
 
     public void setServiceAccountsEnabled(boolean serviceAccountsEnabled) {
-        this.updated |= Objects.equals(this.serviceAccountsEnabled, serviceAccountsEnabled);
+        this.updated |= ! Objects.equals(this.serviceAccountsEnabled, serviceAccountsEnabled);
         this.serviceAccountsEnabled = serviceAccountsEnabled;
     }
 
@@ -407,7 +407,7 @@ public class MapClientEntity {
     }
 
     public void setNodeReRegistrationTimeout(int nodeReRegistrationTimeout) {
-        this.updated |= Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
+        this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
         this.nodeReRegistrationTimeout = nodeReRegistrationTimeout;
     }
 
@@ -421,7 +421,7 @@ public class MapClientEntity {
     }
 
     public void addRedirectUri(String redirectUri) {
-        this.updated |= Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
+        this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
         this.redirectUris.add(redirectUri);
     }
 
@@ -456,7 +456,7 @@ public class MapClientEntity {
     }
 
     public void setAuthenticationFlowBindingOverride(String binding, String flowId) {
-        this.updated |= Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
+        this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
         this.authFlowBindings.put(binding, flowId);
     }
 
