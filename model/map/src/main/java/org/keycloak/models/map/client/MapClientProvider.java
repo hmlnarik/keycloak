@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Red Hat, Inc. and/or its affiliates
+ * Copyright 2020 Red Hat, Inc. and/or its affiliates
  * and other contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,16 +42,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import static org.keycloak.common.util.StackUtil.getShortStackTraceIfTraceEnabled;
 import org.keycloak.models.map.storage.MapStorage;
+import static org.keycloak.common.util.StackUtil.getShortStackTrace;
+import static org.keycloak.common.util.StackUtil.getShortStackTrace;
 
-/**
- * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
- * @version $Revision: 1 $
- */
 public class MapClientProvider implements ClientProvider {
 
-    protected static final Logger logger = Logger.getLogger(MapClientProvider.class);
+    private static final Logger LOG = Logger.getLogger(MapClientProvider.class);
     private static final Predicate<MapClientEntity> ALWAYS_FALSE = c -> { return false; };
     private final KeycloakSession session;
     final MapKeycloakTransaction<UUID, MapClientEntity> tx;
@@ -179,7 +176,7 @@ public class MapClientProvider implements ClientProvider {
             clientId = entityId.toString();
         }
 
-        LOG.tracef("addClient(%s, %s, %s)%s", realm, id, clientId, getShortStackTraceIfTraceEnabled());
+        LOG.tracef("addClient(%s, %s, %s)%s", realm, id, clientId, getShortStackTrace());
 
         MapClientEntity entity = new MapClientEntity(entityId, realm.getId());
         entity.setClientId(clientId);
@@ -210,6 +207,8 @@ public class MapClientProvider implements ClientProvider {
         if (id == null) {
             return false;
         }
+
+        LOG.tracef("removeClient(%s, %s)%s", realm, id, getShortStackTrace());
 
         // TODO: Sending an event (and client role removal) should be extracted to store layer
         final ClientModel client = getClientById(id, realm);
@@ -243,6 +242,9 @@ public class MapClientProvider implements ClientProvider {
         if (id == null) {
             return null;
         }
+
+        LOG.tracef("getClientById(%s, %s)%s", realm, id, getShortStackTrace());
+
         MapClientEntity entity = tx.get(UUID.fromString(id), clientStore::get);
         return (entity == null || ! entityRealmFilter(realm).test(entity))
           ? null
@@ -254,6 +256,8 @@ public class MapClientProvider implements ClientProvider {
         if (clientId == null) {
             return null;
         }
+        LOG.tracef("getClientByClientId(%s, %s)%s", realm, clientId, getShortStackTrace());
+
         String clientIdLower = clientId.toLowerCase();
 
         return getNotRemovedUpdatedClientsStream()
