@@ -85,6 +85,7 @@ import static org.keycloak.services.resources.admin.AdminAuth.Resource.AUTHORIZA
 import static org.keycloak.services.resources.admin.AdminAuth.Resource.CLIENT;
 
 import org.keycloak.testsuite.utils.tls.TLSUtils;
+import org.jgroups.util.UUID;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -712,7 +713,7 @@ public class PermissionsTest extends AbstractKeycloakTest {
 
         invoke(new Invocation() {
             public void invoke(RealmResource realm) {
-                realm.clients().get("nosuch").roles().list();
+                realm.clients().get(UUID.randomUUID().toString()).roles().list();
             }
         }, Resource.CLIENT, false, true);
         invoke(new Invocation() {
