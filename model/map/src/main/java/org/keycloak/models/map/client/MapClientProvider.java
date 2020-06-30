@@ -27,6 +27,7 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmModel.ClientUpdatedEvent;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.transaction.MapKeycloakTransaction;
+import org.keycloak.models.map.utils.Serialization;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import java.util.Collections;
 import java.util.Comparator;
@@ -92,7 +93,7 @@ public class MapClientProvider implements ClientProvider {
     }
 
     private MapClientEntity registerEntityForChanges(MapClientEntity origEntity) {
-        final MapClientEntity res = MapClientEntity.from(origEntity);
+        final MapClientEntity res = Serialization.from(origEntity);
         tx.putIfChanged(origEntity.getId(), res, MapClientEntity::isUpdated);
         return res;
     }

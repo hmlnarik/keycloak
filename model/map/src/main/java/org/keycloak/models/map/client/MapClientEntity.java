@@ -6,14 +6,7 @@
 package org.keycloak.models.map.client;
 
 import org.keycloak.models.ProtocolMapperModel;
-import org.keycloak.models.utils.KeycloakModelUtils;
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import java.io.IOException;
+import org.keycloak.models.map.utils.HasUpdated;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,7 +26,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public class MapClientEntity {
+public class MapClientEntity extends HasUpdated {
 
     // If clone() was improved, the id and realmId could be final
     private UUID id;
@@ -73,10 +66,6 @@ public class MapClientEntity {
     private boolean serviceAccountsEnabled;
     private int nodeReRegistrationTimeout;
 
-    // has any setter been used?
-    @JsonIgnore
-    private boolean updated;
-
     public MapClientEntity() {
         this.id = null;
         this.realmId = null;
@@ -85,30 +74,6 @@ public class MapClientEntity {
     public MapClientEntity(UUID id, String realmId) {
         this.id = id == null ? UUID.randomUUID() : id;
         this.realmId = realmId;
-    }
-
-    public static final ObjectMapper MAPPER = new ObjectMapper();
-
-    static {
-        MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
-        MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        MAPPER.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
-        MAPPER.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
-    }
-
-    public static MapClientEntity from(MapClientEntity orig) {
-        if (orig == null) {
-            return null;
-        }
-        try {
-            // Naive solution but will do.
-            final MapClientEntity res = MAPPER.readValue(MAPPER.writeValueAsBytes(orig), MapClientEntity.class);
-            res.updated = false;
-            return res;
-        } catch (IOException ex) {
-            throw new IllegalStateException(ex);
-        }
     }
 
     public UUID getId() {
@@ -466,7 +431,7 @@ public class MapClientEntity {
         }
         updated = true;
         if (model.getId() == null) {
-            model.setId(KeycloakModelUtils.generateId());
+            model.setId(UUID.randomUUID().toString());
         }
         this.protocolMappers.put(UUID.fromString(model.getId()), model);
         return model;
@@ -537,13 +502,4 @@ public class MapClientEntity {
     public String getRealmId() {
         return this.realmId;
     }
-
-    /**
-     * Flag signalizing that any of the setters has been meaningfully used.
-     * @return
-     */
-    public boolean isUpdated() {
-        return updated;
-    }
-
 }
