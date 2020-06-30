@@ -194,7 +194,9 @@ public class MapClientProvider implements ClientProvider {
 
     @Override
     public List<ClientModel> getAlwaysDisplayInConsoleClients(RealmModel realm) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return getClientsStream(realm)
+                .filter(ClientModel::isAlwaysDisplayInConsole)
+                .collect(Collectors.toList());
     }
 
     @Override
