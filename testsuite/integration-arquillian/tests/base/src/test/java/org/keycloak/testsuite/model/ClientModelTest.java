@@ -305,18 +305,19 @@ public class ClientModelTest extends AbstractKeycloakTest {
     @Test
     @ModelTest
     public void testAddApplicationWithId(KeycloakSession session) {
+        final String id = KeycloakModelUtils.generateId();
         KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession sessionAppWithId1) -> {
             currentSession = sessionAppWithId1;
             RealmModel realm = currentSession.realms().getRealmByName(realmName);
 
-            client = realm.addClient("app-123", "application2");
+            client = realm.addClient(id, "application2");
         });
 
         KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession sessionAppWithId2) -> {
             currentSession = sessionAppWithId2;
             RealmModel realm = currentSession.realms().getRealmByName(realmName);
 
-            client = currentSession.realms().getClientById("app-123", realm);
+            client = currentSession.clientStorageManager().getClientById(id, realm);
             assertThat("Client 'app-123' is NULL!!", client, notNullValue());
 
             currentSession.realms().removeClient(client.getId(), realm);
