@@ -1,12 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.keycloak.models.map.client;
 
 import org.keycloak.models.ProtocolMapperModel;
-import org.keycloak.models.map.utils.HasUpdated;
+import org.keycloak.models.map.common.HasUpdated;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +21,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public class MapClientEntity extends HasUpdated {
+public class MapClientEntity extends HasUpdated<UUID> {
 
     // If clone() was improved, the id and realmId could be final
     private UUID id;

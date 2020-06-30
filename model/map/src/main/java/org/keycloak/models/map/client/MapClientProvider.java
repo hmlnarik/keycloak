@@ -27,7 +27,7 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmModel.ClientUpdatedEvent;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.transaction.MapKeycloakTransaction;
-import org.keycloak.models.map.utils.Serialization;
+import org.keycloak.models.map.common.Serialization;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import java.util.Collections;
 import java.util.Comparator;
