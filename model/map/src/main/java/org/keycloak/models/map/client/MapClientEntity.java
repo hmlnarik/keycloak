@@ -61,7 +61,7 @@ public class MapClientEntity extends HasUpdated<UUID> {
     private boolean serviceAccountsEnabled;
     private int nodeReRegistrationTimeout;
 
-    public MapClientEntity() {
+    protected MapClientEntity() {
         this.id = null;
         this.realmId = null;
     }

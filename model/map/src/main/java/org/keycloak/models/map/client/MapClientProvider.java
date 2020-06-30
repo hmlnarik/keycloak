@@ -174,6 +174,10 @@ public class MapClientProvider implements ClientProvider {
     public ClientModel addClient(RealmModel realm, String id, String clientId) {
         final UUID entityId = id == null ? UUID.randomUUID() : UUID.fromString(id);
 
+        if (clientId == null) {
+            clientId = entityId.toString();
+        }
+
         LOG.tracef("addClient(%s, %s, %s)%s", realm, id, clientId, getShortStackTraceIfTraceEnabled());
 
         MapClientEntity entity = new MapClientEntity(entityId, realm.getId());
