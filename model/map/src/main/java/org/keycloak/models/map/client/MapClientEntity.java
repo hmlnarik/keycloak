@@ -381,7 +381,7 @@ public class MapClientEntity extends HasUpdated<UUID> {
     }
 
     public void addRedirectUri(String redirectUri) {
-        this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
+        this.updated |= ! this.redirectUris.contains(redirectUri);
         this.redirectUris.add(redirectUri);
     }
 
@@ -415,7 +415,7 @@ public class MapClientEntity extends HasUpdated<UUID> {
     }
 
     public void setAuthenticationFlowBindingOverride(String binding, String flowId) {
-        this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
+        this.updated = true;
         this.authFlowBindings.put(binding, flowId);
     }
 
