@@ -395,8 +395,7 @@ public class MapClientEntity extends HasUpdated<UUID> {
     }
 
     public void removeAttribute(String name) {
-        this.updated = true;
-        this.attributes.remove(name);
+        this.updated |= this.attributes.remove(name) != null;
     }
 
     public String getAttribute(String name) {
@@ -467,7 +466,7 @@ public class MapClientEntity extends HasUpdated<UUID> {
 
     public void removeClientScope(UUID id) {
         if (id != null) {
-            updated |= clientScopes.remove(id);
+            updated |= clientScopes.remove(id) != null;
         }
     }
 
