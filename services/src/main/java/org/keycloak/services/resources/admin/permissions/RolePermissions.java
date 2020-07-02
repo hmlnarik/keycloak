@@ -138,7 +138,8 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
 
             ClientModel adminClient = root.getRealmManagementClient();
             // is this an admin role in 'realm-management' client of the realm we are managing?
-            if (adminClient.equals(role.getContainer())) {
+            final RoleContainerModel container = role.getContainer();
+            if (adminClient.equals(container)) {
                 // if this is realm admin role, then check to see if admin has similar permissions
                 // we do this so that the authz service is invoked
                 if (role.getName().equals(AdminRoles.MANAGE_CLIENTS)
@@ -249,18 +250,18 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
 
             } else {
                 // now we need to check to see if this is a master admin role
-                if (role.getContainer() instanceof RealmModel) {
-                    RealmModel realm = (RealmModel)role.getContainer();
+                if (container instanceof RealmModel) {
+                    RealmModel realm = (RealmModel)container;
                     // If realm role is master admin role then abort
                     // if realm name is master realm, than we know this is a admin role in master realm.
                     if (realm.getName().equals(Config.getAdminRealm())) {
                         return adminConflictMessage(role);
                     }
                 } else {
-                    ClientModel container = (ClientModel)role.getContainer();
+                    ClientModel client = (ClientModel)container;
                     // abort if this is an role in master realm and role is an admin role of any realm
-                    if (container.getRealm().getName().equals(Config.getAdminRealm())
-                            && container.getClientId().endsWith("-realm")) {
+                    if (client.getRealm().getName().equals(Config.getAdminRealm())
+                            && client.getClientId().endsWith("-realm")) {
                         return adminConflictMessage(role);
                     }
                 }
@@ -290,8 +291,9 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
             return false;
         }
 
-        if (role.getContainer() instanceof ClientModel) {
-            if (root.clients().canMapRoles((ClientModel)role.getContainer())) return true;
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof ClientModel) {
+            if (root.clients().canMapRoles((ClientModel)container)) return true;
         }
         if (!isPermissionsEnabled(role)){
             return false;
@@ -380,8 +382,9 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
         if (!root.isAdminSameRealm()) {
             return false;
         }
-        if (role.getContainer() instanceof ClientModel) {
-            if (root.clients().canMapCompositeRoles((ClientModel)role.getContainer())) return true;
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof ClientModel) {
+            if (root.clients().canMapCompositeRoles((ClientModel)container)) return true;
         }
         if (!isPermissionsEnabled(role)){
             return false;
@@ -419,8 +422,9 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
         if (!root.isAdminSameRealm()) {
             return false;
         }
-        if (role.getContainer() instanceof ClientModel) {
-            if (root.clients().canMapClientScopeRoles((ClientModel)role.getContainer())) return true;
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof ClientModel) {
+            if (root.clients().canMapClientScopeRoles((ClientModel)container)) return true;
         }
         if (!isPermissionsEnabled(role)){
             return false;
@@ -449,20 +453,22 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
 
     @Override
     public boolean canManage(RoleModel role) {
-        if (role.getContainer() instanceof RealmModel) {
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof RealmModel) {
             return root.realm().canManageRealm();
-        } else if (role.getContainer() instanceof ClientModel) {
-            ClientModel client = (ClientModel)role.getContainer();
+        } else if (container instanceof ClientModel) {
+            ClientModel client = (ClientModel)container;
             return root.clients().canConfigure(client);
         }
         return false;
     }
 
     public boolean canManageDefault(RoleModel role) {
-        if (role.getContainer() instanceof RealmModel) {
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof RealmModel) {
             return root.realm().canManageRealmDefault();
-        } else if (role.getContainer() instanceof ClientModel) {
-            ClientModel client = (ClientModel)role.getContainer();
+        } else if (container instanceof ClientModel) {
+            ClientModel client = (ClientModel)container;
             return root.clients().canManageClientsDefault();
         }
         return false;
@@ -478,10 +484,11 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
 
     @Override
     public boolean canView(RoleModel role) {
-        if (role.getContainer() instanceof RealmModel) {
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof RealmModel) {
             return root.realm().canViewRealm();
-        } else if (role.getContainer() instanceof ClientModel) {
-            ClientModel client = (ClientModel)role.getContainer();
+        } else if (container instanceof ClientModel) {
+            ClientModel client = (ClientModel)container;
             return root.clients().canView(client);
         }
         return false;
@@ -497,8 +504,9 @@ class RolePermissions implements RolePermissionEvaluator, RolePermissionManageme
 
     private ClientModel getRoleClient(RoleModel role) {
         ClientModel client = null;
-        if (role.getContainer() instanceof ClientModel) {
-            client = (ClientModel)role.getContainer();
+        final RoleContainerModel container = role.getContainer();
+        if (container instanceof ClientModel) {
+            client = (ClientModel)container;
         } else {
             client = root.getRealmManagementClient();
         }

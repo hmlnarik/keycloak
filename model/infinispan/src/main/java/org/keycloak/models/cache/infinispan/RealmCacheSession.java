@@ -764,11 +764,11 @@ public class RealmCacheSession implements CacheRealmProvider {
 
     @Override
     public boolean removeRole(RealmModel realm, RoleModel role) {
-        listInvalidations.add(role.getContainer().getId());
+        listInvalidations.add(role.getContainerId());
 
         invalidateRole(role.getId());
-        invalidationEvents.add(RoleRemovedEvent.create(role.getId(), role.getName(), role.getContainer().getId()));
-        roleRemovalInvalidations(role.getId(), role.getName(), role.getContainer().getId());
+        invalidationEvents.add(RoleRemovedEvent.create(role.getId(), role.getName(), role.getContainerId()));
+        roleRemovalInvalidations(role.getId(), role.getName(), role.getContainerId());
 
         return getRealmDelegate().removeRole(realm, role);
     }
