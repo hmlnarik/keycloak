@@ -15,26 +15,13 @@
  * limitations under the License.
  */
 
-package org.keycloak.models.cache;
+package org.keycloak.models;
 
-import org.keycloak.models.ClientProvider;
-import org.keycloak.models.RealmProvider;
-import org.keycloak.models.RoleProvider;
+import org.keycloak.provider.ProviderFactory;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
  */
-public interface CacheRealmProvider extends RealmProvider, ClientProvider, RoleProvider {
-    void clear();
-    RealmProvider getRealmDelegate();
-
-    void registerRealmInvalidation(String id, String name);
-
-    void registerClientInvalidation(String id, String clientId, String realmId);
-    void registerClientScopeInvalidation(String id);
-
-    void registerRoleInvalidation(String id, String roleName, String roleContainerId);
-
-    void registerGroupInvalidation(String id);
+public interface RoleProviderFactory extends ProviderFactory<RoleProvider> {
 }

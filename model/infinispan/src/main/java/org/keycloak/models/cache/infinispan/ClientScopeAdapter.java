@@ -160,7 +160,7 @@ public class ClientScopeAdapter implements ClientScopeModel {
         if (isUpdated()) return updated.getScopeMappings();
         Set<RoleModel> roles = new HashSet<>();
         for (String id : cached.getScope()) {
-            roles.add(cacheSession.getRoleById(id, getRealm()));
+            roles.add(cacheSession.getRoleById(getRealm(), id));
 
         }
         return roles;

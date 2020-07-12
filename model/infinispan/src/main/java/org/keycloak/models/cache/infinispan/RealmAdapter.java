@@ -700,7 +700,7 @@ public class RealmAdapter implements CachedRealmModel {
     @Override
     public RoleModel getRoleById(String id) {
         if (isUpdated()) return updated.getRoleById(id);
-        return cacheSession.getRoleById(id, this);
+        return cacheSession.getRoleById(this, id);
      }
 
     @Override

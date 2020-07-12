@@ -139,9 +139,9 @@ public class ClientModelTest extends AbstractKeycloakTest {
             assertThat("Realm Model 'original' is NULL !!", realm, notNullValue());
             ClientModel from = realm.getClientByClientId("from");
 
-            RoleModel role = currentSession.realms().getRoleById(roleId, realm);
+            RoleModel role = currentSession.roles().getRoleById(realm, roleId);
             from.removeRole(role);
-            currentSession.clients().removeClient(from.getId(), realm);
+            currentSession.clients().removeClient(realm, from.getId());
 
         });
 
@@ -155,7 +155,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
 
             // used to throw an NPE
             assertThat("Scope Mappings must be 0", scopeMappings.size(), is(0));
-            currentSession.clients().removeClient(scoped.getId(), realm);
+            currentSession.clients().removeClient(realm, scoped.getId());
         });
 
     }
@@ -185,14 +185,14 @@ public class ClientModelTest extends AbstractKeycloakTest {
 
             ClientModel scoped = realm.getClientByClientId("scoped");
             ClientModel from = realm.getClientByClientId("from");
-            RoleModel role = currentSession.realms().getRoleById(roleId, realm);
+            RoleModel role = currentSession.roles().getRoleById(realm, roleId);
             from.removeRole(role);
             Set<RoleModel> scopeMappings = scoped.getScopeMappings();
 
             // used to throw an NPE
             assertThat("Scope Mappings is not 0", scopeMappings.size(), is(0));
-            currentSession.clients().removeClient(scoped.getId(), realm);
-            currentSession.clients().removeClient(from.getId(), realm);
+            currentSession.clients().removeClient(realm, scoped.getId());
+            currentSession.clients().removeClient(realm, from.getId());
 
         });
     }
@@ -216,7 +216,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
         KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession sessionRealmRoleRemove2) -> {
             currentSession = sessionRealmRoleRemove2;
             RealmModel realm = currentSession.realms().getRealmByName(realmName);
-            RoleModel role = currentSession.realms().getRoleById(roleId, realm);
+            RoleModel role = currentSession.roles().getRoleById(realm, roleId);
             realm.removeRole(role);
         });
 
@@ -227,7 +227,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             Set<RoleModel> scopeMappings = scoped.getScopeMappings();
             // used to throw an NPE
             assertThat("Scope Mappings is not 0", scopeMappings.size(), is(0));
-            currentSession.clients().removeClient(scoped.getId(), realm);
+            currentSession.clients().removeClient(realm, scoped.getId());
         });
     }
 
@@ -252,7 +252,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
 
             // this hit the circular cache and failed with a stack overflow
             ClientModel scoped1 = realm.getClientByClientId("scoped1");
-            currentSession.clients().removeClient(scoped1.getId(), realm);
+            currentSession.clients().removeClient(realm, scoped1.getId());
         });
     }
 
@@ -270,7 +270,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             client.unregisterNode("node1");
             client.unregisterNode("10.20.30.40");
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
         });
     }
 
@@ -296,8 +296,8 @@ public class ClientModelTest extends AbstractKeycloakTest {
             client.unregisterNode("node1");
             client.unregisterNode("10.20.30.40");
 
-            currentSession.clients().removeClient(client.getId(), realm);
-            currentSession.clients().removeClient(copyClient.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
+            currentSession.clients().removeClient(realm, copyClient.getId());
             currentSession.realms().removeRealm(realm.getId());
         });
     }
@@ -320,7 +320,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             client = currentSession.clients().getClientById(id, realm);
             assertThat("Client 'app-123' is NULL!!", client, notNullValue());
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
         });
     }
 
@@ -408,7 +408,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             assertThat("Client Scope contains 'scope2':", clientScopes2.containsKey("scope2"), is(false));
             assertThat("Client Scope contains 'scope3':", clientScopes2.containsKey("scope3"), is(true));
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
             client.removeClientScope(scope3);
             realm.removeClientScope(scope1Atomic.get().getId());
             realm.removeClientScope(scope2Atomic.get().getId());
@@ -445,7 +445,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
                 // Expected
             }
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
             realm.removeClientScope(scope1Atomic.get().getId());
 
             assertThat("Error with removing Client from realm.", realm.getClientById(client.getId()), nullValue());
@@ -522,7 +522,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             assertThat("Client Scope contains 'scope2':", clientScopes2.containsKey("scope2"), is(true));
             assertThat("Client Scope contains 'scope3':", clientScopes2.containsKey("scope3"), is(true));
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
             // Remove some realm default client scopes
             realm.removeDefaultClientScope(scope1);
             realm.removeDefaultClientScope(scope2);
@@ -550,7 +550,7 @@ public class ClientModelTest extends AbstractKeycloakTest {
             assertThat("Client Scope contains 'scope2':", clientScopes2.containsKey("scope2"), is(false));
             assertThat("Client Scope contains 'scope3':", clientScopes2.containsKey("scope3"), is(true));
 
-            currentSession.clients().removeClient(client.getId(), realm);
+            currentSession.clients().removeClient(realm, client.getId());
             realm.removeClientScope(scope1Atomic.get().getId());
             realm.removeClientScope(scope2Atomic.get().getId());
 

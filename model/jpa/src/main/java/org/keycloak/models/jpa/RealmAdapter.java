@@ -914,42 +914,42 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
 
     @Override
     public RoleModel getRole(String name) {
-        return session.realms().getRealmRole(this, name);
+        return session.roles().getRealmRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String name) {
-        return session.realms().addRealmRole(this, name);
+        return session.roles().addRealmRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String id, String name) {
-        return session.realms().addRealmRole(this, id, name);
+        return session.roles().addRealmRole(this, id, name);
     }
 
     @Override
     public boolean removeRole(RoleModel role) {
-        return session.realms().removeRole(this, role);
+        return session.roles().removeRole(this, role);
     }
 
     @Override
     public Set<RoleModel> getRoles() {
-        return session.realms().getRealmRoles(this);
+        return session.roles().getRealmRoles(this);
     }
     
     @Override
     public Set<RoleModel> getRoles(Integer first, Integer max) {
-        return session.realms().getRealmRoles(this, first, max);
+        return session.roles().getRealmRoles(this, first, max);
     }
     
     @Override
     public Set<RoleModel> searchForRoles(String search, Integer first, Integer max) {
-        return session.realms().searchForRoles(this, search, first, max);
+        return session.roles().searchForRoles(this, search, first, max);
     }
 
     @Override
     public RoleModel getRoleById(String id) {
-        return session.realms().getRoleById(id, this);
+        return session.roles().getRoleById(this, id);
     }
 
     @Override

@@ -48,6 +48,10 @@
         "provider": "${keycloak.client.provider:map}"
     },
 
+    "role": {
+        "provider": "${keycloak.role.provider:jpa}"
+    },
+
     "mapStorage": {
         "provider": "${keycloak.mapStorage.provider:concurrenthashmap}"
     },

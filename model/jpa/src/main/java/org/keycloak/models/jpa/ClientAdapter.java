@@ -653,37 +653,37 @@ public class ClientAdapter implements ClientModel, JpaModel<ClientEntity> {
 
     @Override
     public RoleModel getRole(String name) {
-        return session.realms().getClientRole(realm, this, name);
+        return session.roles().getClientRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String name) {
-        return session.realms().addClientRole(realm, this, name);
+        return session.roles().addClientRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String id, String name) {
-        return session.realms().addClientRole(realm, this, id, name);
+        return session.roles().addClientRole(this, id, name);
     }
 
     @Override
     public boolean removeRole(RoleModel roleModel) {
-        return session.realms().removeRole(realm, roleModel);
+        return session.roles().removeRole(realm, roleModel);
     }
 
     @Override
     public Set<RoleModel> getRoles() {
-        return session.realms().getClientRoles(realm, this);
+        return session.roles().getClientRoles(this);
     }
     
     @Override
     public Set<RoleModel> getRoles(Integer first, Integer max) {
-        return session.realms().getClientRoles(realm, this, first, max);
+        return session.roles().getClientRoles(this, first, max);
     }
     
     @Override
     public Set<RoleModel> searchForRoles(String search, Integer first, Integer max) {
-        return session.realms().searchForClientRoles(realm, this, search, first, max);
+        return session.roles().searchForClientRoles(realm, this, search, first, max);
     }
 
     @Override

@@ -257,7 +257,7 @@ public class ClientAdapter implements ClientModel, CachedObject {
         if (isUpdated()) return updated.getScopeMappings();
         Set<RoleModel> roles = new HashSet<>();
         for (String id : cached.getScope()) {
-            roles.add(cacheSession.getRoleById(id, getRealm()));
+            roles.add(cacheSession.getRoleById(getRealm(), id));
 
         }
         return roles;
@@ -596,17 +596,17 @@ public class ClientAdapter implements ClientModel, CachedObject {
 
     @Override
     public RoleModel getRole(String name) {
-        return cacheSession.getClientRole(getRealm(), this, name);
+        return cacheSession.getClientRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String name) {
-        return cacheSession.addClientRole(getRealm(), this, name);
+        return cacheSession.addClientRole(this, name);
     }
 
     @Override
     public RoleModel addRole(String id, String name) {
-        return cacheSession.addClientRole(getRealm(), this, id, name);
+        return cacheSession.addClientRole(this, id, name);
     }
 
     @Override
@@ -616,12 +616,12 @@ public class ClientAdapter implements ClientModel, CachedObject {
 
     @Override
     public Set<RoleModel> getRoles() {
-        return cacheSession.getClientRoles(cachedRealm, this);
+        return cacheSession.getClientRoles(this);
     }
     
     @Override
     public Set<RoleModel> getRoles(Integer first, Integer max) {
-        return cacheSession.getClientRoles(cachedRealm, this, first, max);
+        return cacheSession.getClientRoles(this, first, max);
     }
     
     @Override

@@ -27,7 +27,7 @@ import java.util.Set;
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
  */
-public interface RealmProvider extends Provider /* TODO: Remove in future version */, ClientProvider /* up to here */ {
+public interface RealmProvider extends Provider /* TODO: Remove in future version */, ClientProvider, RoleProvider /* up to here */ {
 
     // Note: The reason there are so many query methods here is for layering a cache on top of an persistent KeycloakSession
     MigrationModel getMigrationModel();
@@ -41,11 +41,6 @@ public interface RealmProvider extends Provider /* TODO: Remove in future versio
     List<GroupModel> getGroups(RealmModel realm);
 
     Long getGroupsCount(RealmModel realm, Boolean onlyTopGroups);
-
-    /**
-     * @deprecated Use the corresponding method from {@link ClientProvider}. */
-    @Override
-    long getClientsCount(RealmModel realm);
 
     Long getGroupsCountByNameContaining(RealmModel realm, String search);
     
@@ -75,27 +70,6 @@ public interface RealmProvider extends Provider /* TODO: Remove in future versio
 
     void addTopLevelGroup(RealmModel realm, GroupModel subGroup);
 
-    RoleModel addRealmRole(RealmModel realm, String name);
-
-    RoleModel addRealmRole(RealmModel realm, String id, String name);
-
-    RoleModel getRealmRole(RealmModel realm, String name);
-
-    Set<RoleModel> getRealmRoles(RealmModel realm);
-    
-    Set<RoleModel> getRealmRoles(RealmModel realm, Integer first, Integer max);
-    
-    Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client, Integer first, Integer max);
-    
-    Set<RoleModel> searchForClientRoles(RealmModel realm, ClientModel client, String search, Integer first,
-            Integer max);
-    
-    Set<RoleModel> searchForRoles(RealmModel realm, String search, Integer first, Integer max);
-
-    boolean removeRole(RealmModel realm, RoleModel role);
-
-    RoleModel getRoleById(String id, RealmModel realm);
-
     ClientScopeModel getClientScopeById(String id, RealmModel realm);
     GroupModel getGroupById(String id, RealmModel realm);
 
@@ -111,22 +85,6 @@ public interface RealmProvider extends Provider /* TODO: Remove in future versio
     List<ClientInitialAccessModel> listClientInitialAccess(RealmModel realm);
     void removeExpiredClientInitialAccess();
     void decreaseRemainingCount(RealmModel realm, ClientInitialAccessModel clientInitialAccess); // Separate provider method to ensure we decrease remainingCount atomically instead of doing classic update
-
-    /**
-     * TODO: To be @deprecated Use the corresponding method from {@link ??RoleProvider}. */
-    public Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client);
-
-    /**
-     * TODO: To be @deprecated Use the corresponding method from {@link ??RoleProvider}. */
-    public RoleModel getClientRole(RealmModel realm, ClientModel client, String name);
-
-    /**
-     * TODO: To be @deprecated Use the corresponding method from {@link ??RoleProvider}. */
-    public RoleModel addClientRole(RealmModel realm, ClientModel client, String id, String name);
-
-    /**
-     * TODO: To be @deprecated Use the corresponding method from {@link ??RoleProvider}. */
-    public RoleModel addClientRole(RealmModel realm, ClientModel client, String name);
 
     // The methods below are going to be removed in future version of Keycloak
     // Sadly, we have to copy-paste the declarations from the respective interfaces
@@ -195,6 +153,7 @@ public interface RealmProvider extends Provider /* TODO: Remove in future versio
 
     /**
      * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
     default boolean removeClient(String id, RealmModel realm) { return this.removeClient(realm, id); }
 
     /**
@@ -202,4 +161,124 @@ public interface RealmProvider extends Provider /* TODO: Remove in future versio
     @Override
     public List<ClientModel> getAlwaysDisplayInConsoleClients(RealmModel realm);
 
+    /**
+     * @deprecated Use the corresponding method from {@link ClientProvider}. */
+    @Override
+    long getClientsCount(RealmModel realm);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public RoleModel addRealmRole(RealmModel realm, String name) { return addRealmRole(realm, null, name); }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public RoleModel addRealmRole(RealmModel realm, String id, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public RoleModel getRealmRole(RealmModel realm, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public RoleModel getRoleById(String id, RealmModel realm) {
+        return getRoleById(realm, id);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public Set<RoleModel> getRealmRoles(RealmModel realm) {
+        return getRealmRoles(realm, null, null);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public Set<RoleModel> getRealmRoles(RealmModel realm, Integer first, Integer max);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public Set<RoleModel> searchForRoles(RealmModel realm, String search, Integer first, Integer max);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public boolean removeRole(RealmModel realm, RoleModel role);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public RoleModel addClientRole(RealmModel realm, ClientModel client, String name) {
+        return addClientRole(client, name);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public RoleModel addClientRole(ClientModel client, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public RoleModel addClientRole(RealmModel realm, ClientModel client, String id, String name) {
+        return addClientRole(client, id, name);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public RoleModel addClientRole(ClientModel client, String id, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public RoleModel getClientRole(RealmModel realm, ClientModel client, String name) {
+        return getClientRole(client, name);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public RoleModel getClientRole(ClientModel client, String name);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client) {
+        return getClientRoles(client);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public Set<RoleModel> getClientRoles(ClientModel client);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public Set<RoleModel> getClientRoles(RealmModel realm, ClientModel client, Integer first, Integer max) {
+        return getClientRoles(client, first, max);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public Set<RoleModel> getClientRoles(ClientModel client, Integer first, Integer max);
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    default public Set<RoleModel> searchForClientRoles(RealmModel realm, ClientModel client, String search, Integer first, Integer max) {
+        return searchForClientRoles(client, search, first, max);
+    }
+
+    /**
+     * @deprecated Use the corresponding method from {@link RoleProvider}. */
+    @Override
+    public Set<RoleModel> searchForClientRoles(ClientModel client, String search, Integer first, Integer max);
 }
