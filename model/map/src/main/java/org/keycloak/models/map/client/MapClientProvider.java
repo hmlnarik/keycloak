@@ -219,7 +219,7 @@ public class MapClientProvider implements ClientProvider {
         LOG.tracef("removeClient(%s, %s)%s", realm, id, getShortStackTrace());
 
         // TODO: Sending an event (and client role removal) should be extracted to store layer
-        final ClientModel client = getClientById(id, realm);
+        final ClientModel client = getClientById(realm, id);
         if (client == null) return false;
         session.users().preRemove(realm, client);
         final RealmProvider realms = session.realms();
