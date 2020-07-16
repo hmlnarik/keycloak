@@ -79,7 +79,7 @@ public class RoleCommands {
                 return realm;
             } else {
                 String clientId = parts[1];
-                ClientModel client = session.clients().getClientByClientId(clientId, realm);
+                ClientModel client = session.clients().getClientByClientId(realm, clientId);
                 if (client == null) {
                     log.errorf("Unknown client: %s", clientId);
                     throw new HandledException();

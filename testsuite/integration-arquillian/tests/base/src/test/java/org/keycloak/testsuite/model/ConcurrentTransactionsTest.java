@@ -96,7 +96,7 @@ public class ConcurrentTransactionsTest extends AbstractTestRealmKeycloakTest {
 
                             // Read client
                             RealmModel realm1 = currentSession.realms().getRealmByName("original");
-                            ClientModel client1 = currentSession.clients().getClientByClientId("client", realm1);
+                            ClientModel client1 = currentSession.clients().getClientByClientId(realm1, "client");
                             logger.info("transaction1: Read client finished");
                             readLatch.countDown();
 
@@ -107,7 +107,7 @@ public class ConcurrentTransactionsTest extends AbstractTestRealmKeycloakTest {
 
                             logger.info("transaction1: Going to read client again");
 
-                            client1 = currentSession.clients().getClientByClientId("client", realm1);
+                            client1 = currentSession.clients().getClientByClientId(realm1, "client");
                             logger.info("transaction1: secret: " + client1.getSecret());
 
                         } catch (Exception e) {
@@ -136,7 +136,7 @@ public class ConcurrentTransactionsTest extends AbstractTestRealmKeycloakTest {
                             logger.info("transaction2: Going to update client secret");
 
                             RealmModel realm12 = currentSession.realms().getRealmByName("original");
-                            ClientModel client12 = currentSession.clients().getClientByClientId("client", realm12);
+                            ClientModel client12 = currentSession.clients().getClientByClientId(realm12, "client");
                             client12.setSecret("new");
                         } catch (Exception e) {
                             exceptionHolder.set(e);
@@ -168,8 +168,8 @@ public class ConcurrentTransactionsTest extends AbstractTestRealmKeycloakTest {
                 RealmModel realm = session2.realms().getRealmByName("original");
                 String clientDBId = clientDBIdAtomic.get();
 
-                ClientModel clientFromCache = session2.clients().getClientById(clientDBId, realm);
-                ClientModel clientFromDB = session2.getProvider(ClientProvider.class).getClientById(clientDBId, realm);
+                ClientModel clientFromCache = session2.clients().getClientById(realm, clientDBId);
+                ClientModel clientFromDB = session2.getProvider(ClientProvider.class).getClientById(realm, clientDBId);
 
                 logger.info("SECRET FROM DB : " + clientFromDB.getSecret());
                 logger.info("SECRET FROM CACHE : " + clientFromCache.getSecret());

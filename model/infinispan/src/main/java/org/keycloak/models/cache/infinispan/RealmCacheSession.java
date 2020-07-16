@@ -1119,7 +1119,7 @@ public class RealmCacheSession implements CacheRealmProvider {
             // its also hard to test stuff
             if (model.shouldInvalidate(cached)) {
                 registerClientInvalidation(cached.getId(), cached.getClientId(), realm.getId());
-                return getClientDelegate().getClientById(cached.getId(), realm);
+                return getClientDelegate().getClientById(realm, cached.getId());
             }
         }
         ClientAdapter adapter = new ClientAdapter(realm, cached, this);
@@ -1129,7 +1129,7 @@ public class RealmCacheSession implements CacheRealmProvider {
 
     @Override
     public List<ClientModel> searchClientsByClientId(RealmModel realm, String clientId, Integer firstResult, Integer maxResults) {
-        return getClientDelegate().searchClientsByClientId(clientId, firstResult, maxResults, realm);
+        return getClientDelegate().searchClientsByClientId(realm, clientId, firstResult, maxResults);
     }
 
     @Override
@@ -1140,7 +1140,7 @@ public class RealmCacheSession implements CacheRealmProvider {
 
         boolean queryDB = invalidations.contains(cacheKey) || listInvalidations.contains(realm.getId());
         if (queryDB) {  // short-circuit if the client has been potentially invalidated
-            return getClientDelegate().getClientByClientId(clientId, realm);
+            return getClientDelegate().getClientByClientId(realm, clientId);
         }
         if (query != null) {
             logger.tracev("client by name cache hit: {0}", clientId);
@@ -1148,7 +1148,7 @@ public class RealmCacheSession implements CacheRealmProvider {
 
         if (query == null) {
             Long loaded = cache.getCurrentRevision(cacheKey);
-            ClientModel model = getClientDelegate().getClientByClientId(clientId, realm);
+            ClientModel model = getClientDelegate().getClientByClientId(realm, clientId);
             if (model == null) return null;
             if (invalidations.contains(model.getId())) return model;
             id = model.getId();
@@ -1158,7 +1158,7 @@ public class RealmCacheSession implements CacheRealmProvider {
         } else {
             id = query.getClients().iterator().next();
             if (invalidations.contains(id)) {
-                return getClientDelegate().getClientByClientId(clientId, realm);
+                return getClientDelegate().getClientByClientId(realm, clientId);
             }
         }
         return getClientById(realm, id);

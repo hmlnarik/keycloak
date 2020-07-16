@@ -858,22 +858,22 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
         if (id == null) return false;
         ClientModel client = getClientById(id);
         if (client == null) return false;
-        return session.clients().removeClient(id, this);
+        return session.clients().removeClient(this, id);
     }
 
     @Override
     public ClientModel getClientById(String id) {
-        return session.clients().getClientById(id, this);
+        return session.clients().getClientById(this, id);
     }
 
     @Override
     public ClientModel getClientByClientId(String clientId) {
-        return session.clients().getClientByClientId(clientId, this);
+        return session.clients().getClientByClientId(this, clientId);
     }
 
     @Override
     public List<ClientModel> searchClientByClientId(String clientId, Integer firstResult, Integer maxResults) {
-        return session.clients().searchClientsByClientId(clientId, firstResult, maxResults, this);
+        return session.clients().searchClientsByClientId(this, clientId, firstResult, maxResults);
     }
 
     private static final String BROWSER_HEADER_PREFIX = "_browser_header.";
@@ -1257,7 +1257,7 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
         RealmModel masterRealm = getName().equals(Config.getAdminRealm())
           ? this
           : session.realms().getRealm(Config.getAdminRealm());
-        return session.clients().getClientById(masterAdminClientId, masterRealm);
+        return session.clients().getClientById(masterRealm, masterAdminClientId);
     }
 
     @Override
