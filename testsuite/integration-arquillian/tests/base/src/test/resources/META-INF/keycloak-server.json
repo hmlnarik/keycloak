@@ -45,7 +45,7 @@
     },
 
     "client": {
-        "provider": "${keycloak.client.provider:map}"
+        "provider": "${keycloak.client.provider:jpa}"
     },
 
     "mapStorage": {
