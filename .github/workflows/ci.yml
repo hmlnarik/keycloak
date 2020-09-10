@@ -13,8 +13,6 @@ jobs:
           java-version: 1.8
       - name: Build
         run: mvn clean install -B -DskipTests
-      - name: Run base tests - undertow
-        run: mvn clean install -B -f testsuite/integration-arquillian/tests/base/pom.xml -Dkeycloak.client.provider=map -Dkeycloak.logging.level=debug '-Dtest=org.keycloak.testsuite.admin.UsersTest#countUsersWithGroupViewPermission'
-      - name: Run base tests - undertow
-        run: mvn clean install -B -f testsuite/integration-arquillian/tests/base/pom.xml -Dkeycloak.logging.level=debug '-Dtest=org.keycloak.testsuite.admin.UsersTest#countUsersWithGroupViewPermission'
+      - name: Run base tests - undertow I
+        run: bash -c 'I=1; while [[ $I -lt 100 ]] && mvn clean install -B -f testsuite/integration-arquillian/tests/base/pom.xml -Dkeycloak.client.provider=map -Dkeycloak.logging.level=debug "-Dtest=org.keycloak.testsuite.a*.*Test"; do I=$[$I+1] ; done'
 
