@@ -133,7 +133,12 @@ class CodeGenerateUtil {
                 return false;
             }
 
-            authSession.removeAuthNote(ACTIVE_CODE);
+            KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession currentSession) -> {
+                AuthenticationSessionModel authenticationSession = currentSession.authenticationSessions()
+                        .getRootAuthenticationSession(authSession.getRealm(), authSession.getParentSession().getId())
+                        .getAuthenticationSession(authSession.getClient(), authSession.getTabId());
+                authenticationSession.removeAuthNote(ACTIVE_CODE);
+            });
 
             return MessageDigest.isEqual(code.getBytes(), activeCode.getBytes());
         }

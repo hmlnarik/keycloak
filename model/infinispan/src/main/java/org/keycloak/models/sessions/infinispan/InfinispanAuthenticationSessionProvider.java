@@ -183,6 +183,11 @@ public class InfinispanAuthenticationSessionProvider implements AuthenticationSe
     }
 
     @Override
+    public void removeRootAuthenticationSessionById(String id) {
+        tx.remove(cache, id);
+    }
+
+    @Override
     public void close() {
 
     }

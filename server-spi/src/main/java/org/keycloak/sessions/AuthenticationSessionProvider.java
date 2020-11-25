@@ -27,7 +27,7 @@ import java.util.Map;
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
 public interface AuthenticationSessionProvider extends Provider {
-
+// TODO consolidate method's parameters, deprecate old methods, add complete javadocs
     /**
      * Creates and registers a new authentication session with random ID. Authentication session
      * entity will be prefilled with current timestamp, the given realm and client.
@@ -38,7 +38,14 @@ public interface AuthenticationSessionProvider extends Provider {
 
     RootAuthenticationSessionModel getRootAuthenticationSession(RealmModel realm, String authenticationSessionId);
 
+    // TODO remove realm parameter
     void removeRootAuthenticationSession(RealmModel realm, RootAuthenticationSessionModel authenticationSession);
+
+    /**
+     *
+     * @param id
+     */
+    void removeRootAuthenticationSessionById(String id);
 
     void removeExpired(RealmModel realm);
     void onRealmRemoved(RealmModel realm);
