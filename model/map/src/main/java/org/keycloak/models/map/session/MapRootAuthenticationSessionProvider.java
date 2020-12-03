@@ -58,7 +58,8 @@ public class MapRootAuthenticationSessionProvider implements AuthenticationSessi
         this.session = session;
         this.sessionStore = sessionStore;
         this.tx = new MapKeycloakTransaction<>(sessionStore);
-        session.getTransactionManager().enlist(tx);
+
+        session.getTransactionManager().enlistAfterCompletion(tx);
     }
 
     private Function<MapRootAuthenticationSessionEntity, RootAuthenticationSessionModel> entityToAdapterFunc(RealmModel realm) {

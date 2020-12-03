@@ -27,6 +27,7 @@ import javax.crypto.SecretKey;
 
 import org.jboss.logging.Logger;
 import org.keycloak.common.util.Base64Url;
+import org.keycloak.common.util.StackUtil;
 import org.keycloak.common.util.Time;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
@@ -40,6 +41,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.sessions.CommonClientSessionModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.sessions.RootAuthenticationSessionModel;
 import org.keycloak.util.TokenUtil;
 
 /**
@@ -107,9 +109,19 @@ class CodeGenerateUtil {
         @Override
         public String retrieveCode(KeycloakSession session, AuthenticationSessionModel authSession) {
             String nextCode = authSession.getAuthNote(ACTIVE_CODE);
+            logger.tracef("retrieveCode(%s)%s", authSession.getParentSession().getId(), StackUtil.getShortStackTrace());
             if (nextCode == null) {
                 String actionId = Base64Url.encode(KeycloakModelUtils.generateSecret());
                 authSession.setAuthNote(ACTIVE_CODE, actionId);
+                KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession currentSession) -> {
+                    final RootAuthenticationSessionModel rootAuthenticationSession = currentSession.authenticationSessions()
+                      .getRootAuthenticationSession(authSession.getRealm(), authSession.getParentSession().getId());
+                    AuthenticationSessionModel authenticationSession = rootAuthenticationSession == null ? null : rootAuthenticationSession
+                            .getAuthenticationSession(authSession.getClient(), authSession.getTabId());
+                    if (authenticationSession != null) {
+                        authenticationSession.setAuthNote(ACTIVE_CODE, actionId);
+                    }
+                });
                 nextCode = actionId;
             } else {
                 logger.debug("Code already generated for authentication session, using same code");
@@ -128,11 +140,13 @@ class CodeGenerateUtil {
         @Override
         public boolean verifyCode(KeycloakSession session, String code, AuthenticationSessionModel authSession) {
             String activeCode = authSession.getAuthNote(ACTIVE_CODE);
+            logger.tracef("verifyCode(%s)%s", authSession.getParentSession().getId(), StackUtil.getShortStackTrace());
             if (activeCode == null) {
                 logger.debug("Active code not found in authentication session");
                 return false;
             }
 
+            authSession.removeAuthNote(ACTIVE_CODE);
             KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), (KeycloakSession currentSession) -> {
                 AuthenticationSessionModel authenticationSession = currentSession.authenticationSessions()
                         .getRootAuthenticationSession(authSession.getRealm(), authSession.getParentSession().getId())
