@@ -17,17 +17,17 @@
 
 package org.keycloak.connections.httpclient;
 
-import org.apache.http.client.HttpClient;
 import org.keycloak.provider.Provider;
 
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.http.impl.client.CloseableHttpClient;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
 public interface HttpClientProvider extends Provider {
-    HttpClient getHttpClient();
+    CloseableHttpClient getHttpClient();
 
     /**
      * Helper method
