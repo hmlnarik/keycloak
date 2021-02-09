@@ -21,7 +21,7 @@ import org.keycloak.models.map.client.MapClientProviderFactory;
 import org.keycloak.models.map.clientscope.MapClientScopeProviderFactory;
 import org.keycloak.models.map.group.MapGroupProviderFactory;
 import org.keycloak.models.map.role.MapRoleProviderFactory;
-import org.keycloak.models.map.storage.MapStorageProvider;
+import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.MapStorageSpi;
 import org.keycloak.models.map.user.MapUserProviderFactory;
 import org.keycloak.provider.ProviderFactory;
@@ -47,7 +47,7 @@ public class Map extends KeycloakModelParameters {
       .add(MapGroupProviderFactory.class)
       .add(MapRoleProviderFactory.class)
       .add(MapUserProviderFactory.class)
-      .add(MapStorageProvider.class)
+      .add(MapStorageProviderFactory.class)
       .build();
 
     public Map() {
