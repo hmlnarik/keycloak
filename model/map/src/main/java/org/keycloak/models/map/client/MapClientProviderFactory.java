@@ -21,7 +21,7 @@ import org.keycloak.models.map.common.AbstractMapProviderFactory;
 import org.keycloak.models.ClientProvider;
 import org.keycloak.models.ClientProviderFactory;
 import org.keycloak.models.KeycloakSession;
-import java.util.UUID;
+import org.keycloak.models.map.storage.MapStorage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -29,17 +29,18 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author hmlnarik
  */
-public class MapClientProviderFactory extends AbstractMapProviderFactory<ClientProvider, UUID, MapClientEntity, ClientModel> implements ClientProviderFactory {
+public class MapClientProviderFactory<K> extends AbstractMapProviderFactory<ClientProvider, K, AbstractClientEntity<K>, ClientModel> implements ClientProviderFactory {
 
-    private final ConcurrentHashMap<UUID, ConcurrentMap<String, Integer>> REGISTERED_NODES_STORE = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<K, ConcurrentMap<String, Integer>> REGISTERED_NODES_STORE = new ConcurrentHashMap<>();
 
     public MapClientProviderFactory() {
-        super(UUID.class, MapClientEntity.class, ClientModel.class);
+        super(AbstractClientEntity.class, ClientModel.class);
     }
 
     @Override
     public ClientProvider create(KeycloakSession session) {
-        return new MapClientProvider(session, getStorage(session), REGISTERED_NODES_STORE);
+        final MapStorage<K, AbstractClientEntity<K>, ClientModel> storage = getStorage(session);
+        return new MapClientProvider<>(session, storage, REGISTERED_NODES_STORE);
     }
 
     @Override

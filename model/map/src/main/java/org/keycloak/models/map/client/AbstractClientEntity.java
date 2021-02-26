@@ -34,7 +34,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public abstract class AbstractClientEntity<K> implements AbstractEntity<K> {
+public class AbstractClientEntity<K> implements AbstractEntity<K> {
 
     private K id;
     private String realmId;

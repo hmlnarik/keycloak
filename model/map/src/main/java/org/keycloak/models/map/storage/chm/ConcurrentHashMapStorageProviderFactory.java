@@ -42,6 +42,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.models.map.storage.MapStorageProvider;
 import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
+import org.keycloak.models.map.storage.StringKeyConvertor;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.sessions.RootAuthenticationSessionModel;
 import java.util.Collections;
@@ -64,6 +65,8 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
 
     private String suffix;
 
+    private StringKeyConvertor keyConvertor;
+
     public static final Map<Class<?>, String> MODEL_TO_NAME = new HashMap<>();
     static {
         MODEL_TO_NAME.put(AuthenticatedClientSessionModel.class, "client-sessions");
@@ -75,6 +78,13 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
         MODEL_TO_NAME.put(RootAuthenticationSessionModel.class, "sessions");
         MODEL_TO_NAME.put(UserModel.class, "users");
         MODEL_TO_NAME.put(UserSessionModel.class, "user-sessions");
+    }
+
+    private static final Map<String, StringKeyConvertor> KEY_CONVERTORS = new HashMap<>();
+    static {
+        KEY_CONVERTORS.put("uuid", StringKeyConvertor.UUIDKey.INSTANCE);
+        KEY_CONVERTORS.put("string", StringKeyConvertor.StringKey.INSTANCE);
+        KEY_CONVERTORS.put("ulong", StringKeyConvertor.ULongKey.INSTANCE);
     }
 
     @Override
@@ -89,6 +99,12 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
             this.suffix = "-" + ((ComponentModelScope) config).getComponentId();
         } else {
             this.suffix = "";
+        }
+    
+        final String keyType = config.get("keyType", "uuid");
+        this.keyConvertor = KEY_CONVERTORS.get(keyType);
+        if (this.keyConvertor == null) {
+            throw new IllegalArgumentException("Unknown key type: " + keyType);
         }
 
         final String dir = config.get("dir");
@@ -136,7 +152,8 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
 
     private <K, V extends AbstractEntity<K>, M> ConcurrentHashMapStorage<K, V, M> loadMap(String fileName,
       Class<V> valueType, Class<M> modelType, EnumSet<Flag> flags) {
-        ConcurrentHashMapStorage<K, V, M> store = new ConcurrentHashMapStorage<>(modelType);
+        @SuppressWarnings("unchecked")
+        ConcurrentHashMapStorage<K, V, M> store = new ConcurrentHashMapStorage<>(modelType, keyConvertor);
 
         LOG.debugf("Initializing new map storage: %s", fileName);
 
@@ -165,7 +182,7 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
 
     @SuppressWarnings("unchecked")
     public <K, V extends AbstractEntity<K>, M> ConcurrentHashMapStorage<K, V, M> getStorage(
-      Class<K> keyType, Class<V> valueType, Class<M> modelType, Flag... flags) {
+      Class<V> valueType, Class<M> modelType, Flag... flags) {
         EnumSet<Flag> f = flags == null || flags.length == 0 ? EnumSet.noneOf(Flag.class) : EnumSet.of(flags[0], flags);
         String name = MODEL_TO_NAME.getOrDefault(modelType, modelType.getSimpleName());
         return (ConcurrentHashMapStorage<K, V, M>) storages.computeIfAbsent(name, n -> loadMap(name, valueType, modelType, f));

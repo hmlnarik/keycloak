@@ -16,22 +16,21 @@
  */
 package org.keycloak.models.map.role;
 
-import java.util.UUID;
 import org.keycloak.models.map.common.AbstractMapProviderFactory;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.RoleProvider;
 import org.keycloak.models.RoleProviderFactory;
 
-public class MapRoleProviderFactory extends AbstractMapProviderFactory<RoleProvider, UUID, MapRoleEntity, RoleModel> implements RoleProviderFactory {
+public class MapRoleProviderFactory<K> extends AbstractMapProviderFactory<RoleProvider, K, AbstractRoleEntity<K>, RoleModel> implements RoleProviderFactory {
 
     public MapRoleProviderFactory() {
-        super(UUID.class, MapRoleEntity.class, RoleModel.class);
+        super(AbstractRoleEntity.class, RoleModel.class);
     }
 
     @Override
     public RoleProvider create(KeycloakSession session) {
-        return new MapRoleProvider(session, getStorage(session));
+        return new MapRoleProvider<>(session, getStorage(session));
     }
 
     @Override

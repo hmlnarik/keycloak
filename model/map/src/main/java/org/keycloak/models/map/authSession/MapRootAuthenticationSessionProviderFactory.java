@@ -22,21 +22,20 @@ import org.keycloak.sessions.AuthenticationSessionProvider;
 import org.keycloak.sessions.AuthenticationSessionProviderFactory;
 
 import org.keycloak.sessions.RootAuthenticationSessionModel;
-import java.util.UUID;
 
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public class MapRootAuthenticationSessionProviderFactory extends AbstractMapProviderFactory<AuthenticationSessionProvider, UUID, MapRootAuthenticationSessionEntity, RootAuthenticationSessionModel>
+public class MapRootAuthenticationSessionProviderFactory<K> extends AbstractMapProviderFactory<AuthenticationSessionProvider, K, AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel>
         implements AuthenticationSessionProviderFactory {
 
     public MapRootAuthenticationSessionProviderFactory() {
-        super(UUID.class, MapRootAuthenticationSessionEntity.class, RootAuthenticationSessionModel.class);
+        super(AbstractRootAuthenticationSessionEntity.class, RootAuthenticationSessionModel.class);
     }
 
     @Override
     public AuthenticationSessionProvider create(KeycloakSession session) {
-        return new MapRootAuthenticationSessionProvider(session, getStorage(session));
+        return new MapRootAuthenticationSessionProvider<>(session, getStorage(session));
     }
 
     @Override

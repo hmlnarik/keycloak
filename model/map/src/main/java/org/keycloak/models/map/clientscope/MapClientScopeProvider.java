@@ -19,7 +19,6 @@ package org.keycloak.models.map.clientscope;
 
 import java.util.Comparator;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -40,38 +39,42 @@ import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
 import org.keycloak.models.utils.KeycloakModelUtils;
 
-public class MapClientScopeProvider implements ClientScopeProvider {
+public class MapClientScopeProvider<K> implements ClientScopeProvider {
 
     private static final Logger LOG = Logger.getLogger(MapClientScopeProvider.class);
-    private static final Predicate<MapClientScopeEntity> ALWAYS_FALSE = c -> { return false; };
     private final KeycloakSession session;
-    private final MapKeycloakTransaction<UUID, MapClientScopeEntity, ClientScopeModel> tx;
-    private final MapStorage<UUID, MapClientScopeEntity, ClientScopeModel> clientScopeStore;
+    private final MapKeycloakTransaction<K, AbstractClientScopeEntity<K>, ClientScopeModel> tx;
+    private final MapStorage<K, AbstractClientScopeEntity<K>, ClientScopeModel> clientScopeStore;
 
-    private static final Comparator<MapClientScopeEntity> COMPARE_BY_NAME = Comparator.comparing(MapClientScopeEntity::getName);
+    private static final Comparator<AbstractClientScopeEntity> COMPARE_BY_NAME = Comparator.comparing(AbstractClientScopeEntity::getName);
 
-    public MapClientScopeProvider(KeycloakSession session, MapStorage<UUID, MapClientScopeEntity, ClientScopeModel> clientScopeStore) {
+    public MapClientScopeProvider(KeycloakSession session, MapStorage<K, AbstractClientScopeEntity<K>, ClientScopeModel> clientScopeStore) {
         this.session = session;
         this.clientScopeStore = clientScopeStore;
         this.tx = clientScopeStore.createTransaction();
         session.getTransactionManager().enlist(tx);
     }
 
-    private MapClientScopeEntity registerEntityForChanges(MapClientScopeEntity origEntity) {
-        final MapClientScopeEntity res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
-        tx.updateIfChanged(origEntity.getId(), res, MapClientScopeEntity::isUpdated);
+    private AbstractClientScopeEntity<K> registerEntityForChanges(AbstractClientScopeEntity<K> origEntity) {
+        final AbstractClientScopeEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
+        tx.updateIfChanged(origEntity.getId(), res, AbstractClientScopeEntity<K>::isUpdated);
         return res;
     }
 
-    private Function<MapClientScopeEntity, ClientScopeModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<AbstractClientScopeEntity<K>, ClientScopeModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
 
-        return origEntity -> new MapClientScopeAdapter(session, realm, registerEntityForChanges(origEntity));
+        return origEntity -> new MapClientScopeAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
+            @Override
+            public String getId() {
+                return clientScopeStore.getKeyConvertor().keyToString(entity.getId());
+            }
+        };
     }
 
-    private Predicate<MapClientScopeEntity> entityRealmFilter(RealmModel realm) {
+    private Predicate<AbstractClientScopeEntity<K>> entityRealmFilter(RealmModel realm) {
         if (realm == null || realm.getId() == null) {
-            return MapClientScopeProvider.ALWAYS_FALSE;
+            return c -> false;
         }
         String realmId = realm.getId();
         return entity -> Objects.equals(realmId, entity.getRealmId());
@@ -98,11 +101,11 @@ public class MapClientScopeProvider implements ClientScopeProvider {
             throw new ModelDuplicateException("Client scope with name '" + name + "' in realm " + realm.getName());
         }
 
-        final UUID entityId = id == null ? UUID.randomUUID() : UUID.fromString(id);
+        final K entityId = id == null ? clientScopeStore.getKeyConvertor().yieldNewUniqueKey() : clientScopeStore.getKeyConvertor().fromString(id);
 
         LOG.tracef("addClientScope(%s, %s, %s)%s", realm, id, name, getShortStackTrace());
 
-        MapClientScopeEntity entity = new MapClientScopeEntity(entityId, realm.getId());
+        AbstractClientScopeEntity<K> entity = new AbstractClientScopeEntity<K>(entityId, realm.getId());
         entity.setName(KeycloakModelUtils.convertClientScopeName(name));
         if (tx.read(entity.getId()) != null) {
             throw new ModelDuplicateException("Client scope exists: " + id);
@@ -124,7 +127,7 @@ public class MapClientScopeProvider implements ClientScopeProvider {
         session.users().preRemove(clientScope);
         realm.removeDefaultClientScope(clientScope);
 
-        tx.delete(UUID.fromString(id));
+        tx.delete(clientScopeStore.getKeyConvertor().fromString(id));
         return true;
     }
 
@@ -146,14 +149,14 @@ public class MapClientScopeProvider implements ClientScopeProvider {
 
         LOG.tracef("getClientScopeById(%s, %s)%s", realm, id, getShortStackTrace());
 
-        UUID uuid;
+        K uuid;
         try {
-            uuid = UUID.fromString(id);
+            uuid = clientScopeStore.getKeyConvertor().fromString(id);
         } catch (IllegalArgumentException ex) {
             return null;
         }
 
-        MapClientScopeEntity entity = tx.read(uuid);
+        AbstractClientScopeEntity<K> entity = tx.read(uuid);
         return (entity == null || ! entityRealmFilter(realm).test(entity))
           ? null
           : entityToAdapterFunc(realm).apply(entity);

@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public abstract class AbstractRootAuthenticationSessionEntity<K> implements AbstractEntity<K> {
+public class AbstractRootAuthenticationSessionEntity<K> implements AbstractEntity<K> {
 
     private K id;
     private String realmId;

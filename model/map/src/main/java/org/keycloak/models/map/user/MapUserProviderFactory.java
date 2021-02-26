@@ -22,21 +22,20 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.UserProvider;
 import org.keycloak.models.UserProviderFactory;
 import org.keycloak.models.map.common.AbstractMapProviderFactory;
-import java.util.UUID;
 
 /**
  *
  * @author mhajas
  */
-public class MapUserProviderFactory extends AbstractMapProviderFactory<UserProvider, UUID, MapUserEntity, UserModel> implements UserProviderFactory {
+public class MapUserProviderFactory<K> extends AbstractMapProviderFactory<UserProvider, K, AbstractUserEntity<K>, UserModel> implements UserProviderFactory {
 
     public MapUserProviderFactory() {
-        super(UUID.class, MapUserEntity.class, UserModel.class);
+        super(AbstractUserEntity.class, UserModel.class);
     }
 
     @Override
     public UserProvider create(KeycloakSession session) {
-        return new MapUserProvider(session, getStorage(session));
+        return new MapUserProvider<>(session, getStorage(session));
     }
 
     @Override

@@ -30,7 +30,7 @@ import java.util.Set;
  *
  * @author mhajas
  */
-public abstract class AbstractGroupEntity<K> implements AbstractEntity<K> {
+public class AbstractGroupEntity<K> implements AbstractEntity<K> {
 
     private final K id;
     private final String realmId;

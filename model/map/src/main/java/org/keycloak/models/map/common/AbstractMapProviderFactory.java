@@ -38,8 +38,6 @@ public abstract class AbstractMapProviderFactory<T extends Provider, K, V extend
 
     protected final Logger LOG = Logger.getLogger(getClass());
 
-    protected final Class<K> keyType;
-
     protected final Class<M> modelType;
 
     protected final Class<V> entityType;
@@ -48,11 +46,10 @@ public abstract class AbstractMapProviderFactory<T extends Provider, K, V extend
 
     private Scope storageConfigScope;
 
-
-    protected AbstractMapProviderFactory(Class<K> keyType, Class<V> entityType, Class<M> modelType) {
-        this.keyType = keyType;
+    @SuppressWarnings("unchecked")
+    protected AbstractMapProviderFactory(Class<? extends AbstractEntity> entityType, Class<M> modelType) {
         this.modelType = modelType;
-        this.entityType = entityType;
+        this.entityType = (Class<V>) entityType;
     }
 
     @Override
@@ -63,7 +60,7 @@ public abstract class AbstractMapProviderFactory<T extends Provider, K, V extend
     protected MapStorage<K, V, M> getStorage(KeycloakSession session) {
         final MapStorageProvider factory = this.storageProviderFactory.create(session);
 
-        return factory.getStorage(keyType, entityType, modelType);
+        return factory.getStorage(entityType, modelType);
     }
 
     @Override
@@ -77,6 +74,5 @@ public abstract class AbstractMapProviderFactory<T extends Provider, K, V extend
     @Override
     public void init(Scope config) {
         this.storageConfigScope = config.scope("storage");
-
     }
 }

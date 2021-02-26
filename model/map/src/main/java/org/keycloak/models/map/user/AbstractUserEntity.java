@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  *
  * @author mhajas
  */
-public abstract class AbstractUserEntity<K> implements AbstractEntity<K> {
+public class AbstractUserEntity<K> implements AbstractEntity<K> {
 
     private final K id;
     private final String realmId;
