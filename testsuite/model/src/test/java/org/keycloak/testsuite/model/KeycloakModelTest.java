@@ -21,6 +21,8 @@ import org.keycloak.authorization.AuthorizationSpi;
 import org.keycloak.authorization.DefaultAuthorizationProviderFactory;
 import org.keycloak.authorization.store.StoreFactorySpi;
 import org.keycloak.cluster.ClusterSpi;
+import org.keycloak.component.ComponentFactoryProviderFactory;
+import org.keycloak.component.ComponentFactorySpi;
 import org.keycloak.events.EventStoreSpi;
 import org.keycloak.executors.DefaultExecutorsProviderFactory;
 import org.keycloak.executors.ExecutorsSpi;
@@ -165,6 +167,7 @@ public abstract class KeycloakModelTest {
       .add(AuthorizationSpi.class)
       .add(ClientScopeSpi.class)
       .add(ClientSpi.class)
+      .add(ComponentFactorySpi.class)
       .add(ClusterSpi.class)
       .add(EventStoreSpi.class)
       .add(ExecutorsSpi.class)
@@ -178,6 +181,7 @@ public abstract class KeycloakModelTest {
     private static final Set<Class<? extends ProviderFactory>> ALLOWED_FACTORIES = ImmutableSet.<Class<? extends ProviderFactory>>builder()
       .add(DefaultAuthorizationProviderFactory.class)
       .add(DefaultExecutorsProviderFactory.class)
+      .add(ComponentFactoryProviderFactory.class)
       .build();
 
     protected static final List<KeycloakModelParameters> MODEL_PARAMETERS;

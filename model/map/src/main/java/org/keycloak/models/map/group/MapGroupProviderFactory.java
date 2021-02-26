@@ -21,31 +21,27 @@ import org.keycloak.models.GroupModel;
 import org.keycloak.models.GroupProvider;
 import org.keycloak.models.GroupProviderFactory;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.map.common.AbstractMapProviderFactory;
-import org.keycloak.models.map.storage.MapStorage;
-import org.keycloak.models.map.storage.MapStorageProvider;
-
-import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import java.util.UUID;
 
 /**
  *
  * @author mhajas
  */
-public class MapGroupProviderFactory extends AbstractMapProviderFactory<GroupProvider> implements GroupProviderFactory {
+public class MapGroupProviderFactory extends AbstractMapProviderFactory<GroupProvider, UUID, MapGroupEntity, GroupModel> implements GroupProviderFactory {
 
-    private MapStorage<UUID, MapGroupEntity, GroupModel> store;
-
-    @Override
-    public void postInit(KeycloakSessionFactory factory) {
-        MapStorageProviderFactory sp = (MapStorageProviderFactory) factory.getProviderFactory(MapStorageProvider.class);
-        this.store = sp.getStorage("groups", UUID.class, MapGroupEntity.class, GroupModel.class);
+    public MapGroupProviderFactory() {
+        super(UUID.class, MapGroupEntity.class, GroupModel.class);
     }
-
 
     @Override
     public GroupProvider create(KeycloakSession session) {
-        return new MapGroupProvider(session, store);
+        return new MapGroupProvider(session, getStorage(session));
     }
+
+    @Override
+    public String getHelpText() {
+        return "Group provider";
+    }
+
 }
