@@ -149,6 +149,7 @@ public interface ClientProvider extends ClientLookupProvider, Provider {
     void removeClients(RealmModel realm);
 
     /**
+<<<<<<< HEAD
      * Assign clientScopes to the client. Add as default scopes (if parameter 'defaultScope' is true) 
      * or optional scopes (if parameter 'defaultScope' is false)
      * 
@@ -167,4 +168,12 @@ public interface ClientProvider extends ClientLookupProvider, Provider {
      * @param clientScope to be unassigned
      */
     void removeClientScope(RealmModel realm, ClientModel client, ClientScopeModel clientScope);
+
+    /**
+     * This function is called when a role is removed; this serves for removing references from clients to roles.
+     *
+     * @param realm Realm.
+     * @param role Role which will be removed.
+     */
+    void preRemove(RealmModel realm, RoleModel role);
 }

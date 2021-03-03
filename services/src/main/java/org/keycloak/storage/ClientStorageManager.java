@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.keycloak.models.ClientScopeModel;
+import org.keycloak.models.RoleModel;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -239,6 +240,8 @@ public class ClientStorageManager implements ClientProvider {
         return session.clientLocalStorage().removeClient(realm, id);
     }
 
-
-
+    @Override
+    public void preRemove(RealmModel realm, RoleModel role) {
+        session.clientLocalStorage().preRemove(realm, role);
+    }
 }

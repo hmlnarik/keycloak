@@ -335,9 +335,7 @@ public class JpaRealmProvider implements RealmProvider, ClientProvider, ClientSc
         }
         String compositeRoleTable = JpaUtils.getTableNameForNativeQuery("COMPOSITE_ROLE", em);
         em.createNativeQuery("delete from " + compositeRoleTable + " where CHILD_ROLE = :role").setParameter("role", roleEntity).executeUpdate();
-        realm.getClientsStream().forEach(c -> c.deleteScopeMapping(role));
         em.createNamedQuery("deleteClientScopeRoleMappingByRole").setParameter("role", roleEntity).executeUpdate();
-        session.groups().preRemove(realm, role);
 
         em.flush();
         em.remove(roleEntity);
@@ -589,6 +587,10 @@ public class JpaRealmProvider implements RealmProvider, ClientProvider, ClientSc
         // GroupProvider method implementation starts here
         em.createNamedQuery("deleteGroupRoleMappingsByRole").setParameter("roleId", role.getId()).executeUpdate();
         // GroupProvider method implementation ends here
+
+        // ClientProvider implementation
+        String clientScopeMapping = JpaUtils.getTableNameForNativeQuery("SCOPE_MAPPING", em);
+        em.createNativeQuery("delete from " + clientScopeMapping + " where ROLE_ID = :role").setParameter("role", role.getId()).executeUpdate();
     }
 
     @Override

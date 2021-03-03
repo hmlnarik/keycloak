@@ -1065,6 +1065,7 @@ public class RealmCacheSession implements CacheRealmProvider {
     @Override
     public void preRemove(RealmModel realm, RoleModel role) {
         getGroupDelegate().preRemove(realm, role);
+        getClientDelegate().preRemove(realm, role);
     }
 
     private void addGroupEventIfAbsent(InvalidationEvent eventToAdd) {

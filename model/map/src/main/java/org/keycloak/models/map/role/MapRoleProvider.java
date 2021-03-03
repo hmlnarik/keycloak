@@ -211,6 +211,7 @@ public class MapRoleProvider implements RoleProvider {
         });
         
         session.groups().preRemove(realm, role);
+        session.clients().preRemove(realm, role);
 
         // TODO: Sending an event should be extracted to store layer
         session.getKeycloakSessionFactory().publish(new RoleContainerModel.RoleRemovedEvent() {

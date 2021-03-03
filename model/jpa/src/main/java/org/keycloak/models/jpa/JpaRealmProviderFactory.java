@@ -25,6 +25,11 @@ import org.keycloak.models.RealmProvider;
 import org.keycloak.models.RealmProviderFactory;
 
 import javax.persistence.EntityManager;
+import org.keycloak.models.ClientModel;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.RoleContainerModel;
+import org.keycloak.provider.ProviderEvent;
+import org.keycloak.provider.ProviderEventListener;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -38,7 +43,25 @@ public class JpaRealmProviderFactory implements RealmProviderFactory {
 
     @Override
     public void postInit(KeycloakSessionFactory factory) {
-
+        factory.register(new ProviderEventListener() {
+            @Override
+            public void onEvent(ProviderEvent event) {
+                if (event instanceof RoleContainerModel.RoleRemovedEvent) {
+                    RoleContainerModel.RoleRemovedEvent roleRemovedEvent = (RoleContainerModel.RoleRemovedEvent) event;
+                    JpaRealmProvider provider = (JpaRealmProvider) roleRemovedEvent.getKeycloakSession().getProvider(RealmProvider.class, getId());
+                    RoleContainerModel container = roleRemovedEvent.getRole().getContainer();
+                    RealmModel realm;
+                    if (container instanceof RealmModel) {
+                        realm = ((RealmModel) container);
+                    } else if (container instanceof ClientModel) {
+                        realm = ((ClientModel) container).getRealm();
+                    } else {
+                        return;
+                    }
+                    provider.preRemove(realm, roleRemovedEvent.getRole());
+                }
+            }
+        });
     }
 
     @Override
