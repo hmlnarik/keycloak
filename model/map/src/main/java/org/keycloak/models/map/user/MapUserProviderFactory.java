@@ -27,10 +27,10 @@ import org.keycloak.models.map.common.AbstractMapProviderFactory;
  *
  * @author mhajas
  */
-public class MapUserProviderFactory<K> extends AbstractMapProviderFactory<UserProvider, K, AbstractUserEntity<K>, UserModel> implements UserProviderFactory {
+public class MapUserProviderFactory<K> extends AbstractMapProviderFactory<UserProvider, K, MapUserEntity<K>, UserModel> implements UserProviderFactory {
 
     public MapUserProviderFactory() {
-        super(AbstractUserEntity.class, UserModel.class);
+        super(MapUserEntity.class, UserModel.class);
     }
 
     @Override

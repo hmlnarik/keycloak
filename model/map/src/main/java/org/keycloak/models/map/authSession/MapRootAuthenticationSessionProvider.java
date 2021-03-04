@@ -48,12 +48,12 @@ public class MapRootAuthenticationSessionProvider<K> implements AuthenticationSe
 
     private static final Logger LOG = Logger.getLogger(MapRootAuthenticationSessionProvider.class);
     private final KeycloakSession session;
-    protected final MapKeycloakTransaction<K, AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> tx;
-    private final MapStorage<K, AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> sessionStore;
+    protected final MapKeycloakTransaction<K, MapRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> tx;
+    private final MapStorage<K, MapRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> sessionStore;
 
     private static final String AUTHENTICATION_SESSION_EVENTS = "AUTHENTICATION_SESSION_EVENTS";
 
-    public MapRootAuthenticationSessionProvider(KeycloakSession session, MapStorage<K, AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> sessionStore) {
+    public MapRootAuthenticationSessionProvider(KeycloakSession session, MapStorage<K, MapRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> sessionStore) {
         this.session = session;
         this.sessionStore = sessionStore;
         this.tx = sessionStore.createTransaction();
@@ -61,7 +61,7 @@ public class MapRootAuthenticationSessionProvider<K> implements AuthenticationSe
         session.getTransactionManager().enlistAfterCompletion(tx);
     }
 
-    private Function<AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<MapRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
 
         return origEntity -> new MapRootAuthenticationSessionAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
@@ -72,13 +72,13 @@ public class MapRootAuthenticationSessionProvider<K> implements AuthenticationSe
         };
     }
 
-    private AbstractRootAuthenticationSessionEntity<K> registerEntityForChanges(AbstractRootAuthenticationSessionEntity<K> origEntity) {
-        AbstractRootAuthenticationSessionEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
-        tx.updateIfChanged(origEntity.getId(), res, AbstractRootAuthenticationSessionEntity<K>::isUpdated);
+    private MapRootAuthenticationSessionEntity<K> registerEntityForChanges(MapRootAuthenticationSessionEntity<K> origEntity) {
+        MapRootAuthenticationSessionEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
+        tx.updateIfChanged(origEntity.getId(), res, MapRootAuthenticationSessionEntity<K>::isUpdated);
         return res;
     }
 
-    private Predicate<AbstractRootAuthenticationSessionEntity<K>> entityRealmFilter(String realmId) {
+    private Predicate<MapRootAuthenticationSessionEntity<K>> entityRealmFilter(String realmId) {
         if (realmId == null) {
             return c -> false;
         }
@@ -100,7 +100,7 @@ public class MapRootAuthenticationSessionProvider<K> implements AuthenticationSe
         LOG.tracef("createRootAuthenticationSession(%s)%s", realm.getName(), getShortStackTrace());
 
         // create map authentication session entity
-        AbstractRootAuthenticationSessionEntity<K> entity = new AbstractRootAuthenticationSessionEntity<>(entityId, realm.getId());
+        MapRootAuthenticationSessionEntity<K> entity = new MapRootAuthenticationSessionEntity<>(entityId, realm.getId());
         entity.setRealmId(realm.getId());
         entity.setTimestamp(Time.currentTime());
 
@@ -122,7 +122,7 @@ public class MapRootAuthenticationSessionProvider<K> implements AuthenticationSe
 
         LOG.tracef("getRootAuthenticationSession(%s, %s)%s", realm.getName(), authenticationSessionId, getShortStackTrace());
 
-        AbstractRootAuthenticationSessionEntity<K> entity = tx.read(sessionStore.getKeyConvertor().fromString(authenticationSessionId));
+        MapRootAuthenticationSessionEntity<K> entity = tx.read(sessionStore.getKeyConvertor().fromString(authenticationSessionId));
         return (entity == null || !entityRealmFilter(realm.getId()).test(entity))
                 ? null
                 : entityToAdapterFunc(realm).apply(entity);

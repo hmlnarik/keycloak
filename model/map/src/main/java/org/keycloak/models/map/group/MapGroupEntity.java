@@ -30,7 +30,7 @@ import java.util.Set;
  *
  * @author mhajas
  */
-public class AbstractGroupEntity<K> implements AbstractEntity<K> {
+public class MapGroupEntity<K> implements AbstractEntity<K> {
 
     private final K id;
     private final String realmId;
@@ -45,12 +45,12 @@ public class AbstractGroupEntity<K> implements AbstractEntity<K> {
      */
     protected boolean updated;
 
-    protected AbstractGroupEntity() {
+    protected MapGroupEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractGroupEntity(K id, String realmId) {
+    public MapGroupEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

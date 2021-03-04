@@ -30,11 +30,11 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleContainerModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 
-public abstract class MapRoleAdapter<K> extends AbstractRoleModel<AbstractRoleEntity<K>> implements RoleModel {
+public abstract class MapRoleAdapter<K> extends AbstractRoleModel<MapRoleEntity<K>> implements RoleModel {
 
     private static final Logger LOG = Logger.getLogger(MapRoleAdapter.class);
 
-    public MapRoleAdapter(KeycloakSession session, RealmModel realm, AbstractRoleEntity<K> entity) {
+    public MapRoleAdapter(KeycloakSession session, RealmModel realm, MapRoleEntity<K> entity) {
         super(session, realm, entity);
     }
 

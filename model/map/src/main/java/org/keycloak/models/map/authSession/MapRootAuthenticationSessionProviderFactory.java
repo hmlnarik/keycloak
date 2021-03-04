@@ -26,11 +26,11 @@ import org.keycloak.sessions.RootAuthenticationSessionModel;
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public class MapRootAuthenticationSessionProviderFactory<K> extends AbstractMapProviderFactory<AuthenticationSessionProvider, K, AbstractRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel>
+public class MapRootAuthenticationSessionProviderFactory<K> extends AbstractMapProviderFactory<AuthenticationSessionProvider, K, MapRootAuthenticationSessionEntity<K>, RootAuthenticationSessionModel>
         implements AuthenticationSessionProviderFactory {
 
     public MapRootAuthenticationSessionProviderFactory() {
-        super(AbstractRootAuthenticationSessionEntity.class, RootAuthenticationSessionModel.class);
+        super(MapRootAuthenticationSessionEntity.class, RootAuthenticationSessionModel.class);
     }
 
     @Override

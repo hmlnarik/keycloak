@@ -27,10 +27,10 @@ import org.keycloak.models.map.common.AbstractMapProviderFactory;
  *
  * @author mhajas
  */
-public class MapGroupProviderFactory<K> extends AbstractMapProviderFactory<GroupProvider, K, AbstractGroupEntity<K>, GroupModel> implements GroupProviderFactory {
+public class MapGroupProviderFactory<K> extends AbstractMapProviderFactory<GroupProvider, K, MapGroupEntity<K>, GroupModel> implements GroupProviderFactory {
 
     public MapGroupProviderFactory() {
-        super(AbstractGroupEntity.class, GroupModel.class);
+        super(MapGroupEntity.class, GroupModel.class);
     }
 
     @Override

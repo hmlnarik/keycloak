@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public class AbstractRootAuthenticationSessionEntity<K> implements AbstractEntity<K> {
+public class MapRootAuthenticationSessionEntity<K> implements AbstractEntity<K> {
 
     private K id;
     private String realmId;
@@ -37,12 +37,12 @@ public class AbstractRootAuthenticationSessionEntity<K> implements AbstractEntit
     private int timestamp;
     private Map<String, MapAuthenticationSessionEntity> authenticationSessions = new ConcurrentHashMap<>();
 
-    protected AbstractRootAuthenticationSessionEntity() {
+    protected MapRootAuthenticationSessionEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractRootAuthenticationSessionEntity(K id, String realmId) {
+    public MapRootAuthenticationSessionEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

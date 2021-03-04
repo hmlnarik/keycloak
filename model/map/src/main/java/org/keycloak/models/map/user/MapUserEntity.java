@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  *
  * @author mhajas
  */
-public class AbstractUserEntity<K> implements AbstractEntity<K> {
+public class MapUserEntity<K> implements AbstractEntity<K> {
 
     private final K id;
     private final String realmId;
@@ -65,19 +65,19 @@ public class AbstractUserEntity<K> implements AbstractEntity<K> {
     private String serviceAccountClientLink;
     private int notBefore;
 
-    static Comparator<AbstractUserEntity<?>> COMPARE_BY_USERNAME = Comparator.comparing(AbstractUserEntity::getUsername);
+    static Comparator<MapUserEntity<?>> COMPARE_BY_USERNAME = Comparator.comparing(MapUserEntity::getUsername);
 
     /**
      * Flag signalizing that any of the setters has been meaningfully used.
      */
     protected boolean updated;
 
-    protected AbstractUserEntity() {
+    protected MapUserEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractUserEntity(K id, String realmId) {
+    public MapUserEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

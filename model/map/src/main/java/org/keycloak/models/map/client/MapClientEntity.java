@@ -34,7 +34,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public class AbstractClientEntity<K> implements AbstractEntity<K> {
+public class MapClientEntity<K> implements AbstractEntity<K> {
 
     private K id;
     private String realmId;
@@ -77,12 +77,12 @@ public class AbstractClientEntity<K> implements AbstractEntity<K> {
      */
     protected boolean updated;
 
-    protected AbstractClientEntity() {
+    protected MapClientEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractClientEntity(K id, String realmId) {
+    public MapClientEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

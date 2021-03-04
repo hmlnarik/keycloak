@@ -27,15 +27,15 @@ import org.keycloak.models.map.common.AbstractMapProviderFactory;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.MapStorageProvider;
 
-public class MapClientScopeProviderFactory<K> extends AbstractMapProviderFactory<ClientScopeProvider, K, AbstractClientScopeEntity<K>, ClientScopeModel> implements ClientScopeProviderFactory {
+public class MapClientScopeProviderFactory<K> extends AbstractMapProviderFactory<ClientScopeProvider, K, MapClientScopeEntity<K>, ClientScopeModel> implements ClientScopeProviderFactory {
 
     public MapClientScopeProviderFactory(Class<? extends AbstractEntity> entityType, Class<ClientScopeModel> modelType) {
-        super(AbstractClientScopeEntity.class, ClientScopeModel.class);
+        super(MapClientScopeEntity.class, ClientScopeModel.class);
     }
 
     @Override
     public ClientScopeProvider create(KeycloakSession session) {
-        final MapStorage<K, AbstractClientScopeEntity<K>, ClientScopeModel> storage = getStorage(session);
+        final MapStorage<K, MapClientScopeEntity<K>, ClientScopeModel> storage = getStorage(session);
         return new MapClientScopeProvider(session, storage);
     }
 

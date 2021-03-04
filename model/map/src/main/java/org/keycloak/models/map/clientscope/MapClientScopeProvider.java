@@ -43,25 +43,25 @@ public class MapClientScopeProvider<K> implements ClientScopeProvider {
 
     private static final Logger LOG = Logger.getLogger(MapClientScopeProvider.class);
     private final KeycloakSession session;
-    private final MapKeycloakTransaction<K, AbstractClientScopeEntity<K>, ClientScopeModel> tx;
-    private final MapStorage<K, AbstractClientScopeEntity<K>, ClientScopeModel> clientScopeStore;
+    private final MapKeycloakTransaction<K, MapClientScopeEntity<K>, ClientScopeModel> tx;
+    private final MapStorage<K, MapClientScopeEntity<K>, ClientScopeModel> clientScopeStore;
 
-    private static final Comparator<AbstractClientScopeEntity> COMPARE_BY_NAME = Comparator.comparing(AbstractClientScopeEntity::getName);
+    private static final Comparator<MapClientScopeEntity> COMPARE_BY_NAME = Comparator.comparing(MapClientScopeEntity::getName);
 
-    public MapClientScopeProvider(KeycloakSession session, MapStorage<K, AbstractClientScopeEntity<K>, ClientScopeModel> clientScopeStore) {
+    public MapClientScopeProvider(KeycloakSession session, MapStorage<K, MapClientScopeEntity<K>, ClientScopeModel> clientScopeStore) {
         this.session = session;
         this.clientScopeStore = clientScopeStore;
         this.tx = clientScopeStore.createTransaction();
         session.getTransactionManager().enlist(tx);
     }
 
-    private AbstractClientScopeEntity<K> registerEntityForChanges(AbstractClientScopeEntity<K> origEntity) {
-        final AbstractClientScopeEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
-        tx.updateIfChanged(origEntity.getId(), res, AbstractClientScopeEntity<K>::isUpdated);
+    private MapClientScopeEntity<K> registerEntityForChanges(MapClientScopeEntity<K> origEntity) {
+        final MapClientScopeEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
+        tx.updateIfChanged(origEntity.getId(), res, MapClientScopeEntity<K>::isUpdated);
         return res;
     }
 
-    private Function<AbstractClientScopeEntity<K>, ClientScopeModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<MapClientScopeEntity<K>, ClientScopeModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
 
         return origEntity -> new MapClientScopeAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
@@ -72,7 +72,7 @@ public class MapClientScopeProvider<K> implements ClientScopeProvider {
         };
     }
 
-    private Predicate<AbstractClientScopeEntity<K>> entityRealmFilter(RealmModel realm) {
+    private Predicate<MapClientScopeEntity<K>> entityRealmFilter(RealmModel realm) {
         if (realm == null || realm.getId() == null) {
             return c -> false;
         }
@@ -105,7 +105,7 @@ public class MapClientScopeProvider<K> implements ClientScopeProvider {
 
         LOG.tracef("addClientScope(%s, %s, %s)%s", realm, id, name, getShortStackTrace());
 
-        AbstractClientScopeEntity<K> entity = new AbstractClientScopeEntity<K>(entityId, realm.getId());
+        MapClientScopeEntity<K> entity = new MapClientScopeEntity<K>(entityId, realm.getId());
         entity.setName(KeycloakModelUtils.convertClientScopeName(name));
         if (tx.read(entity.getId()) != null) {
             throw new ModelDuplicateException("Client scope exists: " + id);
@@ -156,7 +156,7 @@ public class MapClientScopeProvider<K> implements ClientScopeProvider {
             return null;
         }
 
-        AbstractClientScopeEntity<K> entity = tx.read(uuid);
+        MapClientScopeEntity<K> entity = tx.read(uuid);
         return (entity == null || ! entityRealmFilter(realm).test(entity))
           ? null
           : entityToAdapterFunc(realm).apply(entity);

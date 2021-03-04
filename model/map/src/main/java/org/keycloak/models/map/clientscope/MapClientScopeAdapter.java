@@ -28,9 +28,9 @@ import org.keycloak.models.RoleModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.RoleUtils;
 
-public abstract class MapClientScopeAdapter<K> extends AbstractClientScopeModel<AbstractClientScopeEntity<K>> implements ClientScopeModel {
+public abstract class MapClientScopeAdapter<K> extends AbstractClientScopeModel<MapClientScopeEntity<K>> implements ClientScopeModel {
 
-    public MapClientScopeAdapter(KeycloakSession session, RealmModel realm, AbstractClientScopeEntity<K> entity) {
+    public MapClientScopeAdapter(KeycloakSession session, RealmModel realm, MapClientScopeEntity<K> entity) {
         super(session, realm, entity);
     }
 

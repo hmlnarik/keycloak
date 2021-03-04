@@ -75,23 +75,23 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
 
     private static final Logger LOG = Logger.getLogger(MapUserProvider.class);
     private final KeycloakSession session;
-    final MapKeycloakTransaction<K, AbstractUserEntity<K>, UserModel> tx;
-    private final MapStorage<K, AbstractUserEntity<K>, UserModel> userStore;
+    final MapKeycloakTransaction<K, MapUserEntity<K>, UserModel> tx;
+    private final MapStorage<K, MapUserEntity<K>, UserModel> userStore;
 
-    public MapUserProvider(KeycloakSession session, MapStorage<K, AbstractUserEntity<K>, UserModel> store) {
+    public MapUserProvider(KeycloakSession session, MapStorage<K, MapUserEntity<K>, UserModel> store) {
         this.session = session;
         this.userStore = store;
         this.tx = userStore.createTransaction();
         session.getTransactionManager().enlist(tx);
     }
 
-    private AbstractUserEntity<K> registerEntityForChanges(AbstractUserEntity<K> origEntity) {
-        AbstractUserEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
-        tx.updateIfChanged(origEntity.getId(), res, AbstractUserEntity<K>::isUpdated);
+    private MapUserEntity<K> registerEntityForChanges(MapUserEntity<K> origEntity) {
+        MapUserEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
+        tx.updateIfChanged(origEntity.getId(), res, MapUserEntity<K>::isUpdated);
         return res;
     }
 
-    private Function<AbstractUserEntity<K>, UserModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<MapUserEntity<K>, UserModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
         return origEntity -> new MapUserAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
             @Override
@@ -111,7 +111,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         };
     }
 
-    private Predicate<AbstractUserEntity<K>> entityRealmFilter(RealmModel realm) {
+    private Predicate<MapUserEntity<K>> entityRealmFilter(RealmModel realm) {
         if (realm == null || realm.getId() == null) {
             return c -> false;
         }
@@ -123,7 +123,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         return new ModelException("Specified user doesn't exist.");
     }
 
-    private Optional<AbstractUserEntity<K>> getEntityById(RealmModel realm, String id) {
+    private Optional<MapUserEntity<K>> getEntityById(RealmModel realm, String id) {
         try {
             return getEntityById(realm, userStore.getKeyConvertor().fromString(id));
         } catch (IllegalArgumentException ex) {
@@ -131,14 +131,14 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         }
     }
 
-    private AbstractUserEntity<K> getRegisteredEntityByIdOrThrow(RealmModel realm, String id) {
+    private MapUserEntity<K> getRegisteredEntityByIdOrThrow(RealmModel realm, String id) {
         return getEntityById(realm, id)
                 .map(this::registerEntityForChanges)
                 .orElseThrow(this::userDoesntExistException);
     }
 
-    private Optional<AbstractUserEntity<K>> getEntityById(RealmModel realm, K id) {
-        AbstractUserEntity<K> mapUserEntity = tx.read(id);
+    private Optional<MapUserEntity<K>> getEntityById(RealmModel realm, K id) {
+        MapUserEntity<K> mapUserEntity = tx.read(id);
         if (mapUserEntity != null && entityRealmFilter(realm).test(mapUserEntity)) {
             return Optional.of(mapUserEntity);
         }
@@ -146,7 +146,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         return Optional.empty();
     }
 
-    private Optional<AbstractUserEntity<K>> getRegisteredEntityById(RealmModel realm, String id) {
+    private Optional<MapUserEntity<K>> getRegisteredEntityById(RealmModel realm, String id) {
         return getEntityById(realm, id).map(this::registerEntityForChanges);
     }
 
@@ -194,7 +194,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     public Stream<FederatedIdentityModel> getFederatedIdentitiesStream(RealmModel realm, UserModel user) {
         LOG.tracef("getFederatedIdentitiesStream(%s, %s)%s", realm, user.getId(), getShortStackTrace());
         return getEntityById(realm, user.getId())
-                .map(AbstractUserEntity::getFederatedIdentities).orElseGet(Stream::empty)
+                .map(MapUserEntity::getFederatedIdentities).orElseGet(Stream::empty)
                 .map(UserFederatedIdentityEntity::toModel);
     }
 
@@ -250,7 +250,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     public Stream<UserConsentModel> getConsentsStream(RealmModel realm, String userId) {
         LOG.tracef("getConsentByClientStream(%s, %s)%s", realm, userId, getShortStackTrace());
         return getEntityById(realm, userId)
-                .map(AbstractUserEntity::getUserConsents)
+                .map(MapUserEntity::getUserConsents)
                 .orElse(Stream.empty())
                 .map(consent -> UserConsentEntity.toModel(realm, consent));
     }
@@ -259,7 +259,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     public void updateConsent(RealmModel realm, String userId, UserConsentModel consent) {
         LOG.tracef("updateConsent(%s, %s, %s)%s", realm, userId, consent, getShortStackTrace());
 
-        AbstractUserEntity<K> user = getRegisteredEntityByIdOrThrow(realm, userId);
+        MapUserEntity<K> user = getRegisteredEntityByIdOrThrow(realm, userId);
         UserConsentEntity userConsentEntity = user.getUserConsent(consent.getClient().getId());
         if (userConsentEntity == null) {
             throw new ModelException("Consent not found for client [" + consent.getClient().getId() + "] and user [" + userId + "]");
@@ -336,7 +336,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
             throw new ModelDuplicateException("User exists: " + entityId);
         }
 
-        AbstractUserEntity<K> entity = new AbstractUserEntity<>(entityId, realm.getId());
+        MapUserEntity<K> entity = new MapUserEntity<>(entityId, realm.getId());
         entity.setUsername(username.toLowerCase());
         entity.setCreatedTimestamp(Time.currentTimeMillis());
 
@@ -387,7 +387,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.FEDERATION_LINK, Operator.EQ, storageProviderId);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             s.map(this::registerEntityForChanges)
               .forEach(userEntity -> userEntity.setFederationLink(null));
         }
@@ -401,7 +401,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.ASSIGNED_ROLE, Operator.EQ, roleId);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             s.map(this::registerEntityForChanges)
               .forEach(userEntity -> userEntity.removeRolesMembership(roleId));
         }
@@ -415,7 +415,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.ASSIGNED_GROUP, Operator.EQ, groupId);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             s.map(this::registerEntityForChanges)
               .forEach(userEntity -> userEntity.removeGroupsMembership(groupId));
         }
@@ -429,7 +429,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.CONSENT_FOR_CLIENT, Operator.EQ, clientId);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             s.map(this::registerEntityForChanges)
               .forEach(userEntity -> userEntity.removeUserConsent(clientId));
         }
@@ -449,8 +449,8 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, clientScope.getRealm().getId())
           .compare(SearchableFields.CONSENT_WITH_CLIENT_SCOPE, Operator.EQ, clientScopeId);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
-            s.flatMap(AbstractUserEntity::getUserConsents)
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+            s.flatMap(MapUserEntity::getUserConsents)
               .forEach(consent -> consent.removeGrantedClientScopesIds(clientScopeId));
         }
     }
@@ -467,14 +467,14 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
               .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
               .compare(SearchableFields.CONSENT_CLIENT_FEDERATION_LINK, Operator.EQ, componentId);
 
-            try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+            try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
                 String providerIdS = new StorageId(componentId, "").getId();
                 s.forEach(removeConsentsForExternalClient(providerIdS));
             }
         }
     }
 
-    private Consumer<AbstractUserEntity<K>> removeConsentsForExternalClient(String idPrefix) {
+    private Consumer<MapUserEntity<K>> removeConsentsForExternalClient(String idPrefix) {
         return userEntity -> {
             List<String> consentClientIds = userEntity.getUserConsents()
               .map(UserConsentEntity::getClientId)
@@ -495,7 +495,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         ModelCriteriaBuilder<UserModel> mcb = userStore.createCriteriaBuilder()
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId());
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             s.map(this::registerEntityForChanges)
               .forEach(entity -> entity.addRolesMembership(roleId));
         }
@@ -515,7 +515,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.USERNAME, Operator.ILIKE, username);
 
-        try (Stream<AbstractUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapUserEntity<K>> s = tx.getUpdatedNotRemoved(mcb)) {
             return s.findFirst()
               .map(entityToAdapterFunc(realm)).orElse(null);
         }
@@ -528,7 +528,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.EMAIL, Operator.EQ, email);
 
-        List<AbstractUserEntity<K>> usersWithEmail = tx.getUpdatedNotRemoved(mcb)
+        List<MapUserEntity<K>> usersWithEmail = tx.getUpdatedNotRemoved(mcb)
                 .filter(userEntity -> Objects.equals(userEntity.getEmail(), email))
                 .collect(Collectors.toList());
         if (usersWithEmail.isEmpty()) return null;
@@ -539,7 +539,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
             throw new ModelDuplicateException("Multiple users with email '" + email + "' exist in Keycloak.");
         }
 
-        AbstractUserEntity<K> userEntity = registerEntityForChanges(usersWithEmail.get(0));
+        MapUserEntity<K> userEntity = registerEntityForChanges(usersWithEmail.get(0));
         
         if (!realm.isDuplicateEmailsAllowed()) {
             if (userEntity.getEmail() != null && !userEntity.getEmail().equals(userEntity.getEmailConstraint())) {
@@ -590,7 +590,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
         }
 
         return paginatedStream(tx.getUpdatedNotRemoved(mcb)
-          .sorted(AbstractUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
+          .sorted(MapUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
           .map(entityToAdapterFunc(realm));
     }
 
@@ -707,8 +707,8 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
             mcb = mcb.compare(SearchableFields.ASSIGNED_GROUP, Operator.IN, authorizedGroups);
         }
 
-        Stream<AbstractUserEntity<K>> usersStream = tx.getUpdatedNotRemoved(mcb)
-                .sorted(AbstractUserEntity.COMPARE_BY_USERNAME); // Sort before paginating
+        Stream<MapUserEntity<K>> usersStream = tx.getUpdatedNotRemoved(mcb)
+                .sorted(MapUserEntity.COMPARE_BY_USERNAME); // Sort before paginating
         
         return paginatedStream(usersStream, firstResult, maxResults) // paginate if necessary
                 .map(entityToAdapterFunc(realm))
@@ -722,7 +722,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.ASSIGNED_GROUP, Operator.EQ, group.getId());
 
-        return paginatedStream(tx.getUpdatedNotRemoved(mcb).sorted(AbstractUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
+        return paginatedStream(tx.getUpdatedNotRemoved(mcb).sorted(MapUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
                 .map(entityToAdapterFunc(realm));
     }
 
@@ -734,7 +734,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.ATTRIBUTE, Operator.EQ, attrName, attrValue);
 
         return tx.getUpdatedNotRemoved(mcb)
-          .sorted(AbstractUserEntity.COMPARE_BY_USERNAME)
+          .sorted(MapUserEntity.COMPARE_BY_USERNAME)
           .map(entityToAdapterFunc(realm));
     }
 
@@ -746,7 +746,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     @Override
     public boolean removeUser(RealmModel realm, UserModel user) {
         String userId = user.getId();
-        Optional<AbstractUserEntity<K>> userById = getEntityById(realm, userId);
+        Optional<MapUserEntity<K>> userById = getEntityById(realm, userId);
         if (userById.isPresent()) {
             tx.delete(userStore.getKeyConvertor().fromString(userId));
             return true;
@@ -763,7 +763,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
           .compare(SearchableFields.ASSIGNED_ROLE, Operator.EQ, role.getId());
 
         return paginatedStream(tx.getUpdatedNotRemoved(mcb)
-                .sorted(AbstractUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
+                .sorted(MapUserEntity.COMPARE_BY_USERNAME), firstResult, maxResults)
                 .map(entityToAdapterFunc(realm));
     }
 
@@ -773,7 +773,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
                 .ifPresent(updateCredential(cred));
     }
     
-    private Consumer<AbstractUserEntity<K>> updateCredential(CredentialModel credentialModel) {
+    private Consumer<MapUserEntity<K>> updateCredential(CredentialModel credentialModel) {
         return user -> {
             UserCredentialEntity credentialEntity = user.getCredential(credentialModel.getId());
             if (credentialEntity == null) return;
@@ -818,7 +818,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     public Stream<CredentialModel> getStoredCredentialsStream(RealmModel realm, UserModel user) {
         LOG.tracef("getStoredCredentialsStream(%s, %s)%s", realm, user.getId(), getShortStackTrace());
         return getEntityById(realm, user.getId())
-                .map(AbstractUserEntity::getCredentials)
+                .map(MapUserEntity::getCredentials)
                 .orElseGet(Stream::empty)
                 .map(UserCredentialEntity::toModel);
     }
@@ -842,7 +842,7 @@ public class MapUserProvider<K> implements UserProvider.Streams, UserCredentialS
     public boolean moveCredentialTo(RealmModel realm, UserModel user, String id, String newPreviousCredentialId) {
         LOG.tracef("moveCredentialTo(%s, %s, %s, %s)%s", realm, user.getId(), id, newPreviousCredentialId, getShortStackTrace());
         String userId = user.getId();
-        AbstractUserEntity<K> userEntity = getRegisteredEntityById(realm, userId).orElse(null);
+        MapUserEntity<K> userEntity = getRegisteredEntityById(realm, userId).orElse(null);
         if (userEntity == null) {
             LOG.warnf("User with id: [%s] not found", userId);
             return false;

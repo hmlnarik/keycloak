@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 
-public abstract class MapGroupAdapter<K> extends AbstractGroupModel<AbstractGroupEntity<K>> {
-    public MapGroupAdapter(KeycloakSession session, RealmModel realm, AbstractGroupEntity<K> entity) {
+public abstract class MapGroupAdapter<K> extends AbstractGroupModel<MapGroupEntity<K>> {
+    public MapGroupAdapter(KeycloakSession session, RealmModel realm, MapGroupEntity<K> entity) {
         super(session, realm, entity);
     }
 

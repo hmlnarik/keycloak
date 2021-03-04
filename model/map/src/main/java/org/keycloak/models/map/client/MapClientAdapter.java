@@ -37,9 +37,9 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public abstract class MapClientAdapter<K> extends AbstractClientModel<AbstractClientEntity<K>> implements ClientModel {
+public abstract class MapClientAdapter<K> extends AbstractClientModel<MapClientEntity<K>> implements ClientModel {
 
-    public MapClientAdapter(KeycloakSession session, RealmModel realm, AbstractClientEntity<K> entity) {
+    public MapClientAdapter(KeycloakSession session, RealmModel realm, MapClientEntity<K> entity) {
         super(session, realm, entity);
     }
 

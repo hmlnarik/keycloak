@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.map.common.AbstractEntity;
 
-public class AbstractClientScopeEntity<K> implements AbstractEntity<K> {
+public class MapClientScopeEntity<K> implements AbstractEntity<K> {
 
     private final K id;
     private final String realmId;
@@ -46,12 +46,12 @@ public class AbstractClientScopeEntity<K> implements AbstractEntity<K> {
      */
     protected boolean updated;
 
-    protected AbstractClientScopeEntity() {
+    protected MapClientScopeEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractClientScopeEntity(K id, String realmId) {
+    public MapClientScopeEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

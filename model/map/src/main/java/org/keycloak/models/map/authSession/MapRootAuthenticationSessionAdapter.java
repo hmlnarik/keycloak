@@ -31,9 +31,9 @@ import java.util.stream.Collectors;
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public abstract class MapRootAuthenticationSessionAdapter<K> extends AbstractRootAuthenticationSessionModel<AbstractRootAuthenticationSessionEntity<K>> {
+public abstract class MapRootAuthenticationSessionAdapter<K> extends AbstractRootAuthenticationSessionModel<MapRootAuthenticationSessionEntity<K>> {
 
-    public MapRootAuthenticationSessionAdapter(KeycloakSession session, RealmModel realm, AbstractRootAuthenticationSessionEntity<K> entity) {
+    public MapRootAuthenticationSessionAdapter(KeycloakSession session, RealmModel realm, MapRootAuthenticationSessionEntity<K> entity) {
         super(session, realm, entity);
     }
 

@@ -21,18 +21,18 @@ import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.models.map.authSession.AbstractRootAuthenticationSessionEntity;
-import org.keycloak.models.map.client.AbstractClientEntity;
-import org.keycloak.models.map.clientscope.AbstractClientScopeEntity;
+import org.keycloak.models.map.clientscope.MapClientScopeEntity;
+import org.keycloak.models.map.authSession.MapRootAuthenticationSessionEntity;
+import org.keycloak.models.map.client.MapClientEntity;
 import org.keycloak.models.map.common.AbstractEntity;
-import org.keycloak.models.map.group.AbstractGroupEntity;
-import org.keycloak.models.map.role.AbstractRoleEntity;
+import org.keycloak.models.map.group.MapGroupEntity;
+import org.keycloak.models.map.role.MapRoleEntity;
 import org.keycloak.storage.SearchableModelField;
 import java.util.HashMap;
 import java.util.Map;
 import org.keycloak.models.map.storage.MapModelCriteriaBuilder.UpdatePredicatesFunc;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
-import org.keycloak.models.map.user.AbstractUserEntity;
+import org.keycloak.models.map.user.MapUserEntity;
 import org.keycloak.models.map.user.UserConsentEntity;
 import org.keycloak.sessions.RootAuthenticationSessionModel;
 import org.keycloak.storage.StorageId;
@@ -49,43 +49,43 @@ import java.util.function.Predicate;
  */
 public class MapFieldPredicates {
 
-    public static final Map<SearchableModelField<ClientModel>, UpdatePredicatesFunc<Object, AbstractClientEntity<Object>, ClientModel>> CLIENT_PREDICATES = basePredicates(ClientModel.SearchableFields.ID);
-    public static final Map<SearchableModelField<ClientScopeModel>, UpdatePredicatesFunc<Object, AbstractClientScopeEntity<Object>, ClientScopeModel>> CLIENT_SCOPE_PREDICATES = basePredicates(ClientScopeModel.SearchableFields.ID);
-    public static final Map<SearchableModelField<GroupModel>, UpdatePredicatesFunc<Object, AbstractGroupEntity<Object>, GroupModel>> GROUP_PREDICATES = basePredicates(GroupModel.SearchableFields.ID);
-    public static final Map<SearchableModelField<RoleModel>, UpdatePredicatesFunc<Object, AbstractRoleEntity<Object>, RoleModel>> ROLE_PREDICATES = basePredicates(RoleModel.SearchableFields.ID);
-    public static final Map<SearchableModelField<UserModel>, UpdatePredicatesFunc<Object, AbstractUserEntity<Object>, UserModel>> USER_PREDICATES = basePredicates(UserModel.SearchableFields.ID);
-    public static final Map<SearchableModelField<RootAuthenticationSessionModel>, UpdatePredicatesFunc<Object, AbstractRootAuthenticationSessionEntity<Object>, RootAuthenticationSessionModel>> AUTHENTICATION_SESSION_PREDICATES = basePredicates(RootAuthenticationSessionModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<ClientModel>, UpdatePredicatesFunc<Object, MapClientEntity<Object>, ClientModel>> CLIENT_PREDICATES = basePredicates(ClientModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<ClientScopeModel>, UpdatePredicatesFunc<Object, MapClientScopeEntity<Object>, ClientScopeModel>> CLIENT_SCOPE_PREDICATES = basePredicates(ClientScopeModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<GroupModel>, UpdatePredicatesFunc<Object, MapGroupEntity<Object>, GroupModel>> GROUP_PREDICATES = basePredicates(GroupModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<RoleModel>, UpdatePredicatesFunc<Object, MapRoleEntity<Object>, RoleModel>> ROLE_PREDICATES = basePredicates(RoleModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<UserModel>, UpdatePredicatesFunc<Object, MapUserEntity<Object>, UserModel>> USER_PREDICATES = basePredicates(UserModel.SearchableFields.ID);
+    public static final Map<SearchableModelField<RootAuthenticationSessionModel>, UpdatePredicatesFunc<Object, MapRootAuthenticationSessionEntity<Object>, RootAuthenticationSessionModel>> AUTHENTICATION_SESSION_PREDICATES = basePredicates(RootAuthenticationSessionModel.SearchableFields.ID);
 
     @SuppressWarnings("unchecked")
     private static final Map<Class<?>, Map> PREDICATES = new HashMap<>();
 
     static {
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.REALM_ID,             AbstractClientEntity::getRealmId);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.CLIENT_ID,            AbstractClientEntity::getClientId);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.REALM_ID,             MapClientEntity::getRealmId);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.CLIENT_ID,            MapClientEntity::getClientId);
 
-        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.REALM_ID,  AbstractClientScopeEntity::getRealmId);
-        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.NAME,      AbstractClientScopeEntity::getName);
+        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.REALM_ID,  MapClientScopeEntity::getRealmId);
+        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.NAME,      MapClientScopeEntity::getName);
 
-        put(GROUP_PREDICATES, GroupModel.SearchableFields.REALM_ID,               AbstractGroupEntity::getRealmId);
-        put(GROUP_PREDICATES, GroupModel.SearchableFields.NAME,                   AbstractGroupEntity::getName);
-        put(GROUP_PREDICATES, GroupModel.SearchableFields.PARENT_ID,              AbstractGroupEntity::getParentId);
+        put(GROUP_PREDICATES, GroupModel.SearchableFields.REALM_ID,               MapGroupEntity::getRealmId);
+        put(GROUP_PREDICATES, GroupModel.SearchableFields.NAME,                   MapGroupEntity::getName);
+        put(GROUP_PREDICATES, GroupModel.SearchableFields.PARENT_ID,              MapGroupEntity::getParentId);
         put(GROUP_PREDICATES, GroupModel.SearchableFields.ASSIGNED_ROLE,          MapFieldPredicates::checkGrantedGroupRole);
 
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.REALM_ID,                 AbstractRoleEntity::getRealmId);
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.CLIENT_ID,                AbstractRoleEntity::getClientId);
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.DESCRIPTION,              AbstractRoleEntity::getDescription);
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.NAME,                     AbstractRoleEntity::getName);
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.IS_CLIENT_ROLE,           AbstractRoleEntity::isClientRole);
-        put(ROLE_PREDICATES, RoleModel.SearchableFields.IS_COMPOSITE_ROLE,        AbstractRoleEntity::isComposite);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.REALM_ID,                 MapRoleEntity::getRealmId);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.CLIENT_ID,                MapRoleEntity::getClientId);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.DESCRIPTION,              MapRoleEntity::getDescription);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.NAME,                     MapRoleEntity::getName);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.IS_CLIENT_ROLE,           MapRoleEntity::isClientRole);
+        put(ROLE_PREDICATES, RoleModel.SearchableFields.IS_COMPOSITE_ROLE,        MapRoleEntity::isComposite);
 
-        put(USER_PREDICATES, UserModel.SearchableFields.REALM_ID,                 AbstractUserEntity::getRealmId);
-        put(USER_PREDICATES, UserModel.SearchableFields.USERNAME,                 AbstractUserEntity::getUsername);
-        put(USER_PREDICATES, UserModel.SearchableFields.FIRST_NAME,               AbstractUserEntity::getFirstName);
-        put(USER_PREDICATES, UserModel.SearchableFields.LAST_NAME,                AbstractUserEntity::getLastName);
-        put(USER_PREDICATES, UserModel.SearchableFields.EMAIL,                    AbstractUserEntity::getEmail);
-        put(USER_PREDICATES, UserModel.SearchableFields.ENABLED,                  AbstractUserEntity::isEnabled);
-        put(USER_PREDICATES, UserModel.SearchableFields.EMAIL_VERIFIED,           AbstractUserEntity::isEmailVerified);
-        put(USER_PREDICATES, UserModel.SearchableFields.FEDERATION_LINK,          AbstractUserEntity::getFederationLink);
+        put(USER_PREDICATES, UserModel.SearchableFields.REALM_ID,                 MapUserEntity::getRealmId);
+        put(USER_PREDICATES, UserModel.SearchableFields.USERNAME,                 MapUserEntity::getUsername);
+        put(USER_PREDICATES, UserModel.SearchableFields.FIRST_NAME,               MapUserEntity::getFirstName);
+        put(USER_PREDICATES, UserModel.SearchableFields.LAST_NAME,                MapUserEntity::getLastName);
+        put(USER_PREDICATES, UserModel.SearchableFields.EMAIL,                    MapUserEntity::getEmail);
+        put(USER_PREDICATES, UserModel.SearchableFields.ENABLED,                  MapUserEntity::isEnabled);
+        put(USER_PREDICATES, UserModel.SearchableFields.EMAIL_VERIFIED,           MapUserEntity::isEmailVerified);
+        put(USER_PREDICATES, UserModel.SearchableFields.FEDERATION_LINK,          MapUserEntity::getFederationLink);
         put(USER_PREDICATES, UserModel.SearchableFields.ATTRIBUTE,                MapFieldPredicates::checkUserAttributes);
         put(USER_PREDICATES, UserModel.SearchableFields.IDP_AND_USER,             MapFieldPredicates::getUserIdpAliasAtIdentityProviderPredicate);
         put(USER_PREDICATES, UserModel.SearchableFields.ASSIGNED_ROLE,            MapFieldPredicates::checkGrantedUserRole);
@@ -93,10 +93,10 @@ public class MapFieldPredicates {
         put(USER_PREDICATES, UserModel.SearchableFields.CONSENT_FOR_CLIENT,       MapFieldPredicates::checkUserClientConsent);
         put(USER_PREDICATES, UserModel.SearchableFields.CONSENT_WITH_CLIENT_SCOPE, MapFieldPredicates::checkUserConsentsWithClientScope);
         put(USER_PREDICATES, UserModel.SearchableFields.CONSENT_CLIENT_FEDERATION_LINK, MapFieldPredicates::getUserConsentClientFederationLink);
-        put(USER_PREDICATES, UserModel.SearchableFields.SERVICE_ACCOUNT_CLIENT,   AbstractUserEntity::getServiceAccountClientLink);
+        put(USER_PREDICATES, UserModel.SearchableFields.SERVICE_ACCOUNT_CLIENT,   MapUserEntity::getServiceAccountClientLink);
 
-        put(AUTHENTICATION_SESSION_PREDICATES, RootAuthenticationSessionModel.SearchableFields.REALM_ID,    AbstractRootAuthenticationSessionEntity::getRealmId);
-        put(AUTHENTICATION_SESSION_PREDICATES, RootAuthenticationSessionModel.SearchableFields.TIMESTAMP,   AbstractRootAuthenticationSessionEntity::getTimestamp);
+        put(AUTHENTICATION_SESSION_PREDICATES, RootAuthenticationSessionModel.SearchableFields.REALM_ID,    MapRootAuthenticationSessionEntity::getRealmId);
+        put(AUTHENTICATION_SESSION_PREDICATES, RootAuthenticationSessionModel.SearchableFields.TIMESTAMP,   MapRootAuthenticationSessionEntity::getTimestamp);
     }
 
     static {
@@ -136,23 +136,23 @@ public class MapFieldPredicates {
         return s;
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractGroupEntity<Object>, GroupModel> checkGrantedGroupRole(MapModelCriteriaBuilder<Object, AbstractGroupEntity<Object>, GroupModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapGroupEntity<Object>, GroupModel> checkGrantedGroupRole(MapModelCriteriaBuilder<Object, MapGroupEntity<Object>, GroupModel> mcb, Operator op, Object[] values) {
         String roleIdS = ensureEqSingleValue(GroupModel.SearchableFields.ASSIGNED_ROLE, "role_id", op, values);
-        Function<AbstractGroupEntity<Object>, ?> getter;
+        Function<MapGroupEntity<Object>, ?> getter;
         getter = ge -> ge.getGrantedRoles().contains(roleIdS);
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> getUserConsentClientFederationLink(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> getUserConsentClientFederationLink(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         String providerId = ensureEqSingleValue(UserModel.SearchableFields.CONSENT_CLIENT_FEDERATION_LINK, "provider_id", op, values);
         String providerIdS = new StorageId((String) providerId, "").getId();
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         getter = ue -> ue.getUserConsents().map(UserConsentEntity::getClientId).anyMatch(v -> v != null && v.startsWith(providerIdS));
 
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> checkUserAttributes(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> checkUserAttributes(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         if (values == null || values.length <= 1) {
             throw new CriterionNotSupportedException(UserModel.SearchableFields.ATTRIBUTE, op, "Invalid arguments, expected (attribute_name, ...), got: " + Arrays.toString(values));
         }
@@ -162,7 +162,7 @@ public class MapFieldPredicates {
             throw new CriterionNotSupportedException(UserModel.SearchableFields.ATTRIBUTE, op, "Invalid arguments, expected (String attribute_name), got: " + Arrays.toString(values));
         }
         String attrNameS = (String) attrName;
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         Object[] realValues = new Object[values.length - 1];
         System.arraycopy(values, 1, realValues, 0, values.length - 1);
         Predicate<Object> valueComparator = CriteriaOperator.predicateFor(op, realValues);
@@ -174,16 +174,16 @@ public class MapFieldPredicates {
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> checkGrantedUserRole(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> checkGrantedUserRole(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         String roleIdS = ensureEqSingleValue(UserModel.SearchableFields.ASSIGNED_ROLE, "role_id", op, values);
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         getter = ue -> ue.getRolesMembership().contains(roleIdS);
 
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> checkUserGroup(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
-        Function<AbstractUserEntity<Object>, ?> getter;
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> checkUserGroup(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+        Function<MapUserEntity<Object>, ?> getter;
         if (op == Operator.IN && values != null && values.length == 1 && (values[0] instanceof Collection)) {
             Collection<?> c = (Collection<?>) values[0];
             getter = ue -> ue.getGroupsMembership().stream().anyMatch(c::contains);
@@ -195,23 +195,23 @@ public class MapFieldPredicates {
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> checkUserClientConsent(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> checkUserClientConsent(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         String clientIdS = ensureEqSingleValue(UserModel.SearchableFields.CONSENT_FOR_CLIENT, "client_id", op, values);
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         getter = ue -> ue.getUserConsent(clientIdS);
 
         return mcb.fieldCompare(Operator.EXISTS, getter, null);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> checkUserConsentsWithClientScope(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> checkUserConsentsWithClientScope(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         String clientScopeIdS = ensureEqSingleValue(UserModel.SearchableFields.CONSENT_FOR_CLIENT, "client_scope_id", op, values);
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         getter = ue -> ue.getUserConsents().anyMatch(consent -> consent.getGrantedClientScopesIds().contains(clientScopeIdS));
 
         return mcb.fieldCompare(Boolean.TRUE::equals, getter);
     }
 
-    private static MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> getUserIdpAliasAtIdentityProviderPredicate(MapModelCriteriaBuilder<Object, AbstractUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
+    private static MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> getUserIdpAliasAtIdentityProviderPredicate(MapModelCriteriaBuilder<Object, MapUserEntity<Object>, UserModel> mcb, Operator op, Object[] values) {
         if (op != Operator.EQ) {
             throw new CriterionNotSupportedException(UserModel.SearchableFields.IDP_AND_USER, op);
         }
@@ -220,7 +220,7 @@ public class MapFieldPredicates {
         }
 
         final Object idpAlias = values[0];
-        Function<AbstractUserEntity<Object>, ?> getter;
+        Function<MapUserEntity<Object>, ?> getter;
         if (values.length == 1) {
             getter = ue -> ue.getFederatedIdentities()
               .anyMatch(aue -> Objects.equals(idpAlias, aue.getIdentityProvider()));

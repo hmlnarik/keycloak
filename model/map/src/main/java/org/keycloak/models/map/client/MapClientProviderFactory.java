@@ -29,17 +29,17 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author hmlnarik
  */
-public class MapClientProviderFactory<K> extends AbstractMapProviderFactory<ClientProvider, K, AbstractClientEntity<K>, ClientModel> implements ClientProviderFactory {
+public class MapClientProviderFactory<K> extends AbstractMapProviderFactory<ClientProvider, K, MapClientEntity<K>, ClientModel> implements ClientProviderFactory {
 
     private final ConcurrentHashMap<K, ConcurrentMap<String, Integer>> REGISTERED_NODES_STORE = new ConcurrentHashMap<>();
 
     public MapClientProviderFactory() {
-        super(AbstractClientEntity.class, ClientModel.class);
+        super(MapClientEntity.class, ClientModel.class);
     }
 
     @Override
     public ClientProvider create(KeycloakSession session) {
-        final MapStorage<K, AbstractClientEntity<K>, ClientModel> storage = getStorage(session);
+        final MapStorage<K, MapClientEntity<K>, ClientModel> storage = getStorage(session);
         return new MapClientProvider<>(session, storage, REGISTERED_NODES_STORE);
     }
 

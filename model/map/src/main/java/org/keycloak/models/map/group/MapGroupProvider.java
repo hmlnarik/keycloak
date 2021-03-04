@@ -44,23 +44,23 @@ public class MapGroupProvider<K> implements GroupProvider {
 
     private static final Logger LOG = Logger.getLogger(MapGroupProvider.class);
     private final KeycloakSession session;
-    final MapKeycloakTransaction<K, AbstractGroupEntity<K>, GroupModel> tx;
-    private final MapStorage<K, AbstractGroupEntity<K>, GroupModel> groupStore;
+    final MapKeycloakTransaction<K, MapGroupEntity<K>, GroupModel> tx;
+    private final MapStorage<K, MapGroupEntity<K>, GroupModel> groupStore;
 
-    public MapGroupProvider(KeycloakSession session, MapStorage<K, AbstractGroupEntity<K>, GroupModel> groupStore) {
+    public MapGroupProvider(KeycloakSession session, MapStorage<K, MapGroupEntity<K>, GroupModel> groupStore) {
         this.session = session;
         this.groupStore = groupStore;
         this.tx = groupStore.createTransaction();
         session.getTransactionManager().enlist(tx);
     }
 
-    private AbstractGroupEntity<K> registerEntityForChanges(AbstractGroupEntity<K> origEntity) {
-        final AbstractGroupEntity<K> res = Serialization.from(origEntity);
-        tx.updateIfChanged(origEntity.getId(), res, AbstractGroupEntity<K>::isUpdated);
+    private MapGroupEntity<K> registerEntityForChanges(MapGroupEntity<K> origEntity) {
+        final MapGroupEntity<K> res = Serialization.from(origEntity);
+        tx.updateIfChanged(origEntity.getId(), res, MapGroupEntity<K>::isUpdated);
         return res;
     }
 
-    private Function<AbstractGroupEntity<K>, GroupModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<MapGroupEntity<K>, GroupModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
         return origEntity -> new MapGroupAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
             @Override
@@ -85,7 +85,7 @@ public class MapGroupProvider<K> implements GroupProvider {
             return null;
         }
         
-        AbstractGroupEntity<K> entity = tx.read(uid);
+        MapGroupEntity<K> entity = tx.read(uid);
         String realmId = realm.getId();
         return (entity == null || ! Objects.equals(realmId, entity.getRealmId()))
                 ? null
@@ -204,7 +204,7 @@ public class MapGroupProvider<K> implements GroupProvider {
             throw new ModelDuplicateException("Group with name '" + name + "' in realm " + realm.getName() + " already exists for requested parent" );
         }
 
-        AbstractGroupEntity<K> entity = new AbstractGroupEntity<K>(entityId, realm.getId());
+        MapGroupEntity<K> entity = new MapGroupEntity<K>(entityId, realm.getId());
         entity.setName(name);
         entity.setParentId(toParent == null ? null : toParent.getId());
         if (tx.read(entity.getId()) != null) {
@@ -267,7 +267,7 @@ public class MapGroupProvider<K> implements GroupProvider {
           .compare(SearchableFields.PARENT_ID, Operator.EQ, parentId)
           .compare(SearchableFields.NAME, Operator.EQ, group.getName());
 
-        try (Stream<AbstractGroupEntity<K>> possibleSiblings = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapGroupEntity<K>> possibleSiblings = tx.getUpdatedNotRemoved(mcb)) {
             if (possibleSiblings.findAny().isPresent()) {
                 throw new ModelDuplicateException("Parent already contains subgroup named '" + group.getName() + "'");
             }
@@ -289,7 +289,7 @@ public class MapGroupProvider<K> implements GroupProvider {
           .compare(SearchableFields.PARENT_ID, Operator.EQ, (Object) null)
           .compare(SearchableFields.NAME, Operator.EQ, subGroup.getName());
 
-        try (Stream<AbstractGroupEntity<K>> possibleSiblings = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapGroupEntity<K>> possibleSiblings = tx.getUpdatedNotRemoved(mcb)) {
             if (possibleSiblings.findAny().isPresent()) {
                 throw new ModelDuplicateException("There is already a top level group named '" + subGroup.getName() + "'");
             }
@@ -304,7 +304,7 @@ public class MapGroupProvider<K> implements GroupProvider {
         ModelCriteriaBuilder<GroupModel> mcb = groupStore.createCriteriaBuilder()
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.ASSIGNED_ROLE, Operator.EQ, role.getId());
-        try (Stream<AbstractGroupEntity<K>> toRemove = tx.getUpdatedNotRemoved(mcb)) {
+        try (Stream<MapGroupEntity<K>> toRemove = tx.getUpdatedNotRemoved(mcb)) {
             toRemove
                 .map(groupEntity -> session.groups().getGroupById(realm, groupEntity.getId().toString()))
                 .forEach(groupModel -> groupModel.deleteRoleMapping(role));

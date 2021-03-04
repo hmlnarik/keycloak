@@ -48,13 +48,13 @@ public class MapClientProvider<K> implements ClientProvider {
 
     private static final Logger LOG = Logger.getLogger(MapClientProvider.class);
     private final KeycloakSession session;
-    final MapKeycloakTransaction<K, AbstractClientEntity<K>, ClientModel> tx;
-    private final MapStorage<K, AbstractClientEntity<K>, ClientModel> clientStore;
+    final MapKeycloakTransaction<K, MapClientEntity<K>, ClientModel> tx;
+    private final MapStorage<K, MapClientEntity<K>, ClientModel> clientStore;
     private final ConcurrentMap<K, ConcurrentMap<String, Integer>> clientRegisteredNodesStore;
 
-    private static final Comparator<AbstractClientEntity> COMPARE_BY_CLIENT_ID = Comparator.comparing(AbstractClientEntity::getClientId);
+    private static final Comparator<MapClientEntity> COMPARE_BY_CLIENT_ID = Comparator.comparing(MapClientEntity::getClientId);
 
-    public MapClientProvider(KeycloakSession session, MapStorage<K, AbstractClientEntity<K>, ClientModel> clientStore, ConcurrentMap<K, ConcurrentMap<String, Integer>> clientRegisteredNodesStore) {
+    public MapClientProvider(KeycloakSession session, MapStorage<K, MapClientEntity<K>, ClientModel> clientStore, ConcurrentMap<K, ConcurrentMap<String, Integer>> clientRegisteredNodesStore) {
         this.session = session;
         this.clientStore = clientStore;
         this.clientRegisteredNodesStore = clientRegisteredNodesStore;
@@ -76,13 +76,13 @@ public class MapClientProvider<K> implements ClientProvider {
         };
     }
 
-    private AbstractClientEntity<K> registerEntityForChanges(AbstractClientEntity<K> origEntity) {
-        final AbstractClientEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
-        tx.updateIfChanged(origEntity.getId(), res, AbstractClientEntity<K>::isUpdated);
+    private MapClientEntity<K> registerEntityForChanges(MapClientEntity<K> origEntity) {
+        final MapClientEntity<K> res = tx.read(origEntity.getId(), id -> Serialization.from(origEntity));
+        tx.updateIfChanged(origEntity.getId(), res, MapClientEntity<K>::isUpdated);
         return res;
     }
 
-    private Function<AbstractClientEntity<K>, ClientModel> entityToAdapterFunc(RealmModel realm) {
+    private Function<MapClientEntity<K>, ClientModel> entityToAdapterFunc(RealmModel realm) {
         // Clone entity before returning back, to avoid giving away a reference to the live object to the caller
 
         return origEntity -> new MapClientAdapter<K>(session, realm, registerEntityForChanges(origEntity)) {
@@ -117,7 +117,7 @@ public class MapClientProvider<K> implements ClientProvider {
         };
     }
 
-    private Predicate<AbstractClientEntity<K>> entityRealmFilter(RealmModel realm) {
+    private Predicate<MapClientEntity<K>> entityRealmFilter(RealmModel realm) {
         if (realm == null || realm.getId() == null) {
             return c -> false;
         }
@@ -151,7 +151,7 @@ public class MapClientProvider<K> implements ClientProvider {
 
         LOG.tracef("addClient(%s, %s, %s)%s", realm, id, clientId, getShortStackTrace());
 
-        AbstractClientEntity<K> entity = new AbstractClientEntity<>(entityId, realm.getId());
+        MapClientEntity<K> entity = new MapClientEntity<>(entityId, realm.getId());
         entity.setClientId(clientId);
         entity.setEnabled(true);
         entity.setStandardFlowEnabled(true);
@@ -232,7 +232,7 @@ public class MapClientProvider<K> implements ClientProvider {
 
         LOG.tracef("getClientById(%s, %s)%s", realm, id, getShortStackTrace());
 
-        AbstractClientEntity<K> entity = tx.read(clientStore.getKeyConvertor().fromString(id));
+        MapClientEntity<K> entity = tx.read(clientStore.getKeyConvertor().fromString(id));
         return (entity == null || ! entityRealmFilter(realm).test(entity))
           ? null
           : entityToAdapterFunc(realm).apply(entity);
@@ -266,7 +266,7 @@ public class MapClientProvider<K> implements ClientProvider {
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
           .compare(SearchableFields.CLIENT_ID, Operator.ILIKE, "%" + clientId + "%");
 
-        Stream<AbstractClientEntity<K>> s = tx.getUpdatedNotRemoved(mcb)
+        Stream<MapClientEntity<K>> s = tx.getUpdatedNotRemoved(mcb)
           .sorted(COMPARE_BY_CLIENT_ID);
 
         return paginatedStream(s, firstResult, maxResults).map(entityToAdapterFunc(realm));

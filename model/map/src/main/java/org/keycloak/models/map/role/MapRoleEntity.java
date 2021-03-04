@@ -24,7 +24,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.keycloak.models.map.common.AbstractEntity;
 
-public class AbstractRoleEntity<K> implements AbstractEntity<K> {
+public class MapRoleEntity<K> implements AbstractEntity<K> {
 
     private K id;
     private String realmId;
@@ -41,12 +41,12 @@ public class AbstractRoleEntity<K> implements AbstractEntity<K> {
      */
     protected boolean updated;
 
-    protected AbstractRoleEntity() {
+    protected MapRoleEntity() {
         this.id = null;
         this.realmId = null;
     }
 
-    public AbstractRoleEntity(K id, String realmId) {
+    public MapRoleEntity(K id, String realmId) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(realmId, "realmId");
 

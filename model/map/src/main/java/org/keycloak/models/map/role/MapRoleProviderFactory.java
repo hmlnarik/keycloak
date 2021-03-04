@@ -22,10 +22,10 @@ import org.keycloak.models.RoleModel;
 import org.keycloak.models.RoleProvider;
 import org.keycloak.models.RoleProviderFactory;
 
-public class MapRoleProviderFactory<K> extends AbstractMapProviderFactory<RoleProvider, K, AbstractRoleEntity<K>, RoleModel> implements RoleProviderFactory {
+public class MapRoleProviderFactory<K> extends AbstractMapProviderFactory<RoleProvider, K, MapRoleEntity<K>, RoleModel> implements RoleProviderFactory {
 
     public MapRoleProviderFactory() {
-        super(AbstractRoleEntity.class, RoleModel.class);
+        super(MapRoleEntity.class, RoleModel.class);
     }
 
     @Override
