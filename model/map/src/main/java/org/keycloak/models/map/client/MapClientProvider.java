@@ -64,7 +64,7 @@ public class MapClientProvider implements ClientProvider {
         this.session = session;
         this.clientStore = clientStore;
         this.clientRegisteredNodesStore = clientRegisteredNodesStore;
-        this.tx = clientStore.createTransaction();
+        this.tx = clientStore.createTransaction(session);
         session.getTransactionManager().enlist(tx);
     }
 
@@ -321,7 +321,6 @@ public class MapClientProvider implements ClientProvider {
                 .collect(Collectors.toMap(ClientScopeModel::getName, Function.identity()));
     }
 
-    @Override
     public void preRemove(RealmModel realm, RoleModel role) {
         ModelCriteriaBuilder<ClientModel> mcb = clientStore.createCriteriaBuilder()
           .compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
@@ -329,6 +328,7 @@ public class MapClientProvider implements ClientProvider {
         try (Stream<MapClientEntity> toRemove = tx.getUpdatedNotRemoved(mcb)) {
             toRemove
                 .map(clientEntity -> session.clients().getClientById(realm, clientEntity.getId().toString()))
+                .filter(Objects::nonNull)
                 .forEach(clientModel -> clientModel.deleteScopeMapping(role));
         }
     }

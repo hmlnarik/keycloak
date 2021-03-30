@@ -169,11 +169,4 @@ public interface ClientProvider extends ClientLookupProvider, Provider {
      */
     void removeClientScope(RealmModel realm, ClientModel client, ClientScopeModel clientScope);
 
-    /**
-     * This function is called when a role is removed; this serves for removing references from clients to roles.
-     *
-     * @param realm Realm.
-     * @param role Role which will be removed.
-     */
-    void preRemove(RealmModel realm, RoleModel role);
 }
