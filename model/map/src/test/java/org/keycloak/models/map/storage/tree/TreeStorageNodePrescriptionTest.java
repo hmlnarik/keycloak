@@ -20,7 +20,6 @@ import org.keycloak.models.ClientModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.map.client.MapClientEntity;
 import org.keycloak.models.map.client.MapClientEntityFields;
-import org.keycloak.models.map.client.MapClientEntityFields;
 import org.keycloak.models.map.realm.MapRealmEntity;
 import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.tree.TreeStorageNodePrescription.FieldContainedStatus;
@@ -29,7 +28,6 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import org.junit.Test;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -81,7 +79,7 @@ public class TreeStorageNodePrescriptionTest {
         edgeProperties.put("epropRealmOnly[" + ModelEntityUtil.getModelName(RealmModel.class) + "]", "propRealmOnlyValue");
         edgeProperties.put("epropBoth", "propBothValue");
 
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, edgeProperties, treeProperties);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(treeProperties, nodeProperties, edgeProperties);
         TreeStorageNodePrescription c1 = n.forEntityClass(MapClientEntity.class);
         TreeStorageNodePrescription r1 = n.forEntityClass(MapRealmEntity.class);
 
@@ -111,7 +109,7 @@ public class TreeStorageNodePrescriptionTest {
     @Test
     public void testPrimarySourceForBasicUnset() {
         Map<String, Object> nodeProperties = new HashMap<>();
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, null, null);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(null, nodeProperties, null);
 
         for (MapClientEntityFields field : MapClientEntityFields.values()) {
             assertThat("Field " + field + " has primary source in this node", n.isPrimarySourceFor(field, null), is(FieldContainedStatus.FULLY));
@@ -132,7 +130,7 @@ public class TreeStorageNodePrescriptionTest {
             primarySourceFor.put(field, null);
         }
         nodeProperties.put(NodeProperties.PRIMARY_SOURCE_FOR, primarySourceFor);
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, null, null);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(null, nodeProperties, null);
 
         for (MapClientEntityFields field : MapClientEntityFields.values()) {
             assertThat("Field " + field + " has primary source in this node", n.isPrimarySourceFor(field, null), is(FieldContainedStatus.FULLY));
@@ -151,7 +149,7 @@ public class TreeStorageNodePrescriptionTest {
         EnumMap<MapClientEntityFields, Collection<String>> primarySourceFor = new EnumMap<>(MapClientEntityFields.class);
         nodeProperties.put(NodeProperties.PRIMARY_SOURCE_FOR, primarySourceFor);
         primarySourceFor.put(MapClientEntityFields.ID, null);
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, null, null);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(null, nodeProperties, null);
 
         for (MapClientEntityFields field : MapClientEntityFields.values()) {
             assertThat(n.isPrimarySourceFor(field, null),
@@ -173,7 +171,7 @@ public class TreeStorageNodePrescriptionTest {
         primarySourceForExcluded.put(MapClientEntityFields.ATTRIBUTES, null);
 
         // node is primary for all fields apart from all attributes
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, null, null);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(null, nodeProperties, null);
 
         for (MapClientEntityFields field : MapClientEntityFields.values()) {
             assertThat(n.isPrimarySourceFor(field, null),
@@ -198,7 +196,7 @@ public class TreeStorageNodePrescriptionTest {
         primarySourceForExcluded.put(MapClientEntityFields.ATTRIBUTES, Arrays.asList("attr1", "attr2"));
 
         // node is primary for all attributes apart from "attr1" and "attr2"
-        TreeStorageNodePrescription n = new TreeStorageNodePrescription(nodeProperties, null, null);
+        TreeStorageNodePrescription n = new TreeStorageNodePrescription(null, nodeProperties, null);
 
         assertThat("Field ID has NOT primary source in this node", n.isPrimarySourceFor(MapClientEntityFields.ID, null), is(FieldContainedStatus.NOT_CONTAINED));
         assertThat("Attribute attr1 has NOT primary source in this node", n.isPrimarySourceFor(MapClientEntityFields.ATTRIBUTES, "attr1"), is(FieldContainedStatus.NOT_CONTAINED));

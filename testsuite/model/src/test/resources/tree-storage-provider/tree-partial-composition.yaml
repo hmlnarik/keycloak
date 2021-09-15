@@ -1,0 +1,53 @@
+# Tree store: partial storage only
+stores:
+  - partial:
+      mappers[clients]:
+        attribute.name:
+          from: ${LOGO}
+          read-only: true
+        client-id: ${NAME}
+        id: ${NAME}
+        enabled: ${ENABLED}
+        attribute.origin: partial
+        attribute.some-info: ${NAME} is ${ENABLED}
+      read-only[clients]: true
+
+      contents[clients]:
+        - NAME: client1
+          ENABLED: false
+
+  - partial:
+      mappers[clients]:
+        attribute.name:
+          from: ${LOGO}
+          read-only: true
+        client-id: ${NAME}
+        id: ${NAME}
+        enabled: ${ENABLED}
+        attribute.origin: partial
+        attribute.some-info: ${NAME} is ${ENABLED}
+      read-only[clients]: true
+
+      contents[clients]:
+        - NAME: client2
+          ENABLED: true
+          LOGO: AQIDBAUGBwgJCgsMDQ4P
+
+  - partial:
+      mappers[clients]:
+        attribute.name:
+          from: ${LOGO}
+          read-only: true
+        client-id: ${NAME}
+        id: ${NAME}
+        enabled: ${ENABLED}
+        attribute.origin: partial
+        attribute.some-info: ${NAME} is ${ENABLED}
+      read-only[clients]: true
+
+      contents[clients]:
+        - NAME: client3
+          ENABLED: true
+          LOGO: null
+
+

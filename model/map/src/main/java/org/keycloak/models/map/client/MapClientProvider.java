@@ -43,6 +43,7 @@ import org.keycloak.models.map.storage.MapStorage;
 import static org.keycloak.common.util.StackUtil.getShortStackTrace;
 import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
+import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 import static org.keycloak.models.map.storage.QueryParameters.Order.ASCENDING;
 import static org.keycloak.models.map.storage.QueryParameters.withCriteria;
@@ -179,10 +180,9 @@ public class MapClientProvider implements ClientProvider {
     public void removeClients(RealmModel realm) {
         LOG.tracef("removeClients(%s)%s", realm, getShortStackTrace());
 
-        getClientsStream(realm)
-          .map(ClientModel::getId)
-          .collect(Collectors.toSet())  // This is necessary to read out all the client IDs before removing the clients
-          .forEach(cid -> removeClient(realm, cid));
+        DefaultModelCriteria<ClientModel> mcb = criteria();
+        mcb = mcb.compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId());
+        tx.delete(new QueryParameters<>(mcb));
     }
 
     @Override

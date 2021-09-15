@@ -154,7 +154,7 @@ class CriteriaOperator {
                 operand = Collections.singleton(value0);
             }
         } else {
-            operand = new HashSet(Arrays.asList(value));
+            operand = new HashSet<>(Arrays.asList(value));
         }
         return operand.isEmpty() ? ALWAYS_FALSE : new Predicate<Object>() {
             @Override public boolean test(Object v) { return operand.contains(v); }

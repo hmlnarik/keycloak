@@ -43,7 +43,7 @@ public class DefaultModelCriteriaTest {
     public void testSimpleCompareAnd() {
         DefaultModelCriteria<ClientModel> v = criteria();
         assertThat(v.and(), hasToString("__TRUE__"));
-        assertThat(v.and(v.or()), hasToString("__FALSE__"));
+        assertThat(v.and(v.or()).optimize(), hasToString("__FALSE__"));
 
         assertThat(v.and(v.compare(CLIENT_ID, Operator.EQ, 3)), hasToString("clientId EQ [3]"));
         assertThat(v.and(v.compare(CLIENT_ID, Operator.EQ, 3), v.or()), hasToString("__FALSE__"));

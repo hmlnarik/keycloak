@@ -1,0 +1,28 @@
+# Tree store: hot rod on top of JPA and partial storage
+stores:
+  - hotrod:
+      connection: localhost:11221
+      child-stores:
+        - jpa:
+            connection: jdbc://postgresql:localhost:5432/keycloak/
+            username: a
+            password: b
+            mappers:
+              attribute.origin: jpa
+
+        - partial:
+            mappers[clients]:
+              attribute.name:
+                from: ${LOGO}
+                read-only: true
+              client-id: ${NAME}
+              enabled: ${ENABLED}
+              attribute.expr: ${NAME} is ${ENABLED}
+            mappers:
+              attribute.origin: partial
+            edit-mode: unsynced # read-only, writable
+            sync:
+              mode: always
+              periodic-full-sync-period: 1634567897
+              periodic-changed-sync-period: 86400
+

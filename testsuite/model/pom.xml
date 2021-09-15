@@ -25,6 +25,7 @@
         <jdbc.mvn.version>${h2.version}</jdbc.mvn.version>
         <log4j.configuration>file:${project.build.directory}/dependency/log4j.properties</log4j.configuration>
         <jacoco.skip>true</jacoco.skip>
+        <tree.configResource>none</tree.configResource>
         <keycloak.profile.feature.map_storage>disabled</keycloak.profile.feature.map_storage>
         <keycloak.userSessions.infinispan.preloadOfflineSessionsFromDatabase>false</keycloak.userSessions.infinispan.preloadOfflineSessionsFromDatabase>
     </properties>
@@ -58,6 +59,15 @@
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-map</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-build-processor</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi-private</artifactId>
         </dependency>
         <dependency>
@@ -82,10 +92,6 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-model-infinispan</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-model-map</artifactId>
         </dependency>
         <dependency>
             <groupId>org.keycloak.testsuite</groupId>
@@ -157,6 +163,7 @@
                         <keycloak.userSessions.infinispan.preloadOfflineSessionsFromDatabase>${keycloak.userSessions.infinispan.preloadOfflineSessionsFromDatabase}</keycloak.userSessions.infinispan.preloadOfflineSessionsFromDatabase>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <org.jboss.logging.provider>log4j</org.jboss.logging.provider>
+                        <tree.configResource>${tree.configResource}</tree.configResource>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -297,6 +304,33 @@
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
                 <keycloak.model.parameters>Jpa,Map,ConcurrentHashMapStorage</keycloak.model.parameters>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>tree-single</id>
+            <properties>
+                <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
+                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <tree.configResource>/tree-storage-provider/tree-partial.yaml</tree.configResource>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>tree-two-level</id>
+            <properties>
+                <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
+                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <tree.configResource>/tree-storage-provider/tree-partial-below-chm.yaml</tree.configResource>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>tree-composition</id>
+            <properties>
+                <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
+                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <tree.configResource>/tree-storage-provider/tree-partial-composition.yaml</tree.configResource>
             </properties>
         </profile>
 

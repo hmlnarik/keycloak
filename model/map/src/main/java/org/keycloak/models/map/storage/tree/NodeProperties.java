@@ -31,9 +31,7 @@ public final class NodeProperties {
      */
     public static final String ENTITY_RESTRICTION = "entity-restriction";
     public static final String AUTHORITATIVE_DECIDER = "authoritative-decider";
-    public static final String STRONGLY_AUTHORITATIVE = "strongly-authoritative";
     public static final String READ_ONLY = "read-only";
-    public static final String REVALIDATE = "revalidate";
 
     public static final String AUTHORITATIVE_NODES = "___authoritative-nodes___";
     public static final String STORAGE_PROVIDER = "___storage-provider___";

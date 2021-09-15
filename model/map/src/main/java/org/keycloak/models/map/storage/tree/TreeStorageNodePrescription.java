@@ -16,6 +16,7 @@
  */
 package org.keycloak.models.map.storage.tree;
 
+import org.keycloak.models.map.storage.tree.AuthoritativeDecider.AuthoritativeStatus;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +34,8 @@ import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.EntityField;
 import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+
+import static org.keycloak.models.map.storage.tree.AuthoritativeDecider.AuthoritativeStatus.UNKNOWN;
 
 /**
  * Prescription of the tree storage. This prescription can
@@ -53,6 +56,12 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
     private final boolean isPrimarySourceForEverything;
     private final boolean isCacheForAnything;
 
+    /**
+     * For a given node and an entity field, represents how big a portion of the field is contained by the storage in this node.
+     * This is not any exact measure, only the qualitative indication whether the field is contained fully
+     * (the full value is contained in this node), partially (part of the value is contained in this node but other parts
+     * can be found in some child node, e.g. certain attributes), or not contained at all.
+     */
     public static enum FieldContainedStatus {
         /** 
          * Field is fully contained in the storage in this node.
@@ -138,8 +147,8 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
         this(treeProperties, null, null);
     }
 
-    public TreeStorageNodePrescription(Map<String, Object> nodeProperties, Map<String, Object> edgeProperties, Map<String, Object> treeProperties) {
-        super(nodeProperties, edgeProperties, treeProperties);
+    public TreeStorageNodePrescription(Map<String, Object> treeProperties, Map<String, Object> nodeProperties, Map<String, Object> edgeProperties) {
+        super(treeProperties, nodeProperties, edgeProperties);
         Map<?, ?> psf = (Map<?, ?>) this.nodeProperties.get(NodeProperties.PRIMARY_SOURCE_FOR);
         Map<?, ?> psfe = (Map<?, ?>) this.nodeProperties.get(NodeProperties.PRIMARY_SOURCE_FOR_EXCLUDED);
         isPrimarySourceForAnything = (psf != null && ! psf.isEmpty()) || (psfe != null && ! psfe.isEmpty());
@@ -147,6 +156,16 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
         Map<?, ?> cf = (Map<?, ?>) this.nodeProperties.get(NodeProperties.CACHE_FOR);
         Map<?, ?> cfe = (Map<?, ?>) this.nodeProperties.get(NodeProperties.CACHE_FOR_EXCLUDED);
         isCacheForAnything = (cf != null && ! cf.isEmpty()) || (cfe != null && ! cfe.isEmpty());
+    }
+
+    public AuthoritativeStatus getAuthoritativeStatus(DefaultModelCriteria<?> criteria) {
+        Optional<AuthoritativeDecider> a = getNodeProperty(NodeProperties.AUTHORITATIVE_DECIDER, AuthoritativeDecider.class);
+        return a.map(ad -> ad.isAuthoritative(criteria)).orElse(UNKNOWN);
+    }
+
+    public boolean isStronglyAuthoritative(DefaultModelCriteria<?> criteria) {
+        Optional<DefaultModelCriteria> dmc = getNodeProperty(NodeProperties.ENTITY_RESTRICTION, DefaultModelCriteria.class);
+        return false;
     }
 
     public <V extends AbstractEntity> TreeStorageNodePrescription forEntityClass(Class<V> targetEntityClass) {
@@ -171,7 +190,7 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
             return null;
         }
 
-        return new TreeStorageNodePrescription(nodeProperties, edgeProperties, treeProperties);
+        return new TreeStorageNodePrescription(treeProperties, nodeProperties, edgeProperties);
     }
 
     /**
@@ -237,6 +256,36 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
         return isPrimarySourceFor.minus(isExcludedPrimarySourceFor);
     }
 
+    /**
+     * Returns the field containment status for a particular field and an optional parameter (for example
+     * {@code attributes} field and attribute name, or a {@code client-id} field and {@code null} parameter).
+     * <p>
+     * The field status depends on two node properties: {@link NodeProperties#CACHE_FOR} and {@link NodeProperties#CACHE_FOR_EXCLUDED}.
+     * If there is no {@link NodeProperties#CACHE_FOR} declared while {@link NodeProperties#CACHE_FOR_EXCLUDED} is, it is
+     * considered as if {@link NodeProperties#CACHE_FOR} contained all the fields.
+     * <p>
+     * The result is:
+     * <ul>
+     * <li>{@link FieldContainedStatus#FULLY} if the field and the parameter is listed in the {@link NodeProperties#CACHE_FOR}
+     *     and either it is not listed in {@link NodeProperties#CACHE_FOR_EXCLUDED} at all or for this particular parameter
+     * </li>
+     * <li>{@link FieldContainedStatus#NOT_CONTAINED} if the field and the parameter is not listed in the {@link NodeProperties#CACHE_FOR}
+     *     or it is listed in {@link NodeProperties#CACHE_FOR_EXCLUDED} for this particular parameter or for all parameters.
+     * </li>
+     * <li>{@link FieldContainedStatus#PARTIALLY} if the field is listed in the {@link NodeProperties#CACHE_FOR} only for certain parameters
+     *     and the {@code parameter} is not set, or the field is listed in the {@link NodeProperties#CACHE_FOR} for all parameters
+     *     and at the same time it is listed in {@link NodeProperties#CACHE_FOR_EXCLUDED} for certain parameters (so some of the field
+     *     values might be stored in a child node).
+     * </li>
+     * </ul>
+     *
+     * @see {@link NodeProperties#CACHE_FOR}
+     * @see {@link NodeProperties#CACHE_FOR_EXCLUDED}
+     *
+     * @param field
+     * @param parameter
+     * @return
+     */
     public FieldContainedStatus isCacheFor(EntityField<?> field, Object parameter) {
         if (! isCacheForAnything) {
             return FieldContainedStatus.NOT_CONTAINED;
@@ -258,6 +307,15 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
         return isCacheFor.minus(isExcludedCacheFor);
     }
 
+    /**
+     * Returns {@code true} if this node is not a primary source for all fields for the current area, i.e.
+     * if value of at least one field can only be obtained from a descendant node.
+     * @return
+     */
+    public boolean mayNotContainAllFields() {
+        return ! isPrimarySourceForEverything;
+    }
+
     private FieldContainedStatus isFieldWithParameterIncludedInMap(Map<?, ?> field2possibleParameters, EntityField<?> field, Object parameter) {
         Collection<?> specificCases = (Collection<?>) field2possibleParameters.get(field);
         if (specificCases == null) {
@@ -276,5 +334,21 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
     @Override
     protected String getLabel() {
         return getId() + getNodeProperty(NodeProperties.STORAGE_PROVIDER, String.class).map(s -> " [" + s + "]").orElse("");
+    }
+
+    /**
+     * Returns {@code true} if the objects originating in the child node with the {@code providerId} ID
+     * and retrieved from storage in this node should always be validated before being returned to the caller.
+     * <p>
+     * Example: It may be required to validate always a LDAP user, regardless of whether its mirror is found in JPA storage.
+     *
+     * @param providerId
+     * @return
+     */
+    public boolean shouldValidate(String providerId) {
+        return EdgeProperties.Validate.ALWAYS ==
+          getChild(providerId)
+          .map(n -> n.getEdgeProperty(EdgeProperties.VALIDATE, EdgeProperties.Validate.class).orElse(null))
+          .orElse(EdgeProperties.Validate.NEVER);
     }
 }

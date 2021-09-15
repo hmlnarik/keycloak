@@ -62,7 +62,7 @@ public class DefaultTreeNode<Self extends DefaultTreeNode<Self>> implements Tree
         this.nodeProperties = new HashMap<>();
     }
 
-    public DefaultTreeNode(Map<String, Object> nodeProperties, Map<String, Object> edgeProperties, Map<String, Object> treeProperties) {
+    public DefaultTreeNode(Map<String, Object> treeProperties, Map<String, Object> nodeProperties, Map<String, Object> edgeProperties) {
         this.treeProperties = treeProperties == null ? Collections.emptyMap() : treeProperties;
         this.edgeProperties = edgeProperties == null ? new HashMap<>() : edgeProperties;
         this.nodeProperties = nodeProperties == null ? new HashMap<>() : nodeProperties;
@@ -341,7 +341,9 @@ public class DefaultTreeNode<Self extends DefaultTreeNode<Self>> implements Tree
 
     public <RNode extends TreeNode<? super RNode>> RNode cloneTree(Function<Self, RNode> instantiateFunc) {
         final RNode res = instantiateFunc.apply(getThis());
-        this.getChildren().forEach(c -> res.addChild(c.cloneTree(instantiateFunc)));
+        if (res != null) {
+            this.getChildren().forEach(c -> res.addChild(c.cloneTree(instantiateFunc)));
+        }
         return res;
     }
 
@@ -363,9 +365,7 @@ public class DefaultTreeNode<Self extends DefaultTreeNode<Self>> implements Tree
     @Override
     public Stream<Self> getParentsStream() {
         Builder<Self> resBuilder = Stream.builder();
-        for (Optional<Self> p = getParent(); p.isPresent(); p = p.get().getParent()) {
-            resBuilder.accept(p.get());
-        }
+        forEachParent(resBuilder);
         return resBuilder.build();
     }
 
