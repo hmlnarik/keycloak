@@ -162,7 +162,7 @@ public interface TreeNode<Self extends TreeNode<? extends Self>> {
     Optional<Self> findFirstBfs(Predicate<Self> visitor);
 
     /**
-     * Returns the path (list of nodes) from this node to root node.
+     * Returns the path (list of nodes) from this node (including this node) to root node (including root node).
      * @param orientation Determines order of the nodes in the returned list - either this node is first and the root node
      *   is last, ({@link PathOrientation#BOTTOM_FIRST}) or vice versa ({@link PathOrientation#TOP_FIRST}).
      * @return

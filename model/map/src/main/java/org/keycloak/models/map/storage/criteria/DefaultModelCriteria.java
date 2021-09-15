@@ -84,7 +84,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             }
         }
 
-        if (targetNode.getChildren().isEmpty()) {
+        if (targetNode.hasNoChildren()) {
             // AND on empty set of formulae is TRUE: It does hold that there all formulae are satisfied
             return compare(new ModelCriteriaNode<>(ExtOperator.__TRUE__));
         }
@@ -113,7 +113,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             }
         }
 
-        if (targetNode.getChildren().isEmpty()) {
+        if (targetNode.hasNoChildren()) {
             // OR on empty set of formulae is FALSE: It does not hold that there is at least one satisfied formula
             return compare(new ModelCriteriaNode<>(ExtOperator.__FALSE__));
         }

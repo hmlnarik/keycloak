@@ -92,13 +92,13 @@ public class PerFieldDelegateProviderCacheTest {
     }
 
     private MapClientEntity prepareEntityAndTreeNodeInstances() {
-        TreeStorageNodePrescription upperTsnp = new TreeStorageNodePrescription(upperNodeProperties, null, null);
-        TreeStorageNodePrescription lowerTsnp = new TreeStorageNodePrescription(lowerNodeProperties, null, null);
+        TreeStorageNodePrescription upperTsnp = new TreeStorageNodePrescription(null, upperNodeProperties, null);
+        TreeStorageNodePrescription lowerTsnp = new TreeStorageNodePrescription(null, lowerNodeProperties, null);
 
         upperTsni = new TreeStorageNodeInstance<>(null, upperTsnp);
         lowerTsni = new TreeStorageNodeInstance<>(null, lowerTsnp);
 
-        PerFieldDelegateProvider<MapClientEntity> fieldProvider = new PerFieldDelegateProvider<>(upperTsni.new WithEntity(upperEnt), () -> {
+        PerFieldDelegateProvider<MapClientEntity> fieldProvider = new PerFieldDelegateProvider<>(upperTsni.new WithEntity(upperEnt, null), () -> {
             lowerEntSupplierCallCount.incrementAndGet();
             return lowerEnt;
         });

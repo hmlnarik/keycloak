@@ -46,7 +46,7 @@ public class Dict<E> extends UpdatableEntity.Impl implements EntityFieldDelegate
 
     private static final Set<String> CLIENT_ALLOWED_KEYS = new HashSet<>(Arrays.asList(CLIENT_FIELD_NAME, CLIENT_FIELD_ENABLED, CLIENT_FIELD_LOGO));
 
-    public static MapClientEntity clientDelegate() {
+    public static MapClientEntity clientDelegate(DeepCloner cloner) {
         // To be replaced by dynamic mapper config
         Map<String, String> fieldName2key = new HashMap<>();
         fieldName2key.put(MapClientEntityFields.ID.getName(), CLIENT_FIELD_NAME);

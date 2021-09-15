@@ -42,11 +42,13 @@ import org.keycloak.models.map.group.MapGroupProviderFactory;
 import org.keycloak.models.map.realm.MapRealmProviderFactory;
 import org.keycloak.models.map.role.MapRoleProviderFactory;
 import org.keycloak.models.map.deploymentState.MapDeploymentStateProviderFactory;
+import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.MapStorageSpi;
 import org.keycloak.models.map.user.MapUserProviderFactory;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.Spi;
 import org.keycloak.testsuite.model.Config;
+import org.keycloak.testsuite.model.storage.tree.sample.PartialStorageProviderFactory;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
@@ -80,6 +82,10 @@ public class Map extends KeycloakModelParameters {
       .add(MapEventStoreProviderFactory.class)
       .add(SingleUseObjectProviderFactory.class)
       .add(MapPublicKeyStorageProviderFactory.class)
+
+      .add(PartialStorageProviderFactory.class)
+
+      .add(MapStorageProviderFactory.class)
       .build();
 
     public Map() {

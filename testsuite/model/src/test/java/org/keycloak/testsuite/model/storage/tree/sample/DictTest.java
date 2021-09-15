@@ -10,11 +10,12 @@ import java.util.Arrays;
 
 import org.junit.Test;
 import org.keycloak.models.map.client.MapClientEntity;
+import org.keycloak.models.map.common.DeepCloner;
 
 public class DictTest {
     @Test
     public void testDictClientFromMap() {
-        MapClientEntity mce = Dict.clientDelegate();
+        MapClientEntity mce = Dict.clientDelegate(DeepCloner.DUMB_CLONER);
         assertThat(mce.getClientId(), nullValue());
         assertThat(mce.isEnabled(), nullValue());
         assertThat(mce.getAttribute("logo"), nullValue());
@@ -34,7 +35,7 @@ public class DictTest {
 
     @Test
     public void testDictClientFromEntity() {
-        MapClientEntity mce = Dict.clientDelegate();
+        MapClientEntity mce = Dict.clientDelegate(DeepCloner.DUMB_CLONER);
         
         assertThat(Dict.asDict(mce).get(Dict.CLIENT_FIELD_NAME), nullValue());
         assertThat(Dict.asDict(mce).get(Dict.CLIENT_FIELD_ENABLED), nullValue());

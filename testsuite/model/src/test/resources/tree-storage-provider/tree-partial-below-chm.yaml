@@ -1,0 +1,34 @@
+# Tree store: partial storage only
+stores:
+  - concurrenthashmap:
+      dir: "${project.build.directory:target}"
+      keyType.authz-resource-servers: string
+      
+      child-stores:
+        - partial:
+            only[clients]:
+              mappers:
+                id: ${NAME}
+                attribute.name:
+                  provider: binary
+                  from: ${LOGO}
+                  read-only: true
+                client-id: ${NAME}
+                enabled: ${ENABLED}
+                attribute.origin: partial
+                attribute.some-info: ${NAME} is ${ENABLED}
+
+              read-only: true
+              authoritative-for: mapped-fields
+
+              contents:
+                - NAME: client1
+                  ENABLED: false
+
+                - NAME: client2
+                  ENABLED: true
+                  LOGO: AQIDBAUGBwgJCgsMDQ4P
+
+                - NAME: client3
+                  ENABLED: true
+                  LOGO: null

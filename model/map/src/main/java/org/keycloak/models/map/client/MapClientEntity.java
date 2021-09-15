@@ -132,6 +132,9 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity, Entity
 
     String getName();
 
+    /**
+     * @deprecated Deprecated without replacement
+     */
     Integer getNodeReRegistrationTimeout();
 
     Long getNotBefore();
@@ -200,6 +203,9 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity, Entity
 
     void setName(String name);
 
+    /**
+     * @deprecated Deprecated without replacement
+     */
     void setNodeReRegistrationTimeout(Integer nodeReRegistrationTimeout);
 
     void setNotBefore(Long notBefore);

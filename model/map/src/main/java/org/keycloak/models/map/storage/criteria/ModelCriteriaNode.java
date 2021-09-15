@@ -37,7 +37,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
     public static enum ExtOperator {
         AND {
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
-                if (node.getChildren().isEmpty()) {
+                if (node.hasNoChildren()) {
                     return null;
                 }
                 final C[] operands = node.getChildren().stream()
@@ -52,7 +52,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         },
         OR {
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
-                if (node.getChildren().isEmpty()) {
+                if (node.hasNoChildren()) {
                     return null;
                 }
                 final C[] operands = node.getChildren().stream()
