@@ -44,39 +44,39 @@ public class MapClientEntityImpl implements MapClientEntity {
     private String name;
     private String description;
     private Set<String> redirectUris = new HashSet<>();
-    private boolean enabled;
-    private boolean alwaysDisplayInConsole;
+    private Boolean enabled;
+    private Boolean alwaysDisplayInConsole;
     private String clientAuthenticatorType;
     private String secret;
     private String registrationToken;
     private String protocol;
     private Map<String, List<String>> attributes = new HashMap<>();
     private Map<String, String> authFlowBindings = new HashMap<>();
-    private boolean publicClient;
-    private boolean fullScopeAllowed;
-    private boolean frontchannelLogout;
-    private int notBefore;
+    private Boolean publicClient;
+    private Boolean fullScopeAllowed;
+    private Boolean frontchannelLogout;
+    private Integer notBefore;
     private Set<String> scope = new HashSet<>();
     private Set<String> webOrigins = new HashSet<>();
     private Map<String, ProtocolMapperModel> protocolMappers = new HashMap<>();
     private Map<String, Boolean> clientScopes = new HashMap<>();
     private Set<String> scopeMappings = new LinkedHashSet<>();
-    private boolean surrogateAuthRequired;
+    private Boolean surrogateAuthRequired;
     private String managementUrl;
     private String rootUrl;
     private String baseUrl;
-    private boolean bearerOnly;
-    private boolean consentRequired;
-    private boolean standardFlowEnabled;
-    private boolean implicitFlowEnabled;
-    private boolean directAccessGrantsEnabled;
-    private boolean serviceAccountsEnabled;
-    private int nodeReRegistrationTimeout;
+    private Boolean bearerOnly;
+    private Boolean consentRequired;
+    private Boolean standardFlowEnabled;
+    private Boolean implicitFlowEnabled;
+    private Boolean directAccessGrantsEnabled;
+    private Boolean serviceAccountsEnabled;
+    private Integer nodeReRegistrationTimeout;
 
     /**
      * Flag signalizing that any of the setters has been meaningfully used.
      */
-    protected boolean updated;
+    protected Boolean updated;
 
     protected MapClientEntityImpl() {
         this.id = null;
@@ -265,12 +265,12 @@ public class MapClientEntityImpl implements MapClientEntity {
     }
 
     @Override
-    public int getNotBefore() {
+    public Integer getNotBefore() {
         return notBefore;
     }
 
     @Override
-    public void setNotBefore(int notBefore) {
+    public void setNotBefore(Integer notBefore) {
         this.updated |= ! Objects.equals(this.notBefore, notBefore);
         this.notBefore = notBefore;
     }
@@ -446,12 +446,12 @@ public class MapClientEntityImpl implements MapClientEntity {
     }
 
     @Override
-    public int getNodeReRegistrationTimeout() {
+    public Integer getNodeReRegistrationTimeout() {
         return nodeReRegistrationTimeout;
     }
 
     @Override
-    public void setNodeReRegistrationTimeout(int nodeReRegistrationTimeout) {
+    public void setNodeReRegistrationTimeout(Integer nodeReRegistrationTimeout) {
         this.updated |= ! Objects.equals(this.nodeReRegistrationTimeout, nodeReRegistrationTimeout);
         this.nodeReRegistrationTimeout = nodeReRegistrationTimeout;
     }
