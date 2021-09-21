@@ -22,24 +22,62 @@ import org.keycloak.models.map.common.UpdatableEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.keycloak.models.map.annotations.GenerateEntityImplementations;
 
 /**
  *
  * @author hmlnarik
  */
+@GenerateEntityImplementations(inherits="org.keycloak.models.map.client.MapClientEntity.AbstractClientEntity")
 public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
 
-    void addClientScope(String id, Boolean defaultScope);
+    static abstract class AbstractClientEntity implements MapClientEntity {
+        /**
+         * Flag signalizing that any of the setters has been meaningfully used.
+         */
+        protected boolean updated;
+        private String id;
+        
+        protected AbstractClientEntity() {
+            this.id = null;
+        }
+
+        public AbstractClientEntity(String id) {
+            this.id = id;
+        }
+
+        @Override
+        public String getId() {
+            return this.id;
+        }
+
+        @Override
+        public boolean isUpdated() {
+            return this.updated;
+        }
+
+        @Override
+        public Stream<String> getClientScopes(boolean defaultScope) {
+            final Map<String, Boolean> clientScopes = getClientScopes();
+            return clientScopes == null ? Stream.empty() : clientScopes.entrySet().stream()
+              .filter(me -> Objects.equals(me.getValue(), defaultScope))
+              .map(Entry::getKey);
+        }
+    }
+
+    Map<String, Boolean> getClientScopes();
     Stream<String> getClientScopes(boolean defaultScope);
+    void setClientScope(String id, Boolean defaultScope);
     void removeClientScope(String id);
 
-    ProtocolMapperModel addProtocolMapper(ProtocolMapperModel model);
-    ProtocolMapperModel getProtocolMapperById(String id);
-    Collection<ProtocolMapperModel> getProtocolMappers();
+    ProtocolMapperModel getProtocolMapper(String id);
+    Map<String, ProtocolMapperModel> getProtocolMappers();
+    void setProtocolMapper(String id, ProtocolMapperModel mapping);
     void removeProtocolMapper(String id);
-    void updateProtocolMapper(String id, ProtocolMapperModel mapping);
 
     void addRedirectUri(String redirectUri);
     Set<String> getRedirectUris();
@@ -47,7 +85,7 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
     void setRedirectUris(Set<String> redirectUris);
 
     void addScopeMapping(String id);
-    void deleteScopeMapping(String id);
+    void removeScopeMapping(String id);
     Collection<String> getScopeMappings();
 
     void addWebOrigin(String webOrigin);
@@ -55,7 +93,7 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
     void removeWebOrigin(String webOrigin);
     void setWebOrigins(Set<String> webOrigins);
 
-    List<String> getAttribute(String name);
+    default List<String> getAttribute(String name) { return getAttributes().get(name); }
     Map<String, List<String>> getAttributes();
     void removeAttribute(String name);
     void setAttribute(String name, List<String> values);
@@ -154,9 +192,9 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
 
     void setProtocol(String protocol);
 
-    void setProtocolMappers(Collection<ProtocolMapperModel> protocolMappers);
-
     void setPublicClient(Boolean publicClient);
+
+    void setRealmId(String realmId);
 
     void setRegistrationToken(String registrationToken);
 

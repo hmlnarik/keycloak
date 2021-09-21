@@ -59,13 +59,8 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
-    public void addClientScope(String id, Boolean defaultScope) {
-        getWriteDelegate().addClientScope(id, defaultScope);
-    }
-
-    @Override
-    public ProtocolMapperModel addProtocolMapper(ProtocolMapperModel model) {
-        return getWriteDelegate().addProtocolMapper(model);
+    public void setClientScope(String id, Boolean defaultScope) {
+        getWriteDelegate().setClientScope(id, defaultScope);
     }
 
     @Override
@@ -84,8 +79,8 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
-    public void deleteScopeMapping(String id) {
-        getWriteDelegate().deleteScopeMapping(id);
+    public void removeScopeMapping(String id) {
+        getWriteDelegate().removeScopeMapping(id);
     }
 
     @Override
@@ -134,6 +129,11 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
+    public Map<String, Boolean> getClientScopes() {
+        return getReadDelegate().getClientScopes();
+    }
+
+    @Override
     public String getDescription() {
         return getReadDelegate().getDescription();
     }
@@ -164,18 +164,23 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
-    public ProtocolMapperModel getProtocolMapperById(String id) {
-        return getReadDelegate().getProtocolMapperById(id);
+    public ProtocolMapperModel getProtocolMapper(String id) {
+        return getReadDelegate().getProtocolMapper(id);
     }
 
     @Override
-    public Collection<ProtocolMapperModel> getProtocolMappers() {
+    public Map<String,ProtocolMapperModel> getProtocolMappers() {
         return getReadDelegate().getProtocolMappers();
     }
 
     @Override
     public String getRealmId() {
         return getReadDelegate().getRealmId();
+    }
+
+    @Override
+    public void setRealmId(String realmId) {
+        getWriteDelegate().setRealmId(realmId);
     }
 
     @Override
@@ -404,11 +409,6 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
-    public void setProtocolMappers(Collection<ProtocolMapperModel> protocolMappers) {
-        getWriteDelegate().setProtocolMappers(protocolMappers);
-    }
-
-    @Override
     public void setPublicClient(Boolean publicClient) {
         getWriteDelegate().setPublicClient(publicClient);
     }
@@ -459,8 +459,8 @@ public class MapClientEntityLazyDelegate implements MapClientEntity {
     }
 
     @Override
-    public void updateProtocolMapper(String id, ProtocolMapperModel mapping) {
-        getWriteDelegate().updateProtocolMapper(id, mapping);
+    public void setProtocolMapper(String id, ProtocolMapperModel mapping) {
+        getWriteDelegate().setProtocolMapper(id, mapping);
     }
 
     @Override
