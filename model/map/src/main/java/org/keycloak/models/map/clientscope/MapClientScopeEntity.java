@@ -49,7 +49,7 @@ public class MapClientScopeEntity implements AbstractEntity, UpdatableEntity {
      */
     protected boolean updated;
 
-    protected MapClientScopeEntity() {}
+    public MapClientScopeEntity() {}
 
     public MapClientScopeEntity(String id, String realmId) {
         this.id = id;

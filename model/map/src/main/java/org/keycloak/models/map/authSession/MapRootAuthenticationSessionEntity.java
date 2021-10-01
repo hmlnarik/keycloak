@@ -38,7 +38,7 @@ public class MapRootAuthenticationSessionEntity implements AbstractEntity, Updat
     private int timestamp;
     private Map<String, MapAuthenticationSessionEntity> authenticationSessions = new ConcurrentHashMap<>();
 
-    protected MapRootAuthenticationSessionEntity() {}
+    public MapRootAuthenticationSessionEntity() {}
 
     public MapRootAuthenticationSessionEntity(String id, String realmId) {
         this.id = id;

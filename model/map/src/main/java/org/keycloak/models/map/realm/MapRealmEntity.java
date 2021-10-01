@@ -130,7 +130,7 @@ public class MapRealmEntity implements AbstractEntity, UpdatableEntity {
      */
     protected boolean updated;
 
-    protected MapRealmEntity() {}
+    public MapRealmEntity() {}
 
     public MapRealmEntity(String id) {
         this.id = id;

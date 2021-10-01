@@ -46,7 +46,7 @@ public class MapGroupEntity implements AbstractEntity, UpdatableEntity {
      */
     protected boolean updated;
 
-    protected MapGroupEntity() {}
+    public MapGroupEntity() {}
 
     public MapGroupEntity(String id, String realmId) {
         this.id = id;

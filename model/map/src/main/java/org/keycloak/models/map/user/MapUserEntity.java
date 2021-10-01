@@ -71,7 +71,7 @@ public class MapUserEntity implements AbstractEntity, UpdatableEntity {
      */
     protected boolean updated;
 
-    protected MapUserEntity() {}
+    public MapUserEntity() {}
 
     public MapUserEntity(String id, String realmId) {
         this.id = id;

@@ -42,7 +42,7 @@ public class MapRoleEntity implements AbstractEntity, UpdatableEntity {
      */
     protected boolean updated;
 
-    protected MapRoleEntity() {}
+    public MapRoleEntity() {}
 
     public MapRoleEntity(String id, String realmId) {
         this.id = id;

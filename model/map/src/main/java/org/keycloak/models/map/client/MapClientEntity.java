@@ -26,41 +26,31 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.keycloak.models.map.annotations.GenerateEntityImplementations;
-import org.keycloak.models.map.common.Serialization;
+import org.keycloak.models.map.common.DeepCloner;
 
 /**
  *
  * @author hmlnarik
  */
-@GenerateEntityImplementations(inherits="org.keycloak.models.map.client.MapClientEntity.AbstractClientEntity")
+@GenerateEntityImplementations(
+  inherits = "org.keycloak.models.map.client.MapClientEntity.AbstractClientEntity"
+)
+@DeepCloner.Root
 public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
 
     public abstract class AbstractClientEntity extends UpdatableEntity.Impl implements MapClientEntity {
         /**
          * Flag signalizing that any of the setters has been meaningfully used.
          */
-        private String id;
-
-        protected AbstractClientEntity() {}
-
-        public AbstractClientEntity(String id) {
-            this.id = id;
-        }
-
-        @Override
-        public String getId() {
-            return this.id;
-        }
-
-        @Override
-        public void setId(String id) {
-            if (this.id != null) throw new IllegalStateException("Id cannot be changed");
-            this.id = id;
-            this.updated |= id != null;
+        private final DeepCloner cloner;
+        
+        public AbstractClientEntity() { this((DeepCloner) null); }
+        public AbstractClientEntity(DeepCloner deepCloner) {
+            this.cloner = deepCloner;
         }
 
         public <V> V deepClone(V obj) {
-            return Serialization.from(obj);
+            return cloner == null ? DeepCloner.warnCloneNotSupported(obj) : cloner.from(obj);
         }
 
         @Override
@@ -96,7 +86,7 @@ public interface MapClientEntity extends AbstractEntity, UpdatableEntity {
     void removeWebOrigin(String webOrigin);
     void setWebOrigins(Set<String> webOrigins);
 
-    default List<String> getAttribute(String name) { return getAttributes().get(name); }
+    default List<String> getAttribute(String name) { return getAttributes() == null ? null : getAttributes().get(name); }
     Map<String, List<String>> getAttributes();
     void removeAttribute(String name);
     void setAttribute(String name, List<String> values);
