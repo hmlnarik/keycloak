@@ -107,6 +107,9 @@ public abstract class AbstractMapProviderFactory<T extends Provider, V extends A
 
     public MapStorage<V, M> getStorage(KeycloakSession session) {
         ProviderFactory<MapStorageProvider> storageProviderFactory = getProviderFactoryOrComponentFactory(session, storageConfigScope);
+        if (storageProviderFactory == null) {
+            throw new IllegalStateException("No map storage provider configured for " + getClass().getSimpleName() + ", neither specifically for this provider, nor a default provider.");
+        }
         final MapStorageProvider factory = storageProviderFactory.create(session);
         session.enlistForClose(factory);
         return factory.getStorage(modelType);

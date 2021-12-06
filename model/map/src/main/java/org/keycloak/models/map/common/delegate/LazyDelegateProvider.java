@@ -19,7 +19,6 @@ package org.keycloak.models.map.common.delegate;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.EntityField;
 import org.keycloak.models.map.common.UpdatableEntity;
-import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.function.Supplier;
 
 /**
