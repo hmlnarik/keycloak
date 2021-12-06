@@ -46,7 +46,6 @@ public abstract class AbstractMapProviderFactory<T extends Provider, V extends A
 
     private Scope storageConfigScope;
 
-    @SuppressWarnings("unchecked")
     protected AbstractMapProviderFactory(Class<M> modelType) {
         this.modelType = modelType;
     }
@@ -59,6 +58,9 @@ public abstract class AbstractMapProviderFactory<T extends Provider, V extends A
     protected MapStorage<V, M> getStorage(KeycloakSession session) {
         ProviderFactory<MapStorageProvider> storageProviderFactory = getComponentFactory(session.getKeycloakSessionFactory(),
           MapStorageProvider.class, storageConfigScope, MapStorageSpi.NAME);
+        if (storageProviderFactory == null) {
+            throw new IllegalStateException("No map storage provider configured for " + getClass().getSimpleName() + ", neither specifically for this provider, nor a default provider.");
+        }
         final MapStorageProvider factory = storageProviderFactory.create(session);
 
         return factory.getStorage(modelType);

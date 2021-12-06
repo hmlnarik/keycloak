@@ -99,7 +99,11 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
     }
 
     private MapModelCriteriaBuilder<K, V, M> createCriteriaBuilder() {
+<<<<<<< HEAD
         return new MapModelCriteriaBuilder<K, V, M>(keyConverter, fieldPredicates);
+=======
+        return new MapModelCriteriaBuilder<>(keyConvertor, fieldPredicates);
+>>>>>>> 15aa55fa0c (KEYCLOAK-### minor changes in typing)
     }
 
     /**

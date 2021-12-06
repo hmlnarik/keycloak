@@ -36,6 +36,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
         this.node = node;
     }
 
+    @SuppressWarnings("unchecked")
     public static <M> DefaultModelCriteria<M> criteria() {
         return (DefaultModelCriteria<M>) INSTANCE;
     }

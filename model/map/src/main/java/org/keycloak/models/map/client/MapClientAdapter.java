@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-public abstract class MapClientAdapter extends AbstractClientModel<MapClientEntity> implements ClientModel {
+public abstract class MapClientAdapter extends AbstractClientModel<MapClientEntity> {
 
     private static final Logger LOG = Logger.getLogger(MapClientAdapter.class);
     private final MapProtocolMapperUtils pmUtils;
