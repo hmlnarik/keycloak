@@ -56,11 +56,11 @@ import com.fasterxml.jackson.databind.JavaType;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jboss.logging.Logger;
 import org.keycloak.models.map.storage.MapStorageProvider;
+import org.keycloak.models.map.storage.MapStorageProvider.DefaultFlag;
 import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.user.MapUserConsentEntityImpl;
 import org.keycloak.models.map.user.MapUserCredentialEntityImpl;
@@ -70,10 +70,13 @@ import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.provider.EnvironmentDependentProviderFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 
 import static org.keycloak.models.map.storage.ModelEntityUtil.getModelName;
 import static org.keycloak.models.map.storage.ModelEntityUtil.getModelNames;
@@ -218,7 +221,7 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
 
     @SuppressWarnings("unchecked")
     private <K, V extends AbstractEntity & UpdatableEntity, M> ConcurrentHashMapStorage<K, V, M> loadMap(String mapName,
-      Class<M> modelType, EnumSet<Flag> flags) {
+      Class<M> modelType, Set<Flag> flags) {
         final StringKeyConverter kc = keyConverters.getOrDefault(mapName, defaultKeyConverter);
         Class<?> valueType = ModelEntityUtil.getEntityType(modelType);
         LOG.debugf("Initializing new map storage: %s", mapName);
@@ -241,7 +244,7 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
             };
         }
 
-        if (! flags.contains(Flag.INITIALIZE_EMPTY)) {
+        if (! flags.contains(DefaultFlag.INITIALIZE_EMPTY)) {
             final File f = getFile(mapName);
             if (f != null && f.exists()) {
                 try {
@@ -271,7 +274,7 @@ public class ConcurrentHashMapStorageProviderFactory implements AmphibianProvide
     @SuppressWarnings("unchecked")
     public <K, V extends AbstractEntity & UpdatableEntity, M> ConcurrentHashMapStorage<K, V, M> getStorage(
       Class<M> modelType, Flag... flags) {
-        EnumSet<Flag> f = flags == null || flags.length == 0 ? EnumSet.noneOf(Flag.class) : EnumSet.of(flags[0], flags);
+        Set<Flag> f = flags == null || flags.length == 0 ? Collections.emptySet() : new HashSet<>(Arrays.asList(flags));
         String name = getModelName(modelType, modelType.getSimpleName());
         /* From ConcurrentHashMapStorage.computeIfAbsent javadoc:
          *
