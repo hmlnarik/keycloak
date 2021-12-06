@@ -25,8 +25,6 @@ import org.keycloak.provider.ProviderFactory;
  */
 public interface MapStorageProviderFactory extends ProviderFactory<MapStorageProvider>, ComponentFactory<MapStorageProvider, MapStorageProvider> {
     
-    public enum Flag {
-        INITIALIZE_EMPTY,
-        LOCAL
-    }
+    public interface Flag {}
+
 }
