@@ -68,7 +68,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     }
 
     @Override
-    protected LdapModelCriteriaBuilder createLdapModelCriteriaBuilder() {
-        return null;
+    protected LdapRoleModelCriteriaBuilder createLdapModelCriteriaBuilder() {
+        return new LdapRoleModelCriteriaBuilder();
     }
 }

@@ -16,17 +16,12 @@
  */
 package org.keycloak.models.map.storage.ldap;
 
-import java.util.Collection;
 import java.util.stream.Stream;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
-import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.storage.ldap.idm.query.Condition;
-import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
-import org.keycloak.storage.ldap.idm.query.internal.LDAPQueryConditionsBuilder;
-import org.keycloak.storage.ldap.mappers.membership.role.RoleLDAPStorageMapper;
 
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
@@ -54,7 +49,11 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
         LdapModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
                 .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilder());
 
-        /** TODO: implement criteria builder, run LDAP query **/
+        Condition condition = (Condition) mcb.getPredicateFunc().get();
+        StringBuilder sb = new StringBuilder();
+        condition.applyCondition(sb);
+
+        /** TODO: pass condition to LDAP and run query **/
 
         /*
         LDAPQuery ldapQuery = new LDAPQuery(ldapProvider);

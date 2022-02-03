@@ -22,11 +22,11 @@ import org.keycloak.storage.ldap.idm.query.Condition;
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class OrCondition implements Condition {
+public class NotCondition implements Condition {
 
     private final Condition[] innerConditions;
 
-    public OrCondition(Condition... innerConditions) {
+    public NotCondition(Condition... innerConditions) {
         this.innerConditions = innerConditions;
     }
 
@@ -48,7 +48,7 @@ public class OrCondition implements Condition {
 
     @Override
     public void applyCondition(StringBuilder filter) {
-        filter.append("(|");
+        filter.append("(!");
 
         for (Condition innerCondition : innerConditions) {
             innerCondition.applyCondition(filter);

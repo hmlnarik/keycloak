@@ -17,39 +17,73 @@
 package org.keycloak.models.map.storage.ldap.role;
 
 import org.keycloak.models.RoleModel;
+import org.keycloak.models.map.common.StringKeyConvertor;
+import org.keycloak.models.map.storage.CriterionNotSupportedException;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.LdapMapQuery;
 import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.SearchableModelField;
+import org.keycloak.storage.ldap.idm.query.Condition;
+import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
+import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
+import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 
-public class LdapRoleModelCriteriaBuilder<Self extends ModelCriteriaBuilder<RoleModel, Self>> extends LdapModelCriteriaBuilder<LdapRoleEntity, RoleModel, Self> {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-    private LdapMapQuery query = new LdapMapQuery();
+public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapRoleEntity, RoleModel, LdapRoleModelCriteriaBuilder> {
 
-    public LdapRoleModelCriteriaBuilder(Object o) {
-        super();
+    public LdapRoleModelCriteriaBuilder() {
+        super(LdapRoleModelCriteriaBuilder::new);
     }
 
-    @SafeVarargs
-    @Override
-    public final Self and(Self... builders) {
-        return (Self) this;
-    }
-
-    @SafeVarargs
-    @Override
-    public final Self or(Self... builders) {
-        return (Self) this;
+    private LdapRoleModelCriteriaBuilder(Supplier<Condition> predicateFunc) {
+        super(LdapRoleModelCriteriaBuilder::new, predicateFunc);
     }
 
     @Override
-    public Self not(Self builder) {
-        return (Self) this;
-    }
+    public LdapRoleModelCriteriaBuilder compare(SearchableModelField<? super RoleModel> modelField, Operator op, Object... value) {
+        switch (op) {
+            case EQ:
+                if (modelField.equals(RoleModel.SearchableFields.REALM_ID) ||
+                        modelField.equals(RoleModel.SearchableFields.CLIENT_ID) ||
+                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
+                        modelField.equals(RoleModel.SearchableFields.NAME)) {
+                    // validateValue(value, modelField, op, String.class);
 
-    @Override
-    public Self compare(SearchableModelField<? super RoleModel> modelField, Operator op, Object... value) {
-        return (Self) this;
+                    return new LdapRoleModelCriteriaBuilder(() ->
+                            new EqualCondition(modelField.getName(), value[0], EscapeStrategy.DEFAULT)
+                    );
+                } else {
+                    throw new CriterionNotSupportedException(modelField, op);
+                }
+
+            case NE:
+                if (modelField.equals(RoleModel.SearchableFields.REALM_ID) ||
+                        modelField.equals(RoleModel.SearchableFields.CLIENT_ID) ||
+                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
+                        modelField.equals(RoleModel.SearchableFields.NAME)) {
+                    // validateValue(value, modelField, op, String.class);
+
+                    return new LdapRoleModelCriteriaBuilder(() ->
+                            new NotCondition(new EqualCondition(modelField.getName(), value[0], EscapeStrategy.DEFAULT))
+                    );
+                } else {
+                    throw new CriterionNotSupportedException(modelField, op);
+                }
+
+            default:
+                throw new CriterionNotSupportedException(modelField, op);
+        }
     }
 }
