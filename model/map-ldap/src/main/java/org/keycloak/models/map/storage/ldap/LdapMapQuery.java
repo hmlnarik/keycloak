@@ -14,17 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.keycloak.models.map.storage.ldap;
 
-import org.keycloak.models.map.storage.ModelCriteriaBuilder;
+import org.keycloak.storage.ldap.LDAPStorageProvider;
+import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
 
-/**
- * Abstract class containing methods common to all Ldap*ModelCriteriaBuilder implementations
- * 
- * @param <E> Entity
- * @param <M> Model
- * @param <Self> specific implementation of this class
- */
-public abstract class LdapModelCriteriaBuilder<E, M, Self extends ModelCriteriaBuilder<M, Self>> implements ModelCriteriaBuilder<M, Self> {
-
+public class LdapMapQuery extends LDAPQuery {
+    public LdapMapQuery() {
+        super(null);
+    }
 }

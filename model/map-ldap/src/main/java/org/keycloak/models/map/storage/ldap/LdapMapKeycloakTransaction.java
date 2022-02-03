@@ -16,11 +16,17 @@
  */
 package org.keycloak.models.map.storage.ldap;
 
+import java.util.Collection;
 import java.util.stream.Stream;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
+import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.QueryParameters;
+import org.keycloak.storage.ldap.idm.query.Condition;
+import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
+import org.keycloak.storage.ldap.idm.query.internal.LDAPQueryConditionsBuilder;
+import org.keycloak.storage.ldap.mappers.membership.role.RoleLDAPStorageMapper;
 
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
@@ -41,8 +47,39 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
         return delegate.read(key);
     }
 
+    protected abstract LdapModelCriteriaBuilder createLdapModelCriteriaBuilder();
+
     @Override
     public Stream<E> read(QueryParameters<M> queryParameters) {
+        LdapModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
+                .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilder());
+
+        /** TODO: implement criteria builder, run LDAP query **/
+
+        /*
+        LDAPQuery ldapQuery = new LDAPQuery(ldapProvider);
+
+        // For now, use same search scope, which is configured "globally" and used for user's search.
+        ldapQuery.setSearchScope(ldapProvider.getLdapIdentityStore().getConfig().getSearchScope());
+
+        String rolesDn = config.getRolesDn();
+        ldapQuery.setSearchDn(rolesDn);
+
+        Collection<String> roleObjectClasses = config.getRoleObjectClasses(ldapProvider);
+        ldapQuery.addObjectClasses(roleObjectClasses);
+
+        String rolesRdnAttr = config.getRoleNameLdapAttribute();
+
+        String customFilter = config.getCustomLdapFilter();
+        if (customFilter != null && customFilter.trim().length() > 0) {
+            Condition customFilterCondition = new LDAPQueryConditionsBuilder().addCustomLDAPFilter(customFilter);
+            ldapQuery.addWhereCondition(customFilterCondition);
+        }
+
+        ldapQuery.addReturningLdapAttribute(rolesRdnAttr);
+
+        */
+
         return delegate.read(queryParameters);
     }
 

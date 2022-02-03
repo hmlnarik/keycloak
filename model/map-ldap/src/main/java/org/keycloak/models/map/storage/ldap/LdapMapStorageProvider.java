@@ -54,7 +54,7 @@ public class LdapMapStorageProvider implements MapStorageProvider {
                 MapKeycloakTransaction<V, M> sessionTx = session.getAttribute(SESSION_TX_PREFIX + modelType.hashCode(), MapKeycloakTransaction.class);
                 if (sessionTx == null) {
                     MapKeycloakTransaction<V, M> delegateTransaction = delegateStorage.createTransaction(session);
-                    sessionTx = factory.createTransaction(modelType, delegateTransaction);
+                    sessionTx = factory.createTransaction(session, modelType, delegateTransaction);
                     session.setAttribute(SESSION_TX_PREFIX + modelType.hashCode(), sessionTx);
                 }
                 return sessionTx;

@@ -119,7 +119,15 @@
             "showSql": "${keycloak.map.storage.connectionsJpa,showSql:false}"
         },
         "ldap-map-storage": {
-            "//": "put data here"
+            "vendor": "other",
+            "usernameLDAPAttribute": "uid",
+            "rdnLDAPAttribute": "uid",
+            "uuidLDAPAttribute": "entryUUID",
+            "userObjectClasses": "inetOrgPerson, organizationalPerson",
+            "connectionUrl": "ldap://localhost:10389",
+            "usersDn": "ou=People,dc=keycloak,dc=org",
+            "bindDn": "uid=admin,ou=system",
+            "bindCredential": "secret"
         }
     },
 

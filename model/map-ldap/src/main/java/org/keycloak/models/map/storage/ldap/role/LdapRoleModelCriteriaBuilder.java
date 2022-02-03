@@ -18,38 +18,38 @@ package org.keycloak.models.map.storage.ldap.role;
 
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
+import org.keycloak.models.map.storage.ldap.LdapMapQuery;
 import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.SearchableModelField;
 
-public class LdapRoleModelCriteriaBuilder<S extends ModelCriteriaBuilder<RoleModel, S>> extends LdapModelCriteriaBuilder<LdapRoleEntity, RoleModel, S> {
+public class LdapRoleModelCriteriaBuilder<Self extends ModelCriteriaBuilder<RoleModel, Self>> extends LdapModelCriteriaBuilder<LdapRoleEntity, RoleModel, Self> {
 
-    private final ModelCriteriaBuilder<RoleModel, S> delegate;
+    private LdapMapQuery query = new LdapMapQuery();
 
-    public LdapRoleModelCriteriaBuilder(ModelCriteriaBuilder<RoleModel, S> delegate) {
-        super(delegate);
-        this.delegate = delegate;
+    public LdapRoleModelCriteriaBuilder(Object o) {
+        super();
     }
 
     @SafeVarargs
     @Override
-    public final S and(S... builders) {
-        return delegate.and(builders);
+    public final Self and(Self... builders) {
+        return (Self) this;
     }
 
     @SafeVarargs
     @Override
-    public final S or(S... builders) {
-        return delegate.or(builders);
+    public final Self or(Self... builders) {
+        return (Self) this;
     }
 
     @Override
-    public S not(S builder) {
-        return delegate.not(builder);
+    public Self not(Self builder) {
+        return (Self) this;
     }
 
     @Override
-    public S compare(SearchableModelField<? super RoleModel> modelField, Operator op, Object... value) {
-        return delegate.compare(modelField, op, value);
+    public Self compare(SearchableModelField<? super RoleModel> modelField, Operator op, Object... value) {
+        return (Self) this;
     }
 }

@@ -18,10 +18,12 @@ package org.keycloak.models.map.storage.ldap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.common.Profile;
+import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.component.AmphibianProviderFactory;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.KeycloakSession;
@@ -32,6 +34,8 @@ import org.keycloak.models.map.storage.MapStorageProvider;
 import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.ldap.role.LdapRoleMapKeycloakTransaction;
 import org.keycloak.provider.EnvironmentDependentProviderFactory;
+import org.keycloak.storage.ldap.LDAPConfig;
+import org.keycloak.storage.ldap.idm.store.ldap.LDAPContextManager;
 
 public class LdapMapStorageProviderFactory implements
         AmphibianProviderFactory<MapStorageProvider>,
@@ -42,17 +46,18 @@ public class LdapMapStorageProviderFactory implements
 
     private volatile MapStorageProvider delegate;
 
-    private Config.Scope config;
+    private LDAPConfig config;
     private static final Logger logger = Logger.getLogger(LdapMapStorageProviderFactory.class);
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Class<?>, Function<MapKeycloakTransaction, MapKeycloakTransaction>> MODEL_TO_TX = new HashMap<>();
+    private static final Map<Class<?>, BiFunction<LDAPContextManager, MapKeycloakTransaction, MapKeycloakTransaction>> MODEL_TO_TX = new HashMap<>();
     static {
         MODEL_TO_TX.put(RoleModel.class,            LdapRoleMapKeycloakTransaction::new);
     }
 
-    public <M, V extends AbstractEntity> MapKeycloakTransaction<V, M> createTransaction(Class<M> modelType, MapKeycloakTransaction<V, M> delegate) {
-        return MODEL_TO_TX.get(modelType).apply(delegate);
+    public <M, V extends AbstractEntity> MapKeycloakTransaction<V, M> createTransaction(KeycloakSession session, Class<M> modelType, MapKeycloakTransaction<V, M> delegate) {
+        LDAPContextManager ldapContextManager = LDAPContextManager.create(session, config);
+        return MODEL_TO_TX.get(modelType).apply(ldapContextManager, delegate);
     }
 
     @Override
@@ -63,7 +68,12 @@ public class LdapMapStorageProviderFactory implements
 
     @Override
     public void init(Config.Scope config) {
-        this.config = config;
+        this.config = new LDAPConfig(new MultivaluedHashMap<String, String>() {
+            @Override
+            public String getFirst(String key) {
+                return config.get(key);
+            }
+        });
     }
 
     @Override

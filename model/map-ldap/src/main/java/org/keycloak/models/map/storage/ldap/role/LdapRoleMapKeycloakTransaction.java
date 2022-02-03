@@ -23,13 +23,17 @@ import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
+import org.keycloak.storage.ldap.LDAPConfig;
+import org.keycloak.storage.ldap.idm.store.ldap.LDAPContextManager;
 
 public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<LdapRoleEntity, MapRoleEntity, RoleModel> {
 
+    private LDAPContextManager contextManager;
     private final MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate;
 
-    public LdapRoleMapKeycloakTransaction(MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
+    public LdapRoleMapKeycloakTransaction(LDAPContextManager contextManager, MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
         super(delegate);
+        this.contextManager = contextManager;
         this.delegate = delegate;
     }
 
@@ -61,5 +65,10 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     @Override
     public boolean isActive() {
         return delegate.isActive();
+    }
+
+    @Override
+    protected LdapModelCriteriaBuilder createLdapModelCriteriaBuilder() {
+        return null;
     }
 }
