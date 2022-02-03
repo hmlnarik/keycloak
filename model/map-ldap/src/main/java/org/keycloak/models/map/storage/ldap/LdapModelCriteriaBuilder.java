@@ -19,6 +19,7 @@ package org.keycloak.models.map.storage.ldap;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.storage.ldap.idm.query.Condition;
 import org.keycloak.storage.ldap.idm.query.internal.AndCondition;
+import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
 import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 import org.keycloak.storage.ldap.idm.query.internal.OrCondition;
 
@@ -45,18 +46,27 @@ public abstract class LdapModelCriteriaBuilder<E, M, Self extends LdapModelCrite
     @SafeVarargs
     @Override
     public final Self and(Self... builders) {
-        return instantiator.apply(() -> new AndCondition((Stream.of(builders).map(b -> b.getPredicateFunc().get()).toArray(Condition[]::new))));
+        return instantiator.apply(() -> {
+            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().get()).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
+            return conditions.length > 0 ? new AndCondition(conditions) : new NoopCondition();
+        });
     }
 
     @SafeVarargs
     @Override
     public final Self or(Self... builders) {
-        return instantiator.apply(() -> new OrCondition(Stream.of(builders).map(b -> b.getPredicateFunc().get()).toArray(Condition[]::new)));
+        return instantiator.apply(() -> {
+            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().get()).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
+            return conditions.length > 0 ? new OrCondition(conditions) : new NoopCondition();
+        });
     }
 
     @Override
     public Self not(Self builder) {
-        return instantiator.apply(() -> new NotCondition(builder.getPredicateFunc().get()));
+        return instantiator.apply(() -> {
+            Condition condition = builder.getPredicateFunc().get();
+            return condition instanceof NoopCondition ? condition : new NotCondition(condition);
+        });
     }
 
     public Supplier<Condition> getPredicateFunc() {

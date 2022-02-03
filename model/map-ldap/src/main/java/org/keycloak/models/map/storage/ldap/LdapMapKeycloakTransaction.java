@@ -17,18 +17,28 @@
 package org.keycloak.models.map.storage.ldap;
 
 import java.util.stream.Stream;
+
+import org.apache.commons.lang.NotImplementedException;
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
-import org.keycloak.storage.ldap.idm.query.Condition;
+import org.keycloak.storage.ldap.LDAPConfig;
+import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
 
+    private final RoleMapperConfig roleMapperConfig;
     private final MapKeycloakTransaction<E, M> delegate;
+    private final LDAPConfig config;
+    private final KeycloakSession session;
 
-    public LdapMapKeycloakTransaction(MapKeycloakTransaction<E, M> delegate) {
+    public LdapMapKeycloakTransaction(KeycloakSession session, LDAPConfig config, RoleMapperConfig roleMapperConfig, MapKeycloakTransaction<E, M> delegate) {
+        this.session = session;
+        this.config = config;
+        this.roleMapperConfig = roleMapperConfig;
         this.delegate = delegate;
     }
 
@@ -46,40 +56,7 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
 
     @Override
     public Stream<E> read(QueryParameters<M> queryParameters) {
-        LdapModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
-                .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilder());
-
-        Condition condition = (Condition) mcb.getPredicateFunc().get();
-        StringBuilder sb = new StringBuilder();
-        condition.applyCondition(sb);
-
-        /** TODO: pass condition to LDAP and run query **/
-
-        /*
-        LDAPQuery ldapQuery = new LDAPQuery(ldapProvider);
-
-        // For now, use same search scope, which is configured "globally" and used for user's search.
-        ldapQuery.setSearchScope(ldapProvider.getLdapIdentityStore().getConfig().getSearchScope());
-
-        String rolesDn = config.getRolesDn();
-        ldapQuery.setSearchDn(rolesDn);
-
-        Collection<String> roleObjectClasses = config.getRoleObjectClasses(ldapProvider);
-        ldapQuery.addObjectClasses(roleObjectClasses);
-
-        String rolesRdnAttr = config.getRoleNameLdapAttribute();
-
-        String customFilter = config.getCustomLdapFilter();
-        if (customFilter != null && customFilter.trim().length() > 0) {
-            Condition customFilterCondition = new LDAPQueryConditionsBuilder().addCustomLDAPFilter(customFilter);
-            ldapQuery.addWhereCondition(customFilterCondition);
-        }
-
-        ldapQuery.addReturningLdapAttribute(rolesRdnAttr);
-
-        */
-
-        return delegate.read(queryParameters);
+        throw new NotImplementedException("will have a common method here, soon");
     }
 
     @Override

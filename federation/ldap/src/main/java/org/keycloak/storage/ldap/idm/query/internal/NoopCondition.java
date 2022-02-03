@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Red Hat, Inc. and/or its affiliates
+ * Copyright 2022. Red Hat, Inc. and/or its affiliates
  * and other contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +19,24 @@ package org.keycloak.storage.ldap.idm.query.internal;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
 
+import java.util.Date;
+
 /**
- * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
+ * @author Alexander Schwartz
  */
-public class CustomLDAPFilter implements Condition {
+public class NoopCondition implements Condition {
 
-    private final String customFilter;
+    @Override
+    public void applyCondition(StringBuilder filter) {
+    }
 
-    public CustomLDAPFilter(String customFilter) {
-        this.customFilter = customFilter;
+    @Override
+    public void setBinary(boolean binary) {
+    }
+
+    @Override
+    public boolean isBinary() {
+        return false;
     }
 
     @Override
@@ -41,20 +50,10 @@ public class CustomLDAPFilter implements Condition {
 
     @Override
     public void updateParameterName(String modelParamName, String ldapParamName) {
-
     }
 
     @Override
-    public void applyCondition(StringBuilder filter) {
-        filter.append(customFilter);
-    }
-
-    @Override
-    public void setBinary(boolean binary) {
-    }
-
-    @Override
-    public boolean isBinary() {
-        return false;
+    public String toString() {
+        return "NoopCondition{}";
     }
 }

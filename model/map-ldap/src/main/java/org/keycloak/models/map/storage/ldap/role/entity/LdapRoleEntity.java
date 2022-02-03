@@ -18,132 +18,128 @@ package org.keycloak.models.map.storage.ldap.role.entity;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import org.keycloak.models.map.role.MapRoleEntity;
+
+import org.apache.commons.lang.NotImplementedException;
 import org.keycloak.models.map.role.MapRoleEntity.AbstractRoleEntity;
+import org.keycloak.storage.ldap.idm.model.LDAPObject;
+import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 public class LdapRoleEntity extends AbstractRoleEntity  {
 
-    private final MapRoleEntity delegate;
+    private final LDAPObject ldapObject;
+    private final RoleMapperConfig roleMapperConfig;
 
     // TODO: would I need one with a cloner?
-    public LdapRoleEntity(MapRoleEntity delegate) {
-        this.delegate = delegate;
+    public LdapRoleEntity(LDAPObject ldapObject, RoleMapperConfig roleMapperConfig) {
+        this.ldapObject = ldapObject;
+        this.roleMapperConfig = roleMapperConfig;
     }
 
     @Override
     public String getId() {
-        return delegate.getId();
+        return ldapObject.getUuid();
     }
 
     @Override
     public void setId(String id) {
-        delegate.setId(id);
+        ldapObject.setUuid(id);
     }
+
 
     @Override
     public Map<String, List<String>> getAttributes() {
-        return delegate.getAttributes();
+        return null;
     }
 
     @Override
     public void setAttributes(Map<String, List<String>> attributes) {
-        delegate.setAttributes(attributes);
+        throw new NotImplementedException();
     }
 
     @Override
     public List<String> getAttribute(String name) {
-        return delegate.getAttribute(name);
+        return null;
     }
 
     @Override
     public void setAttribute(String name, List<String> value) {
-        delegate.setAttribute(name, value);
+        throw new NotImplementedException();
     }
 
     @Override
     public void removeAttribute(String name) {
-        delegate.removeAttribute(name);
-    }
-
-    @Override
-    public boolean isUpdated() {
-        return delegate.isUpdated();
-    }
-
-    @Override
-    public void clearUpdatedFlag() {
-        delegate.clearUpdatedFlag();
-    }
-
-    @Override
-    public Boolean isClientRole() {
-        return delegate.isClientRole();
+        throw new NotImplementedException();
     }
 
     @Override
     public String getRealmId() {
-        return delegate.getRealmId();
+        // TODO: make dynamic
+        return "master";
     }
 
     @Override
     public String getClientId() {
-        return delegate.getClientId();
+        return null;
     }
 
     @Override
     public String getName() {
-        return delegate.getName();
+        return ldapObject.getAttributeAsString(roleMapperConfig.getRoleNameLdapAttribute());
     }
 
     @Override
     public String getDescription() {
-        return delegate.getDescription();
+        return ldapObject.getDn().toString();
     }
 
     @Override
     public void setClientRole(Boolean clientRole) {
-        delegate.setClientRole(clientRole);
+        throw new NotImplementedException();
     }
 
     @Override
     public void setRealmId(String realmId) {
-        delegate.setRealmId(realmId);
+        throw new NotImplementedException();
     }
 
     @Override
     public void setClientId(String clientId) {
-        delegate.setClientId(clientId);
+        throw new NotImplementedException();
     }
 
     @Override
     public void setName(String name) {
-        delegate.setName(name);
+        if (!Objects.equals(this.getName(), name)) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override
     public void setDescription(String description) {
-        delegate.setDescription(description);
+        if (!Objects.equals(this.getDescription(), description)) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override
     public Set<String> getCompositeRoles() {
-        return delegate.getCompositeRoles();
+        return null;
     }
 
     @Override
     public void setCompositeRoles(Set<String> compositeRoles) {
-        delegate.setCompositeRoles(compositeRoles);
+        throw new NotImplementedException();
     }
 
     @Override
     public void addCompositeRole(String roleId) {
-        delegate.addCompositeRole(roleId);
+        throw new NotImplementedException();
     }
 
     @Override
     public void removeCompositeRole(String roleId) {
-        delegate.removeCompositeRole(roleId);
+        throw new NotImplementedException();
     }
-
 }
