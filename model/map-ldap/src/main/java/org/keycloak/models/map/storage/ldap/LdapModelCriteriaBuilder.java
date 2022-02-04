@@ -22,9 +22,9 @@ import org.keycloak.storage.ldap.idm.query.internal.AndCondition;
 import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
 import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 import org.keycloak.storage.ldap.idm.query.internal.OrCondition;
+import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -36,18 +36,18 @@ import java.util.stream.Stream;
  */
 public abstract class LdapModelCriteriaBuilder<E, M, Self extends LdapModelCriteriaBuilder<E, M, Self>> implements ModelCriteriaBuilder<M, Self> {
 
-    private final Function<Supplier<Condition>, Self> instantiator;
-    private Supplier<Condition> predicateFunc = null;
+    private final Function<Function<RoleMapperConfig, Condition>, Self> instantiator;
+    private Function<RoleMapperConfig, Condition> predicateFunc = null;
 
-    public LdapModelCriteriaBuilder(Function<Supplier<Condition>, Self> instantiator) {
+    public LdapModelCriteriaBuilder(Function<Function<RoleMapperConfig, Condition>, Self> instantiator) {
         this.instantiator = instantiator;
     }
 
     @SafeVarargs
     @Override
     public final Self and(Self... builders) {
-        return instantiator.apply(() -> {
-            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().get()).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
+        return instantiator.apply((config) -> {
+            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().apply(config)).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
             return conditions.length > 0 ? new AndCondition(conditions) : new NoopCondition();
         });
     }
@@ -55,26 +55,26 @@ public abstract class LdapModelCriteriaBuilder<E, M, Self extends LdapModelCrite
     @SafeVarargs
     @Override
     public final Self or(Self... builders) {
-        return instantiator.apply(() -> {
-            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().get()).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
+        return instantiator.apply((config) -> {
+            Condition[] conditions = Stream.of(builders).map(b -> b.getPredicateFunc().apply(config)).filter(condition -> !(condition instanceof NoopCondition)).toArray(Condition[]::new);
             return conditions.length > 0 ? new OrCondition(conditions) : new NoopCondition();
         });
     }
 
     @Override
     public Self not(Self builder) {
-        return instantiator.apply(() -> {
-            Condition condition = builder.getPredicateFunc().get();
+        return instantiator.apply((config) -> {
+            Condition condition = builder.getPredicateFunc().apply(config);
             return condition instanceof NoopCondition ? condition : new NotCondition(condition);
         });
     }
 
-    public Supplier<Condition> getPredicateFunc() {
+    public Function<RoleMapperConfig, Condition> getPredicateFunc() {
         return predicateFunc;
     }
 
-    public LdapModelCriteriaBuilder(Function<Supplier<Condition>, Self> instantiator,
-                                    Supplier<Condition> predicateFunc) {
+    public LdapModelCriteriaBuilder(Function<Function<RoleMapperConfig, Condition>, Self> instantiator,
+                                    Function<RoleMapperConfig, Condition> predicateFunc) {
         this.instantiator = instantiator;
         this.predicateFunc = predicateFunc;
     }

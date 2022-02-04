@@ -31,7 +31,8 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
     private final LDAPObject ldapObject;
     private final RoleMapperConfig roleMapperConfig;
 
-    // TODO: would I need one with a cloner?
+    // TODO: would I need one with a cloner -> might/will need it once I create new entities
+    // to transform a MapRoleEntity to a LdapRoleEntity
     public LdapRoleEntity(LDAPObject ldapObject, RoleMapperConfig roleMapperConfig) {
         this.ldapObject = ldapObject;
         this.roleMapperConfig = roleMapperConfig;
@@ -91,7 +92,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public String getDescription() {
-        return ldapObject.getDn().toString();
+        return ldapObject.getAttributeAsString("description");
     }
 
     @Override

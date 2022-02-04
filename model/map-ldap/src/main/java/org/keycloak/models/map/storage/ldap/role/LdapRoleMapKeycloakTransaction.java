@@ -87,12 +87,12 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
         LDAPQuery ldapQuery = getLdapQuery();
 
-        List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
-
-        Condition condition = (Condition) mcb.getPredicateFunc().get();
+        Condition condition = (Condition) mcb.getPredicateFunc().apply(roleMapperConfig);
         if (!(condition instanceof NoopCondition)) {
             ldapQuery.addWhereCondition(condition);
         }
+
+        List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
 
         Stream<LdapRoleEntity> ldapStream = ldapObjects.stream().map(ldapObject -> new LdapRoleEntity(ldapObject, roleMapperConfig));
 
