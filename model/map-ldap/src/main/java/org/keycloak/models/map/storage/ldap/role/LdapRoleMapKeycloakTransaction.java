@@ -16,6 +16,7 @@
  */
 package org.keycloak.models.map.storage.ldap.role;
 
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.role.MapRoleEntity;
@@ -25,6 +26,7 @@ import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
+import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.storage.ldap.idm.query.Condition;
@@ -34,40 +36,51 @@ import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
 import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
 import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
 import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
-import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.StringTokenizer;
 import java.util.stream.Stream;
 
 public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<LdapRoleEntity, MapRoleEntity, RoleModel> {
 
     private final MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate;
     private final KeycloakSession session;
-    private final LdapConfig config;
-    private final RoleMapperConfig roleMapperConfig;
+    private final Config.Scope config;
 
-    public LdapRoleMapKeycloakTransaction(KeycloakSession session, LdapConfig config, RoleMapperConfig roleMapperConfig, MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
-        super(session, config, roleMapperConfig, delegate);
+    public LdapRoleMapKeycloakTransaction(KeycloakSession session, Config.Scope config, MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
+        super(session, config, delegate);
         this.session = session;
         this.config = config;
-        this.roleMapperConfig = roleMapperConfig;
         this.delegate = delegate;
     }
 
-    public interface LdapRoleMapKeycloakTransactionFunction<A, B, C, D, R> {
-        R apply(A a, B b, C c, D d);
+    public interface LdapRoleMapKeycloakTransactionFunction<A, B, C, R> {
+        R apply(A a, B b, C c);
     }
 
     @Override
     public MapRoleEntity read(String key) {
         MapRoleEntity val = delegate.read(key);
         if (val == null) {
-            LDAPIdentityStore identityStore = new LDAPIdentityStore(session, config);
+            StringTokenizer st = new StringTokenizer(key, ".");
+            if (!st.hasMoreTokens()) {
+                return null;
+            }
+            String realm = st.nextToken();
+            if (!st.hasMoreTokens()) {
+                return null;
+            }
+            String id = st.nextToken();
 
-            LDAPQuery ldapQuery = getLdapQuery();
+            LdapConfig ldapConfig = new LdapConfig(config, realm);
+            LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm);
 
-            ldapQuery.addWhereCondition(new EqualCondition(config.getUuidLDAPAttributeName(), key, EscapeStrategy.DEFAULT));
+            LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+
+            LDAPQuery ldapQuery = getLdapQuery(ldapConfig, roleMapperConfig);
+
+            ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
 
             List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
             if (ldapObjects.size() == 1) {
@@ -80,14 +93,24 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     @Override
     public Stream<MapRoleEntity> read(QueryParameters<RoleModel> queryParameters) {
-        LdapModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
+
+        // first analyze the query to find out the realm
+        LdapRoleModelCriteriaBuilderForRealm mcbr = queryParameters.getModelCriteriaBuilder()
+                .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilderForRealm());
+        String realm = mcbr.getPredicateFunc().get().findAny().get();
+
+        // then analyze the query again to retrieve the query without the realm
+        LdapRoleModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
                 .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilder());
 
-        LDAPIdentityStore identityStore = new LDAPIdentityStore(session, config);
+        LdapConfig ldapConfig = new LdapConfig(config, realm);
+        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm);
 
-        LDAPQuery ldapQuery = getLdapQuery();
+        LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
 
-        Condition condition = (Condition) mcb.getPredicateFunc().apply(roleMapperConfig);
+        LDAPQuery ldapQuery = getLdapQuery(ldapConfig, roleMapperConfig);
+
+        Condition condition = mcb.getPredicateFunc().apply(roleMapperConfig);
         if (!(condition instanceof NoopCondition)) {
             ldapQuery.addWhereCondition(condition);
         }
@@ -99,16 +122,16 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         return Stream.concat(delegate.read(queryParameters), ldapStream);
     }
 
-    private LDAPQuery getLdapQuery() {
+    private LDAPQuery getLdapQuery(LdapConfig ldapConfig, LdapRoleMapperConfig roleMapperConfig) {
         LDAPQuery ldapQuery = new LDAPQuery(null);
 
         // For now, use same search scope, which is configured "globally" and used for user's search.
-        ldapQuery.setSearchScope(config.getSearchScope());
+        ldapQuery.setSearchScope(ldapConfig.getSearchScope());
 
         String rolesDn = roleMapperConfig.getRolesDn();
         ldapQuery.setSearchDn(rolesDn);
 
-        Collection<String> roleObjectClasses = config.getRoleObjectClasses();
+        Collection<String> roleObjectClasses = ldapConfig.getRoleObjectClasses();
         ldapQuery.addObjectClasses(roleObjectClasses);
 
         String rolesRdnAttr = roleMapperConfig.getRoleNameLdapAttribute();
@@ -157,4 +180,10 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     protected LdapRoleModelCriteriaBuilder createLdapModelCriteriaBuilder() {
         return new LdapRoleModelCriteriaBuilder();
     }
+
+    @Override
+    protected LdapRoleModelCriteriaBuilderForRealm createLdapModelCriteriaBuilderForRealm() {
+        return new LdapRoleModelCriteriaBuilderForRealm();
+    }
+
 }

@@ -19,6 +19,7 @@ package org.keycloak.models.map.storage.ldap;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
@@ -30,15 +31,13 @@ import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
 
-    private final RoleMapperConfig roleMapperConfig;
     private final MapKeycloakTransaction<E, M> delegate;
-    private final LDAPConfig config;
+    private final Config.Scope config;
     private final KeycloakSession session;
 
-    public LdapMapKeycloakTransaction(KeycloakSession session, LDAPConfig config, RoleMapperConfig roleMapperConfig, MapKeycloakTransaction<E, M> delegate) {
+    public LdapMapKeycloakTransaction(KeycloakSession session, Config.Scope config, MapKeycloakTransaction<E, M> delegate) {
         this.session = session;
         this.config = config;
-        this.roleMapperConfig = roleMapperConfig;
         this.delegate = delegate;
     }
 
@@ -53,6 +52,8 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
     }
 
     protected abstract LdapModelCriteriaBuilder createLdapModelCriteriaBuilder();
+
+    protected abstract LdapModelCriteriaBuilderForRealm createLdapModelCriteriaBuilderForRealm();
 
     @Override
     public Stream<E> read(QueryParameters<M> queryParameters) {

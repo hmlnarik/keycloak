@@ -47,6 +47,7 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
                 if (modelField.equals(RoleModel.SearchableFields.REALM_ID) ||
                         modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE)) {
                     // don't filter by realm, as the LDAP directory is specific to the realm already
+                    // TODO: find out how to handle clientroles
                     return new LdapRoleModelCriteriaBuilder(config -> new NoopCondition());
                 } else if (modelField.equals(RoleModel.SearchableFields.CLIENT_ID) ||
                         modelField.equals(RoleModel.SearchableFields.NAME)) {
@@ -55,8 +56,7 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
                     return new LdapRoleModelCriteriaBuilder((config) -> {
                         String field = modelFieldNameToLdap(config, modelField);
                         return new EqualCondition(field, value[0], EscapeStrategy.DEFAULT);
-                    }
-                    );
+                    });
                 } else {
                     throw new CriterionNotSupportedException(modelField, op);
                 }

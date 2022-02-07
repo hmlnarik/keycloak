@@ -49,30 +49,13 @@ public class LdapMapStorageProviderFactory implements
     private static final Logger logger = Logger.getLogger(LdapMapStorageProviderFactory.class);
 
     @SuppressWarnings("rawtypes")
-    private static final Map<Class<?>, LdapRoleMapKeycloakTransaction.LdapRoleMapKeycloakTransactionFunction<KeycloakSession, LdapConfig, RoleMapperConfig, MapKeycloakTransaction, MapKeycloakTransaction>> MODEL_TO_TX = new HashMap<>();
+    private static final Map<Class<?>, LdapRoleMapKeycloakTransaction.LdapRoleMapKeycloakTransactionFunction<KeycloakSession, Config.Scope, MapKeycloakTransaction, MapKeycloakTransaction>> MODEL_TO_TX = new HashMap<>();
     static {
         MODEL_TO_TX.put(RoleModel.class,            LdapRoleMapKeycloakTransaction::new);
     }
 
     public <M, V extends AbstractEntity> MapKeycloakTransaction<V, M> createTransaction(KeycloakSession session, Class<M> modelType, MapKeycloakTransaction<V, M> delegate) {
-        LdapConfig ldapConfig = new LdapConfig(new MultivaluedHashMap<String, String>() {
-            @Override
-            public String getFirst(String key) {
-                return config.get(key);
-            }
-        });
-        RoleMapperConfig roleMapperConfig = new RoleMapperConfig(new ComponentModel() {
-            @Override
-            public MultivaluedHashMap<String, String> getConfig() {
-                return new MultivaluedHashMap<String, String>() {
-                    @Override
-                    public String getFirst(String key) {
-                        return config.get(key);
-                    }
-                };
-            }
-        });
-        return MODEL_TO_TX.get(modelType).apply(session, ldapConfig, roleMapperConfig, delegate);
+        return MODEL_TO_TX.get(modelType).apply(session, config, delegate);
     }
 
     @Override

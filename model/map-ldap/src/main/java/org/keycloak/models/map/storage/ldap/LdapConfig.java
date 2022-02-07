@@ -17,6 +17,7 @@
 
 package org.keycloak.models.map.storage.ldap;
 
+import org.keycloak.Config;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.models.LDAPConstants;
 import org.keycloak.storage.ldap.LDAPConfig;
@@ -29,9 +30,18 @@ import java.util.Set;
 public class LdapConfig extends LDAPConfig {
     private MultivaluedHashMap<String, String> config;
 
-    public LdapConfig(MultivaluedHashMap<String, String> config) {
-        super(config);
-        this.config = config;
+    public LdapConfig(Config.Scope config, String realm) {
+        super(hm(config, realm));
+        this.config = hm(config, realm);
+    }
+
+    private static MultivaluedHashMap<String, String> hm(Config.Scope config, String realm) {
+        return new MultivaluedHashMap<String, String>() {
+            @Override
+            public String getFirst(String key) {
+                return config.scope(realm).get(key);
+            }
+        };
     }
 
     // from: RoleMapperConfig

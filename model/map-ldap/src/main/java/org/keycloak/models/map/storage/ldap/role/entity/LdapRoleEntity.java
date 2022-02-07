@@ -23,29 +23,31 @@ import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.keycloak.models.map.role.MapRoleEntity.AbstractRoleEntity;
+import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
-import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 public class LdapRoleEntity extends AbstractRoleEntity  {
 
     private final LDAPObject ldapObject;
-    private final RoleMapperConfig roleMapperConfig;
+    private final LdapRoleMapperConfig roleMapperConfig;
 
     // TODO: would I need one with a cloner -> might/will need it once I create new entities
     // to transform a MapRoleEntity to a LdapRoleEntity
-    public LdapRoleEntity(LDAPObject ldapObject, RoleMapperConfig roleMapperConfig) {
+    public LdapRoleEntity(LDAPObject ldapObject, LdapRoleMapperConfig roleMapperConfig) {
         this.ldapObject = ldapObject;
         this.roleMapperConfig = roleMapperConfig;
     }
 
     @Override
     public String getId() {
-        return ldapObject.getUuid();
+        return roleMapperConfig.getRealm() + "." + ldapObject.getUuid();
     }
 
     @Override
     public void setId(String id) {
-        ldapObject.setUuid(id);
+        if (!Objects.equals(this.getId(), id)) {
+            throw new NotImplementedException();
+        }
     }
 
 
@@ -76,8 +78,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public String getRealmId() {
-        // TODO: make dynamic
-        return "master";
+        return roleMapperConfig.getRealm();
     }
 
     @Override
@@ -119,6 +120,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setDescription(String description) {
+        if (description != null && description.length() == 0 && getDescription() == null) {
+            return;
+        }
         if (!Objects.equals(this.getDescription(), description)) {
             throw new NotImplementedException();
         }
