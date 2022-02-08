@@ -17,14 +17,8 @@
 package org.keycloak.models.map.storage.ldap;
 
 import org.keycloak.models.RoleModel;
-import org.keycloak.models.map.storage.CriterionNotSupportedException;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
-import org.keycloak.models.map.storage.ldap.role.LdapRoleModelCriteriaBuilder;
 import org.keycloak.storage.SearchableModelField;
-import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
-import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -37,12 +31,12 @@ import java.util.stream.Stream;
  * @param <M> Model
  * @param <Self> specific implementation of this class
  */
-public class LdapModelCriteriaBuilderForRealm<E, M, Self extends LdapModelCriteriaBuilderForRealm<E, M, Self>> implements ModelCriteriaBuilder<M, Self> {
+public class LdapModelCriteriaBuilderForClientId<E, M, Self extends LdapModelCriteriaBuilderForClientId<E, M, Self>> implements ModelCriteriaBuilder<M, Self> {
 
     private final Function<Supplier<Stream<String>>, Self> instantiator;
     private Supplier<Stream<String>> predicateFunc = null;
 
-    public LdapModelCriteriaBuilderForRealm(Function<Supplier<Stream<String>>, Self> instantiator) {
+    public LdapModelCriteriaBuilderForClientId(Function<Supplier<Stream<String>>, Self> instantiator) {
         this.instantiator = instantiator;
     }
 
@@ -65,7 +59,7 @@ public class LdapModelCriteriaBuilderForRealm<E, M, Self extends LdapModelCriter
 
     @Override
     public Self compare(SearchableModelField<? super M> modelField, Operator op, Object... value) {
-        if (modelField.equals(RoleModel.SearchableFields.REALM_ID)) {
+        if (modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
             // don't filter by realm, as the LDAP directory is specific to the realm already
             return instantiator.apply(() -> Stream.of((String) value[0]));
         } else {
@@ -77,8 +71,8 @@ public class LdapModelCriteriaBuilderForRealm<E, M, Self extends LdapModelCriter
         return predicateFunc;
     }
 
-    public LdapModelCriteriaBuilderForRealm(Function<Supplier<Stream<String>>, Self> instantiator,
-                                            Supplier<Stream<String>> predicateFunc) {
+    public LdapModelCriteriaBuilderForClientId(Function<Supplier<Stream<String>>, Self> instantiator,
+                                               Supplier<Stream<String>> predicateFunc) {
         this.instantiator = instantiator;
         this.predicateFunc = predicateFunc;
     }

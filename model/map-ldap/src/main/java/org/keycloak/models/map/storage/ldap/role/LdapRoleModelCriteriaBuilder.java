@@ -45,12 +45,12 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
         switch (op) {
             case EQ:
                 if (modelField.equals(RoleModel.SearchableFields.REALM_ID) ||
-                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE)) {
+                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
+                        modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
                     // don't filter by realm, as the LDAP directory is specific to the realm already
                     // TODO: find out how to handle clientroles
                     return new LdapRoleModelCriteriaBuilder(config -> new NoopCondition());
-                } else if (modelField.equals(RoleModel.SearchableFields.CLIENT_ID) ||
-                        modelField.equals(RoleModel.SearchableFields.NAME)) {
+                } else if (modelField.equals(RoleModel.SearchableFields.NAME)) {
                     // validateValue(value, modelField, op, String.class);
                     // handle client IDs ...
                     return new LdapRoleModelCriteriaBuilder((config) -> {
@@ -63,11 +63,11 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
 
             case NE:
                 if (modelField.equals(RoleModel.SearchableFields.REALM_ID) ||
-                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE)) {
+                        modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
+                        modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
                     // don't filter by realm, as the LDAP directory is specific to the realm already
                     return new LdapRoleModelCriteriaBuilder(config -> new NoopCondition());
-                } else if (modelField.equals(RoleModel.SearchableFields.CLIENT_ID) ||
-                        modelField.equals(RoleModel.SearchableFields.NAME)) {
+                } else if (modelField.equals(RoleModel.SearchableFields.NAME)) {
                     // validateValue(value, modelField, op, String.class);
                     return new LdapRoleModelCriteriaBuilder((roleMapperConfig) -> {
                         String field = modelFieldNameToLdap(roleMapperConfig, modelField);

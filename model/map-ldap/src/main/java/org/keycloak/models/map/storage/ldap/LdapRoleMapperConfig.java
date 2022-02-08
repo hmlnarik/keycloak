@@ -24,23 +24,44 @@ import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 public class LdapRoleMapperConfig extends RoleMapperConfig {
     private final String realm;
+    private final String clientId;
 
-    public LdapRoleMapperConfig(Config.Scope config, String realm) {
+    public LdapRoleMapperConfig(Config.Scope config, String realm, String clientId) {
         super(new ComponentModel() {
             @Override
             public MultivaluedHashMap<String, String> getConfig() {
                 return new MultivaluedHashMap<String, String>() {
                     @Override
                     public String getFirst(String key) {
-                        return config.scope(realm).get(key);
+                        if (clientId == null) {
+                            return config.scope(realm).get(key);
+                        } else {
+                            String val = config.scope(realm).scope("clients").scope("client").scope(clientId).get(key);
+                            if (val == null) {
+                                val = config.scope(realm).scope("clients").scope(clientId).get(key);
+                                if (val != null) {
+                                    val = val.replaceAll("\\{0}", clientId);
+                                }
+                            }
+                            if (val == null) {
+                                val = config.scope(realm).get(key);
+                            }
+                            return val;
+                        }
                     }
                 };
             }
         });
+        this.clientId = clientId;
         this.realm = realm;
     }
 
     public String getRealm() {
         return realm;
+    }
+
+    @Override
+    public String getClientId() {
+        return clientId;
     }
 }

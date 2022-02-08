@@ -134,8 +134,17 @@
                 "role.name.ldap.attribute": "cn",
                 "role.object.classes": "groupOfNames",
                 "mode": "LDAP_ONLY",
-                "use.realm.roles.mapping": "true"
-            }
+                "use.realm.roles.mapping": "true",
+                "clients": {
+                    "clientsToSearch": "e44b2d1c-9b00-4f22-a8c1-d0aa1c48d7fb",
+                    "roles.dn": "ou={0},dc=keycloak,dc=org",
+                    "client": {
+                        "e44b2d1c-9b00-4f22-a8c1-d0aa1c48d7fb": {
+                            "roles.dn": "ou=FinanceRoles,dc=keycloak,dc=org"
+                        }
+                    }
+                }
+             }
         }
     },
 

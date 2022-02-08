@@ -83,7 +83,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public String getClientId() {
-        return null;
+        return roleMapperConfig.getClientId();
     }
 
     @Override
@@ -98,7 +98,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setClientRole(Boolean clientRole) {
-        throw new NotImplementedException();
+        if (!Objects.equals(this.isClientRole(), clientRole)) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override
@@ -108,7 +110,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setClientId(String clientId) {
-        throw new NotImplementedException();
+        if (!Objects.equals(this.getClientId(), clientId)) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override

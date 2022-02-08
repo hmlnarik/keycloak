@@ -55,6 +55,8 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
 
     protected abstract LdapModelCriteriaBuilderForRealm createLdapModelCriteriaBuilderForRealm();
 
+    protected abstract LdapModelCriteriaBuilderForClientId createLdapModelCriteriaBuilderForClientId();
+
     @Override
     public Stream<E> read(QueryParameters<M> queryParameters) {
         throw new NotImplementedException("will have a common method here, soon");

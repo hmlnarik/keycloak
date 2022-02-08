@@ -25,7 +25,6 @@ import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
-import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
@@ -39,6 +38,7 @@ import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.stream.Stream;
 
@@ -74,21 +74,41 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             String id = st.nextToken();
 
             LdapConfig ldapConfig = new LdapConfig(config, realm);
-            LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm);
 
-            LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+            // try to look it up as a realm role
+            val = lookupEntityById(realm, id, ldapConfig, null);
 
-            LDAPQuery ldapQuery = getLdapQuery(ldapConfig, roleMapperConfig);
-
-            ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
-
-            List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
-            if (ldapObjects.size() == 1) {
-                val = new LdapRoleEntity(ldapObjects.get(0), roleMapperConfig);
+            if (val == null) {
+                // try to look it up using a client role
+                // currently the API doesn't allow to get a list of all keys, therefore we need a separate attribute
+                // also, getArray is broken as it doesn't look up the parent's values if an entry is empty
+                String[] clientIds = config.scope(realm).scope("clients").get("clientsToSearch").split("\\s*,\\s*");
+                for (String clientId : clientIds) {
+                    val = lookupEntityById(realm, id, ldapConfig, clientId);
+                    if (val != null) {
+                        break;
+                    }
+                }
             }
 
         }
         return val;
+    }
+
+    private MapRoleEntity lookupEntityById(String realm, String id, LdapConfig ldapConfig, String clientId) {
+        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm, clientId);
+
+        LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+
+        LDAPQuery ldapQuery = getLdapQuery(ldapConfig, roleMapperConfig);
+
+        ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+
+        List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
+        if (ldapObjects.size() == 1) {
+            return new LdapRoleEntity(ldapObjects.get(0), roleMapperConfig);
+        }
+        return null;
     }
 
     @Override
@@ -97,14 +117,28 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         // first analyze the query to find out the realm
         LdapRoleModelCriteriaBuilderForRealm mcbr = queryParameters.getModelCriteriaBuilder()
                 .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilderForRealm());
-        String realm = mcbr.getPredicateFunc().get().findAny().get();
+        String realm;
+        Optional<String> realmOptional = mcbr.getPredicateFunc().get().findAny();
+        if (!realmOptional.isPresent()) {
+            throw new IllegalArgumentException("unable to determine realm from query parameters");
+        }
+        realm = realmOptional.get();
+
+        // find out if this contains a client ID
+        LdapRoleModelCriteriaBuilderForClientId mcbc = queryParameters.getModelCriteriaBuilder()
+                .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilderForClientId());
+        String clientId = null;
+        Optional<String> clientIdOptional = mcbc.getPredicateFunc().get().findAny();
+        if (clientIdOptional.isPresent()) {
+          clientId = clientIdOptional.get();
+        }
 
         // then analyze the query again to retrieve the query without the realm
         LdapRoleModelCriteriaBuilder mcb = queryParameters.getModelCriteriaBuilder()
                 .flashToModelCriteriaBuilder(createLdapModelCriteriaBuilder());
 
         LdapConfig ldapConfig = new LdapConfig(config, realm);
-        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm);
+        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm, clientId);
 
         LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
 
@@ -184,6 +218,11 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     @Override
     protected LdapRoleModelCriteriaBuilderForRealm createLdapModelCriteriaBuilderForRealm() {
         return new LdapRoleModelCriteriaBuilderForRealm();
+    }
+
+    @Override
+    protected LdapRoleModelCriteriaBuilderForClientId createLdapModelCriteriaBuilderForClientId() {
+        return new LdapRoleModelCriteriaBuilderForClientId();
     }
 
 }
