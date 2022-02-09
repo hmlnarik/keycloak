@@ -16,20 +16,31 @@
  */
 package org.keycloak.models.map.storage.ldap.role.entity;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.role.MapRoleEntity.AbstractRoleEntity;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
+import org.keycloak.storage.ldap.idm.model.LDAPDn;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 
 public class LdapRoleEntity extends AbstractRoleEntity  {
 
     private final LDAPObject ldapObject;
     private final LdapRoleMapperConfig roleMapperConfig;
+
+    public LdapRoleEntity(DeepCloner cloner, LdapRoleMapperConfig roleMapperConfig) {
+        ldapObject = new LDAPObject();
+        ldapObject.setObjectClasses(Arrays.asList("top", "groupOfNames"));
+        this.roleMapperConfig = roleMapperConfig;
+    }
 
     // TODO: would I need one with a cloner -> might/will need it once I create new entities
     // to transform a MapRoleEntity to a LdapRoleEntity
@@ -40,14 +51,15 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public String getId() {
-        return roleMapperConfig.getRealm() + "." + ldapObject.getUuid();
+        // for now, only support one realm, don't make realm part of the key
+        // https://github.com/keycloak/keycloak/discussions/10045
+        // return roleMapperConfig.getRealm() + "." + ldapObject.getUuid();
+        return ldapObject.getUuid();
     }
 
     @Override
     public void setId(String id) {
-        if (!Objects.equals(this.getId(), id)) {
-            throw new NotImplementedException();
-        }
+        ldapObject.setUuid(id);
     }
 
 
@@ -58,7 +70,8 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setAttributes(Map<String, List<String>> attributes) {
-        throw new NotImplementedException();
+        // TODO: implement attributes
+        // throw new NotImplementedException();
     }
 
     @Override
@@ -105,7 +118,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setRealmId(String realmId) {
-        throw new NotImplementedException();
+        if (!Objects.equals(this.getRealmId(), realmId)) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override
@@ -117,18 +132,14 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setName(String name) {
-        if (!Objects.equals(this.getName(), name)) {
-            throw new NotImplementedException();
-        }
+        ldapObject.setSingleAttribute(roleMapperConfig.getRoleNameLdapAttribute(), name);
+        ldapObject.setDn(LDAPDn.fromString(roleMapperConfig.getRoleNameLdapAttribute() + "=" + name + "," + roleMapperConfig.getRolesDn()));
     }
 
     @Override
     public void setDescription(String description) {
-        if (description != null && description.length() == 0 && getDescription() == null) {
-            return;
-        }
-        if (!Objects.equals(this.getDescription(), description)) {
-            throw new NotImplementedException();
+        if (description != null) {
+            ldapObject.setSingleAttribute("description", description);
         }
     }
 
@@ -139,7 +150,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setCompositeRoles(Set<String> compositeRoles) {
-        throw new NotImplementedException();
+        if (compositeRoles != null && compositeRoles.size() > 0) {
+            throw new NotImplementedException();
+        }
     }
 
     @Override
@@ -150,5 +163,9 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
     @Override
     public void removeCompositeRole(String roleId) {
         throw new NotImplementedException();
+    }
+
+    public LDAPObject getLdapObject() {
+        return ldapObject;
     }
 }

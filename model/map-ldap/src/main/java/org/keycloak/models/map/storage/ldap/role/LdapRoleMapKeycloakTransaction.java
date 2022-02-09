@@ -19,6 +19,7 @@ package org.keycloak.models.map.storage.ldap.role;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
+import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.role.MapRoleEntity;
 
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
@@ -39,7 +40,7 @@ import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.StringTokenizer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<LdapRoleEntity, MapRoleEntity, RoleModel> {
@@ -60,9 +61,43 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     }
 
     @Override
+    public MapRoleEntity create(MapRoleEntity value) {
+        if (value.getDescription() != null && value.getDescription().startsWith("{")) {
+            // direct all internal roles to the delegate store
+            return delegate.create(value);
+        }
+        // in order to get the ID, we need to write it to LDAP
+        // TODO: on transaction rollback the element should then be deleted
+
+        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, value.getRealmId(), value.getClientId());
+        LdapConfig ldapConfig = new LdapConfig(config, value.getRealmId());
+        LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+
+        DeepCloner CLONER = new DeepCloner.Builder()
+                .constructor(MapRoleEntity.class, cloner -> new LdapRoleEntity(cloner, roleMapperConfig))
+                .build();
+
+        LdapRoleEntity mapped = (LdapRoleEntity) CLONER.from(value);
+        // LDAP should never use the UUID provided by the caller, as UUID is generated
+        mapped.setId(null);
+        // Roles as groups need to have at least one member on most directories. Add ourselves as a member as a dummy.
+        if (mapped.getLdapObject().getUuid() == null && mapped.getLdapObject().getAttributeAsSet("member") == null) {
+            // insert our own name as dummy member of this role to avoid a schema conflict in LDAP
+            mapped.getLdapObject().setAttribute("member", Stream.of(mapped.getLdapObject().getDn().toString()).collect(Collectors.toSet()));
+        }
+
+        identityStore.add(mapped.getLdapObject());
+
+        return mapped;
+    }
+
+    @Override
     public MapRoleEntity read(String key) {
         MapRoleEntity val = delegate.read(key);
         if (val == null) {
+            // for now, only support one realm, don't make realm part of the key
+            // https://github.com/keycloak/keycloak/discussions/10045
+            /*
             StringTokenizer st = new StringTokenizer(key, ".");
             if (!st.hasMoreTokens()) {
                 return null;
@@ -72,6 +107,9 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
                 return null;
             }
             String id = st.nextToken();
+             */
+            String realm = "master";
+            @SuppressWarnings("UnnecessaryLocalVariable") String id = key;
 
             LdapConfig ldapConfig = new LdapConfig(config, realm);
 

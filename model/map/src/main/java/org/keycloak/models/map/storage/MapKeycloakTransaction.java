@@ -29,8 +29,12 @@ public interface MapKeycloakTransaction<V extends AbstractEntity, M> extends Key
      * Updates to the returned instances of {@code V} would be visible in the current transaction
      * and will propagate into the underlying store upon commit.
      *
+     * The ID of the entity passed in the parameter might change to a different value in the returned value
+     *  if the underlying storage decided this was necessary.
+     *  If the ID of the entity was null before, it will be set on the returned value.
+     *
      * @param value the value
-     * @return Entity representing the {@code value} in the store. It may or may not be the same instance as {@code value}
+     * @return Entity representing the {@code value} in the store. It may or may not be the same instance as {@code value}.
      */
     V create(V value);
 
