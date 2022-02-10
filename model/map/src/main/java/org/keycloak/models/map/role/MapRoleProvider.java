@@ -129,7 +129,7 @@ public class MapRoleProvider implements RoleProvider {
         entity.setName(name);
         entity.setClientRole(true);
         entity.setClientId(client.getId());
-        if (tx.read(entity.getId()) != null) {
+        if (entity.getId() != null && tx.read(entity.getId()) != null) {
             throw new ModelDuplicateException("Role exists: " + id);
         }
         entity = tx.create(entity);

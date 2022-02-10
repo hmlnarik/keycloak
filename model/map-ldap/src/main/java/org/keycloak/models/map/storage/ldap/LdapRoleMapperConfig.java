@@ -38,7 +38,7 @@ public class LdapRoleMapperConfig extends RoleMapperConfig {
                         } else {
                             String val = config.scope(realm).scope("clients").scope("client").scope(clientId).get(key);
                             if (val == null) {
-                                val = config.scope(realm).scope("clients").scope(clientId).get(key);
+                                val = config.scope(realm).scope("clients").get(key);
                                 if (val != null) {
                                     val = val.replaceAll("\\{0}", clientId);
                                 }

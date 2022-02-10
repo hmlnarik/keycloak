@@ -16,6 +16,11 @@
  */
 package org.keycloak.models.map.storage.ldap;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -25,8 +30,6 @@ import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
-import org.keycloak.storage.ldap.LDAPConfig;
-import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
@@ -40,6 +43,23 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
         this.config = config;
         this.delegate = delegate;
     }
+
+    protected abstract static class MapTaskWithValue {
+        public abstract void execute();
+    }
+
+    protected abstract class DeleteOperation extends MapTaskWithValue {
+        final protected RE entity;
+        public DeleteOperation(RE entity) {
+            this.entity = entity;
+        }
+    }
+
+    protected final List<MapTaskWithValue> tasksOnRollback = new LinkedList<>();
+
+    protected final List<MapTaskWithValue> tasksOnCommit = new LinkedList<>();
+
+    protected final Map<EntityKey, RE> entities = new HashMap<>();
 
     @Override
     public E create(E mapEntity) {
@@ -75,5 +95,32 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
     @Override
     public long delete(QueryParameters<M> queryParameters) {
         return delegate.delete(queryParameters);
+    }
+
+    protected static class EntityKey {
+        private final String key;
+
+        public String getRealmId() {
+            return realmId;
+        }
+
+        private final String realmId;
+        public EntityKey(String realmId, String key) {
+            this.realmId = realmId;
+            this.key = key;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            EntityKey entityKey = (EntityKey) o;
+            return Objects.equals(key, entityKey.key) && Objects.equals(realmId, entityKey.realmId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, realmId);
+        }
     }
 }

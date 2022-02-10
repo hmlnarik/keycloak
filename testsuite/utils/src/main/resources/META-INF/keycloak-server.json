@@ -196,6 +196,13 @@
         }
     },
 
+    "realmCache": {
+        "provider": "${keycloak.realm.cache.provider:}",
+        "default" : {
+            "enabled": false
+        }
+    },
+
     "connectionsInfinispan": {
         "default": {
             "jgroupsUdpMcastAddr": "${keycloak.connectionsInfinispan.jgroupsUdpMcastAddr:234.56.78.90}",

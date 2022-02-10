@@ -18,6 +18,7 @@ package org.keycloak.models.map.storage.ldap.role;
 
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.ModelException;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.role.MapRoleEntity;
@@ -37,7 +38,10 @@ import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
 import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
 import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
 
+import javax.naming.NamingException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -62,8 +66,8 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     @Override
     public MapRoleEntity create(MapRoleEntity value) {
-        if (value.getDescription() != null && value.getDescription().startsWith("{")) {
-            // direct all internal roles to the delegate store
+        if (Arrays.asList("admin", "default-roles-master").contains(value.getName()) || value.isClientRole()) {
+            // this is a composite role, we don't support that yet
             return delegate.create(value);
         }
         // in order to get the ID, we need to write it to LDAP
@@ -88,7 +92,35 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
         identityStore.add(mapped.getLdapObject());
 
+        entities.put(new EntityKey(mapped.getRealmId(), mapped.getId()), mapped);
+
+        tasksOnRollback.add(new DeleteOperation(mapped) {
+            @Override
+            public void execute() {
+                identityStore.remove(mapped.getLdapObject());
+                entities.remove(new EntityKey(mapped.getRealmId(), mapped.getId()));
+            }
+        });
+
         return mapped;
+    }
+
+    @Override
+    public boolean delete(String key) {
+        boolean delete = super.delete(key);
+        MapRoleEntity read = read(key);
+        if (read instanceof LdapRoleEntity) {
+            tasksOnCommit.add(new DeleteOperation((LdapRoleEntity) read) {
+                @Override
+                public void execute() {
+                    LdapConfig ldapConfig = new LdapConfig(config, entity.getRealmId());
+                    LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+                    identityStore.remove(entity.getLdapObject());
+                }
+            });
+            delete = true;
+        }
+        return delete;
     }
 
     @Override
@@ -111,22 +143,32 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             String realm = "master";
             @SuppressWarnings("UnnecessaryLocalVariable") String id = key;
 
-            LdapConfig ldapConfig = new LdapConfig(config, realm);
-
-            // try to look it up as a realm role
-            val = lookupEntityById(realm, id, ldapConfig, null);
+            // reuse an existing live entity
+            val = entities.get(new EntityKey(realm, id));
 
             if (val == null) {
-                // try to look it up using a client role
-                // currently the API doesn't allow to get a list of all keys, therefore we need a separate attribute
-                // also, getArray is broken as it doesn't look up the parent's values if an entry is empty
-                String[] clientIds = config.scope(realm).scope("clients").get("clientsToSearch").split("\\s*,\\s*");
-                for (String clientId : clientIds) {
-                    val = lookupEntityById(realm, id, ldapConfig, clientId);
-                    if (val != null) {
-                        break;
+                LdapConfig ldapConfig = new LdapConfig(config, realm);
+
+                // try to look it up as a realm role
+                val = lookupEntityById(realm, id, ldapConfig, null);
+
+                if (val == null) {
+                    // try to look it up using a client role
+                    // currently the API doesn't allow to get a list of all keys, therefore we need a separate attribute
+                    // also, getArray is broken as it doesn't look up the parent's values if an entry is empty
+                    String[] clientIds = config.scope(realm).scope("clients").get("clientsToSearch").split("\\s*,\\s*");
+                    for (String clientId : clientIds) {
+                        val = lookupEntityById(realm, id, ldapConfig, clientId);
+                        if (val != null) {
+                            break;
+                        }
                     }
                 }
+
+                if (val != null) {
+                    entities.put(new EntityKey(val.getRealmId(), val.getId()), (LdapRoleEntity) val);
+                }
+
             }
 
         }
@@ -187,11 +229,33 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             ldapQuery.addWhereCondition(condition);
         }
 
-        List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
+        Stream<LdapRoleEntity> ldapStream;
 
-        Stream<LdapRoleEntity> ldapStream = ldapObjects.stream().map(ldapObject -> new LdapRoleEntity(ldapObject, roleMapperConfig));
+        try {
+            List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
 
-        return Stream.concat(delegate.read(queryParameters), ldapStream);
+            ldapStream = ldapObjects.stream().map(ldapObject -> {
+                LdapRoleEntity ldapRoleEntity = new LdapRoleEntity(ldapObject, roleMapperConfig);
+                LdapRoleEntity existingEntry = entities.get(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()));
+                if (existingEntry != null) {
+                    // TODO: instead of returning the existing entity,
+                    //  filter out this entity, and search all existing entries using the query criteria and append those result.
+                    return existingEntry;
+                }
+                // TODO: this assumes that these are no light entities, that would later need loading of details
+                entities.put(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()), ldapRoleEntity);
+                return ldapRoleEntity;
+            });
+        } catch (ModelException ex) {
+            if (clientId != null && ex.getCause() instanceof NamingException) {
+                // the client wasn't found in LDAP, assume an empty result
+                ldapStream = Stream.empty();
+            } else {
+                throw ex;
+            }
+        }
+
+        return Stream.concat(delegate.read(queryParameters), ldapStream).sorted(Comparator.comparing(MapRoleEntity::getName));
     }
 
     private LDAPQuery getLdapQuery(LdapConfig ldapConfig, LdapRoleMapperConfig roleMapperConfig) {
@@ -215,6 +279,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         }
 
         ldapQuery.addReturningLdapAttribute(rolesRdnAttr);
+        ldapQuery.addReturningLdapAttribute("description");
         return ldapQuery;
     }
 
@@ -226,11 +291,27 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     @Override
     public void commit() {
         delegate.commit();
+
+        for (MapTaskWithValue mapTaskWithValue : tasksOnCommit) {
+            mapTaskWithValue.execute();
+        }
+
+        entities.forEach((entityKey, ldapRoleEntity) -> {
+            if (ldapRoleEntity.isUpdated()) {
+                LdapConfig ldapConfig = new LdapConfig(config, entityKey.getRealmId());
+                LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+                identityStore.update(ldapRoleEntity.getLdapObject());
+            }
+        });
     }
 
     @Override
     public void rollback() {
         delegate.rollback();
+
+        for (MapTaskWithValue mapTaskWithValue : tasksOnRollback) {
+            mapTaskWithValue.execute();
+        }
     }
 
     @Override

@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.keycloak.models.map.common.DeepCloner;
@@ -39,6 +37,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
     public LdapRoleEntity(DeepCloner cloner, LdapRoleMapperConfig roleMapperConfig) {
         ldapObject = new LDAPObject();
         ldapObject.setObjectClasses(Arrays.asList("top", "groupOfNames"));
+        ldapObject.setRdnAttributeName("cn");
         this.roleMapperConfig = roleMapperConfig;
     }
 
@@ -59,6 +58,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setId(String id) {
+        this.updated |= !Objects.equals(getId(), id);
         ldapObject.setUuid(id);
     }
 
@@ -70,8 +70,10 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setAttributes(Map<String, List<String>> attributes) {
-        // TODO: implement attributes
-        // throw new NotImplementedException();
+        if (attributes != null && attributes.size() > 0) {
+            // maybe delegate this, or have some custom mapper to ldap attributes
+            throw new NotImplementedException();
+        }
     }
 
     @Override
@@ -132,14 +134,18 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void setName(String name) {
+        this.updated |= !Objects.equals(getName(), name);
         ldapObject.setSingleAttribute(roleMapperConfig.getRoleNameLdapAttribute(), name);
         ldapObject.setDn(LDAPDn.fromString(roleMapperConfig.getRoleNameLdapAttribute() + "=" + name + "," + roleMapperConfig.getRolesDn()));
     }
 
     @Override
     public void setDescription(String description) {
+        this.updated |= !Objects.equals(getDescription(), description);
         if (description != null) {
             ldapObject.setSingleAttribute("description", description);
+        } else {
+            ldapObject.setSingleAttribute("description", "");
         }
     }
 
