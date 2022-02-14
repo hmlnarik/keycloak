@@ -279,7 +279,8 @@ public class LDAPOperationManager {
 
             });
         } catch (NamingException e) {
-            logger.errorf(e, "Could not query server using DN [%s] and filter [%s]", baseDN, filter);
+            // do not log and throw!
+            // logger.errorf(e, "Could not query server using DN [%s] and filter [%s]", baseDN, filter);
             throw e;
         }
     }

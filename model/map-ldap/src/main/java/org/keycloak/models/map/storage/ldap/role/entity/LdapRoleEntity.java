@@ -17,6 +17,7 @@
 package org.keycloak.models.map.storage.ldap.role.entity;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,8 +25,10 @@ import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.role.MapRoleEntity;
 import org.keycloak.models.map.role.MapRoleEntity.AbstractRoleEntity;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
+import org.keycloak.models.map.storage.ldap.role.LdapRoleMapKeycloakTransaction;
 import org.keycloak.storage.ldap.idm.model.LDAPDn;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 
@@ -33,19 +36,22 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     private final LDAPObject ldapObject;
     private final LdapRoleMapperConfig roleMapperConfig;
+    private final LdapRoleMapKeycloakTransaction transaction;
 
-    public LdapRoleEntity(DeepCloner cloner, LdapRoleMapperConfig roleMapperConfig) {
+    public LdapRoleEntity(DeepCloner cloner, LdapRoleMapperConfig roleMapperConfig, LdapRoleMapKeycloakTransaction transaction) {
         ldapObject = new LDAPObject();
         ldapObject.setObjectClasses(Arrays.asList("top", "groupOfNames"));
         ldapObject.setRdnAttributeName("cn");
         this.roleMapperConfig = roleMapperConfig;
+        this.transaction = transaction;
     }
 
     // TODO: would I need one with a cloner -> might/will need it once I create new entities
     // to transform a MapRoleEntity to a LdapRoleEntity
-    public LdapRoleEntity(LDAPObject ldapObject, LdapRoleMapperConfig roleMapperConfig) {
+    public LdapRoleEntity(LDAPObject ldapObject, LdapRoleMapperConfig roleMapperConfig, LdapRoleMapKeycloakTransaction transaction) {
         this.ldapObject = ldapObject;
         this.roleMapperConfig = roleMapperConfig;
+        this.transaction = transaction;
     }
 
     @Override
@@ -151,24 +157,88 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public Set<String> getCompositeRoles() {
-        return null;
+        Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
+        HashSet<String> compositeRoles = new HashSet<>();
+        for (String member : members) {
+            if (member.equals(ldapObject.getDn().toString())) {
+                continue;
+            }
+            if (!member.startsWith(roleMapperConfig.getRoleNameLdapAttribute())) {
+                // this is a real user, not a composite role, ignore
+                // TODO: this will not work if users and role use the same!
+                continue;
+            }
+            String roleId = transaction.readIdByDn(member);
+            if (roleId == null) {
+                throw new NotImplementedException();
+            }
+            compositeRoles.add(roleId);
+        }
+        return compositeRoles;
     }
 
     @Override
     public void setCompositeRoles(Set<String> compositeRoles) {
-        if (compositeRoles != null && compositeRoles.size() > 0) {
-            throw new NotImplementedException();
+        HashSet<String> translatedCompositeRoles = new HashSet<>();
+        if (compositeRoles != null) {
+            for (String compositeRole : compositeRoles) {
+                MapRoleEntity role = transaction.read(compositeRole);
+                if (!(role instanceof LdapRoleEntity)) {
+                    // TODO: encode ID as a dummy DN that signals an external entity
+                    throw new NotImplementedException();
+                }
+                LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+                translatedCompositeRoles.add(ldapRole.getLdapObject().getDn().toString());
+            }
+        }
+        Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
+        if (members == null) {
+            members = new HashSet<>();
+        }
+        for (String member : members) {
+            if (!member.startsWith(roleMapperConfig.getRoleNameLdapAttribute())) {
+                // this is a real user, not a composite role, ignore
+                // TODO: this will not work if users and role use the same!
+                translatedCompositeRoles.add(member);
+            }
+        }
+        if (!translatedCompositeRoles.equals(members)) {
+            ldapObject.setAttribute(roleMapperConfig.getMembershipLdapAttribute(), members);
+            this.updated = true;
         }
     }
 
     @Override
     public void addCompositeRole(String roleId) {
-        throw new NotImplementedException();
+        MapRoleEntity role = transaction.read(roleId);
+        if (!(role instanceof LdapRoleEntity)) {
+            // TODO: encode ID as a dummy DN that signals an external entity
+            throw new NotImplementedException();
+        }
+        LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+        Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
+        if (members == null) {
+            members = new HashSet<>();
+        }
+        members.add(ldapRole.getLdapObject().getDn().toString());
+        ldapObject.setAttribute(roleMapperConfig.getMembershipLdapAttribute(), members);
+        this.updated = true;
     }
 
     @Override
     public void removeCompositeRole(String roleId) {
-        throw new NotImplementedException();
+        MapRoleEntity role = transaction.read(roleId);
+        if (!(role instanceof LdapRoleEntity)) {
+            throw new NotImplementedException();
+        }
+        LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+        Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
+        if (members == null) {
+            members = new HashSet<>();
+        }
+        members.remove(ldapRole.getLdapObject().getDn().toString());
+        ldapObject.setAttribute(roleMapperConfig.getMembershipLdapAttribute(), members);
+        this.updated = true;
     }
 
     public LDAPObject getLdapObject() {
