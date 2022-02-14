@@ -55,9 +55,9 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
         }
     }
 
-    protected final List<MapTaskWithValue> tasksOnRollback = new LinkedList<>();
+    protected final LinkedList<MapTaskWithValue> tasksOnRollback = new LinkedList<>();
 
-    protected final List<MapTaskWithValue> tasksOnCommit = new LinkedList<>();
+    protected final LinkedList<MapTaskWithValue> tasksOnCommit = new LinkedList<>();
 
     protected final Map<EntityKey, RE> entities = new HashMap<>();
 

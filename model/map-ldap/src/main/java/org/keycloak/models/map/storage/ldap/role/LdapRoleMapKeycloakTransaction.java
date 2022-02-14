@@ -29,6 +29,7 @@ import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
+import org.keycloak.storage.ldap.idm.model.LDAPDn;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.storage.ldap.idm.query.Condition;
 import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
@@ -42,6 +43,7 @@ import javax.naming.NamingException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -66,7 +68,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     @Override
     public MapRoleEntity create(MapRoleEntity value) {
-        if (Arrays.asList("admin", "default-roles-master").contains(value.getName()) || value.isClientRole()) {
+        if (Arrays.asList("admin", "default-roles-master", "view-clients", "view-users", "manage-account", "manage-consent").contains(value.getName())) {
             // this is a composite role, we don't support that yet
             return delegate.create(value);
         }
@@ -90,7 +92,29 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             mapped.getLdapObject().setAttribute("member", Stream.of(mapped.getLdapObject().getDn().toString()).collect(Collectors.toSet()));
         }
 
-        identityStore.add(mapped.getLdapObject());
+        try {
+            identityStore.add(mapped.getLdapObject());
+        } catch (ModelException ex) {
+            if (value.isClientRole() && ex.getCause() instanceof NamingException) {
+                // the client hasn't been created, therefore adding it here
+                LDAPObject client = new LDAPObject();
+                client.setObjectClasses(Arrays.asList("top", "organizationalUnit"));
+                client.setRdnAttributeName("ou");
+                client.setDn(LDAPDn.fromString(roleMapperConfig.getRolesDn()));
+                client.setSingleAttribute("ou", mapped.getClientId());
+                identityStore.add(client);
+
+                tasksOnRollback.add(new DeleteOperation(mapped) {
+                    @Override
+                    public void execute() {
+                        identityStore.remove(client);
+                    }
+                });
+
+                // retry creation of client role
+                identityStore.add(mapped.getLdapObject());
+            }
+        }
 
         entities.put(new EntityKey(mapped.getRealmId(), mapped.getId()), mapped);
 
@@ -162,6 +186,29 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
                         if (val != null) {
                             break;
                         }
+                    }
+                }
+
+                if (val == null) {
+                    // try to find out the client ID
+                    LDAPQuery ldapQuery = new LDAPQuery(null);
+
+                    // For now, use same search scope, which is configured "globally" and used for user's search.
+                    ldapQuery.setSearchScope(ldapConfig.getSearchScope());
+
+                    // remove prefix with placeholder to allow for a broad search
+                    ldapQuery.setSearchDn(config.scope(realm).scope("clients").get("roles.dn").replaceAll(".*\\{0},", ""));
+
+                    ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+
+                    LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+
+                    List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
+                    if (ldapObjects.size() == 1) {
+                        // as the client ID is now known, search again with the specific configuration
+                        String clientId = ldapObjects.get(0).getDn().getParentDn().getFirstRdn().getAttrValue("ou");
+                        // TODO: re-use the ldapObject to create the entity instead of querying again
+                        val = lookupEntityById(realm, id, ldapConfig, clientId);
                     }
                 }
 
@@ -309,8 +356,9 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     public void rollback() {
         delegate.rollback();
 
-        for (MapTaskWithValue mapTaskWithValue : tasksOnRollback) {
-            mapTaskWithValue.execute();
+        Iterator<MapTaskWithValue> iterator = tasksOnRollback.descendingIterator();
+        while (iterator.hasNext()) {
+            iterator.next().execute();
         }
     }
 

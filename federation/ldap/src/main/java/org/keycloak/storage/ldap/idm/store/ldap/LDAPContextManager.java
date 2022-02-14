@@ -155,12 +155,12 @@ public final class LDAPContextManager implements AutoCloseable {
             }
         }
 
-        if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
             Map<Object, Object> copyEnv = new Hashtable<>(env);
             if (copyEnv.containsKey(Context.SECURITY_CREDENTIALS)) {
                 copyEnv.put(Context.SECURITY_CREDENTIALS, "**************************************");
             }
-            logger.debugf("Creating LdapContext using properties: [%s]", copyEnv);
+            logger.tracef("Creating LdapContext using properties: [%s]", copyEnv);
         }
 
         return env;
