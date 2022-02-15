@@ -22,6 +22,10 @@ import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public class LdapRoleMapperConfig extends RoleMapperConfig {
     private final String realm;
     private final String clientId;
@@ -64,4 +68,13 @@ public class LdapRoleMapperConfig extends RoleMapperConfig {
     public String getClientId() {
         return clientId;
     }
+
+    public Set<String> getRoleAttributes() {
+        String roleAttributes = mapperModel.getConfig().getFirst("role.attributes");
+        if (roleAttributes == null) {
+            roleAttributes = "";
+        }
+        return new HashSet<>(Arrays.asList(roleAttributes.trim().split("\\s+")));
+    }
+
 }

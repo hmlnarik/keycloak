@@ -16,7 +16,9 @@
  */
 package org.keycloak.models.map.storage.ldap.role.entity;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.keycloak.models.ModelException;
 import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.role.MapRoleEntity;
 import org.keycloak.models.map.role.MapRoleEntity.AbstractRoleEntity;
@@ -71,30 +74,64 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public Map<String, List<String>> getAttributes() {
-        return null;
+        Map<String, List<String>> result = new HashMap<>();
+        for (String roleAttribute : roleMapperConfig.getRoleAttributes()) {
+            Set<String> attrs = ldapObject.getAttributeAsSet(roleAttribute);
+            if (attrs != null) {
+                result.put(roleAttribute, new ArrayList<>(attrs));
+            }
+        }
+        return result;
     }
 
     @Override
     public void setAttributes(Map<String, List<String>> attributes) {
-        if (attributes != null && attributes.size() > 0) {
-            // maybe delegate this, or have some custom mapper to ldap attributes
-            throw new NotImplementedException();
+        // store all attributes
+        if (attributes != null) {
+            attributes.forEach(this::setAttribute);
+        }
+        // clear attributes not in the list
+        for (String roleAttribute : roleMapperConfig.getRoleAttributes()) {
+            if (attributes == null || !attributes.containsKey(roleAttribute)) {
+                removeAttribute(roleAttribute);
+            }
         }
     }
 
     @Override
     public List<String> getAttribute(String name) {
-        return null;
+        if (!roleMapperConfig.getRoleAttributes().contains(name)) {
+            throw new ModelException("can't read attribute '" + name +"' as it is not supported");
+        }
+        return new ArrayList<>(ldapObject.getAttributeAsSet(name));
     }
 
     @Override
     public void setAttribute(String name, List<String> value) {
-        throw new NotImplementedException();
+        if (!roleMapperConfig.getRoleAttributes().contains(name)) {
+            throw new ModelException("can't set attribute '" + name +"' as it is not supported");
+        }
+        if ((ldapObject.getAttributeAsSet(name) == null && (value == null || value.size() == 0)) ||
+                Objects.equals(ldapObject.getAttributeAsSet(name), new HashSet<>(value))) {
+            return;
+        }
+        if (ldapObject.getReadOnlyAttributeNames().contains(name)) {
+            throw new ModelException("can't write attribute '" + name +"' as it is not writeable");
+        }
+        ldapObject.setAttribute(name, new HashSet<>(value));
+        this.updated = true;
     }
 
     @Override
     public void removeAttribute(String name) {
-        throw new NotImplementedException();
+        if (!roleMapperConfig.getRoleAttributes().contains(name)) {
+            throw new ModelException("can't write attribute '" + name +"' as it is not supported");
+        }
+        if (ldapObject.getAttributeAsSet(name) == null || ldapObject.getAttributeAsSet(name).size() == 0) {
+            return;
+        }
+        ldapObject.setAttribute(name, null);
+        this.updated = true;
     }
 
     @Override

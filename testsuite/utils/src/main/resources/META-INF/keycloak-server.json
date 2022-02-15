@@ -133,6 +133,7 @@
                 "membership.ldap.attribute": "member",
                 "role.name.ldap.attribute": "cn",
                 "role.object.classes": "groupOfNames",
+                "role.attributes": "ou",
                 "mode": "LDAP_ONLY",
                 "use.realm.roles.mapping": "true",
                 "clients": {

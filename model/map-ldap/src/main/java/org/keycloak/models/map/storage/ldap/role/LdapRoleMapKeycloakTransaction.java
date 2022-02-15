@@ -391,6 +391,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         ldapQuery.addReturningLdapAttribute(rolesRdnAttr);
         ldapQuery.addReturningLdapAttribute("description");
         ldapQuery.addReturningLdapAttribute(roleMapperConfig.getMembershipLdapAttribute());
+        roleMapperConfig.getRoleAttributes().forEach(ldapQuery::addReturningLdapAttribute);
         return ldapQuery;
     }
 
