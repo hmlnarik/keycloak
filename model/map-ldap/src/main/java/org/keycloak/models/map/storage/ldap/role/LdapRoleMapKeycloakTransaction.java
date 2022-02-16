@@ -21,11 +21,13 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.common.StringKeyConvertor;
 import org.keycloak.models.map.role.MapRoleEntity;
 
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.chm.MapFieldPredicates;
+import org.keycloak.models.map.storage.chm.MapModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
@@ -45,8 +47,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,11 +59,18 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     private final KeycloakSession session;
     private final Config.Scope config;
+    private final StringKeyConvertor<String> keyConverter = new StringKeyConvertor.StringKey();
+    private final List<String> deletedKeys = new LinkedList<>();
 
     public LdapRoleMapKeycloakTransaction(KeycloakSession session, Config.Scope config, MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
         super(session, config);
         this.session = session;
         this.config = config;
+    }
+
+    // interface matching the constructor of this class
+    public interface LdapRoleMapKeycloakTransactionFunction<A, B, C, R> {
+        R apply(A a, B b, C c);
     }
 
     // TODO: entries might get stale if a DN of an entry changes due to changes in the entity in the same transaction
@@ -123,8 +134,8 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         return null;
     }
 
-    public interface LdapRoleMapKeycloakTransactionFunction<A, B, C, R> {
-        R apply(A a, B b, C c);
+    private MapModelCriteriaBuilder<String, LdapRoleEntity, RoleModel> createCriteriaBuilderMap() {
+        return new MapModelCriteriaBuilder<>(keyConverter, MapFieldPredicates.getPredicates(RoleModel.class));
     }
 
     @Override
@@ -136,7 +147,6 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         }
          */
         // in order to get the ID, we need to write it to LDAP
-        // TODO: on transaction rollback the element should then be deleted
 
         LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, value.getRealmId(), value.getClientId());
         LdapConfig ldapConfig = new LdapConfig(config, value.getRealmId());
@@ -198,6 +208,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         if (read == null) {
             throw new ModelException("unable to read entity with key " + key);
         }
+        deletedKeys.add(key);
         tasksOnCommit.add(new DeleteOperation(read) {
             @Override
             public void execute() {
@@ -226,6 +237,10 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
          */
         String realm = "master";
         @SuppressWarnings("UnnecessaryLocalVariable") String id = key;
+
+        if (deletedKeys.contains(key)) {
+            return null;
+        }
 
         // reuse an existing live entity
         LdapRoleEntity val = entities.get(new EntityKey(realm, id));
@@ -336,21 +351,31 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
         Stream<MapRoleEntity> ldapStream;
 
+        MapModelCriteriaBuilder<String,LdapRoleEntity,RoleModel> mapMcb = queryParameters.getModelCriteriaBuilder().flashToModelCriteriaBuilder(createCriteriaBuilderMap());
+
+        Stream<LdapRoleEntity> existingEntities = entities.entrySet().stream()
+                .filter(me -> mapMcb.getKeyFilter().test(keyConverter.fromString(me.getKey().getKey())) || deletedKeys.contains(me.getKey().getKey()))
+                .map(Map.Entry::getValue)
+                .filter(mapMcb.getEntityFilter())
+                // snapshot list
+                .collect(Collectors.toList()).stream();
+
         try {
             List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
 
             ldapStream = ldapObjects.stream().map(ldapObject -> {
-                LdapRoleEntity ldapRoleEntity = new LdapRoleEntity(ldapObject, roleMapperConfig, this);
-                LdapRoleEntity existingEntry = entities.get(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()));
-                if (existingEntry != null) {
-                    // TODO: instead of returning the existing entity,
-                    //  filter out this entity, and search all existing entries using the query criteria and append those result.
-                    return existingEntry;
-                }
-                // TODO: this assumes that these are no light entities, that would later need loading of details
-                entities.put(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()), ldapRoleEntity);
-                return ldapRoleEntity;
-            });
+                        LdapRoleEntity ldapRoleEntity = new LdapRoleEntity(ldapObject, roleMapperConfig, this);
+                        LdapRoleEntity existingEntry = entities.get(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()));
+                        if (existingEntry != null) {
+                            // this entry will be part of the existing entities
+                            return null;
+                        }
+                        entities.put(new EntityKey(ldapRoleEntity.getRealmId(), ldapRoleEntity.getId()), ldapRoleEntity);
+                        return (MapRoleEntity) ldapRoleEntity;
+                    })
+                    .filter(Objects::nonNull)
+                    // snapshot list
+                    .collect(Collectors.toList()).stream();
         } catch (ModelException ex) {
             if (clientId != null && ex.getCause() instanceof NamingException) {
                 // the client wasn't found in LDAP, assume an empty result
@@ -360,8 +385,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             }
         }
 
-        // TODO: search contents of current transaction for entries that have been modified
-        // TODO: remove elements from search result that have been deleted in current transaction
+        ldapStream = Stream.concat(ldapStream, existingEntities);
 
         if (!queryParameters.getOrderBy().isEmpty()) {
             ldapStream = ldapStream.sorted(MapFieldPredicates.getComparator(queryParameters.getOrderBy().stream()));

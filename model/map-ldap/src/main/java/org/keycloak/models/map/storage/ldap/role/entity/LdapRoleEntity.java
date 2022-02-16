@@ -44,13 +44,11 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
     public LdapRoleEntity(DeepCloner cloner, LdapRoleMapperConfig roleMapperConfig, LdapRoleMapKeycloakTransaction transaction) {
         ldapObject = new LDAPObject();
         ldapObject.setObjectClasses(Arrays.asList("top", "groupOfNames"));
-        ldapObject.setRdnAttributeName("cn");
+        ldapObject.setRdnAttributeName(roleMapperConfig.getRoleNameLdapAttribute());
         this.roleMapperConfig = roleMapperConfig;
         this.transaction = transaction;
     }
 
-    // TODO: would I need one with a cloner -> might/will need it once I create new entities
-    // to transform a MapRoleEntity to a LdapRoleEntity
     public LdapRoleEntity(LDAPObject ldapObject, LdapRoleMapperConfig roleMapperConfig, LdapRoleMapKeycloakTransaction transaction) {
         this.ldapObject = ldapObject;
         this.roleMapperConfig = roleMapperConfig;
@@ -219,12 +217,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
         HashSet<String> translatedCompositeRoles = new HashSet<>();
         if (compositeRoles != null) {
             for (String compositeRole : compositeRoles) {
-                MapRoleEntity role = transaction.read(compositeRole);
-                if (!(role instanceof LdapRoleEntity)) {
-                    // TODO: encode ID as a dummy DN that signals an external entity
-                    throw new NotImplementedException();
-                }
-                LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+                LdapRoleEntity ldapRole = transaction.read(compositeRole);
                 translatedCompositeRoles.add(ldapRole.getLdapObject().getDn().toString());
             }
         }
@@ -247,12 +240,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void addCompositeRole(String roleId) {
-        MapRoleEntity role = transaction.read(roleId);
-        if (!(role instanceof LdapRoleEntity)) {
-            // TODO: encode ID as a dummy DN that signals an external entity
-            throw new NotImplementedException();
-        }
-        LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+        LdapRoleEntity ldapRole = transaction.read(roleId);
         Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
         if (members == null) {
             members = new HashSet<>();
@@ -264,11 +252,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
 
     @Override
     public void removeCompositeRole(String roleId) {
-        MapRoleEntity role = transaction.read(roleId);
-        if (!(role instanceof LdapRoleEntity)) {
-            throw new NotImplementedException();
-        }
-        LdapRoleEntity ldapRole = (LdapRoleEntity) role;
+        LdapRoleEntity ldapRole = transaction.read(roleId);
         Set<String> members = ldapObject.getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute());
         if (members == null) {
             members = new HashSet<>();

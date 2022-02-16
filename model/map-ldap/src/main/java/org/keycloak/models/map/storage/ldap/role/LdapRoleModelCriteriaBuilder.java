@@ -48,7 +48,7 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
                         modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
                         modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
                     // don't filter by realm, as the LDAP directory is specific to the realm already
-                    // TODO: find out how to handle clientroles
+                    // CLIENT_ID / IS_CLIENT_ROLE is already part of the query when constructing the search DN
                     return new LdapRoleModelCriteriaBuilder(config -> new NoopCondition());
                 } else if (modelField.equals(RoleModel.SearchableFields.NAME)) {
                     // validateValue(value, modelField, op, String.class);
@@ -66,6 +66,7 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
                         modelField.equals(RoleModel.SearchableFields.IS_CLIENT_ROLE) ||
                         modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
                     // don't filter by realm, as the LDAP directory is specific to the realm already
+                    // CLIENT_ID / IS_CLIENT_ROLE is already part of the query when constructing the search DN
                     return new LdapRoleModelCriteriaBuilder(config -> new NoopCondition());
                 } else if (modelField.equals(RoleModel.SearchableFields.NAME)) {
                     // validateValue(value, modelField, op, String.class);
@@ -86,6 +87,7 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
                     // then replace percent sign with the wildcard character asterisk
                     // the result should then be used unescaped in the condition.
                     String v = EscapeStrategy.DEFAULT.escape(String.valueOf(value[0])).replaceAll("%", "*");
+                    // TODO: there is no placeholder for a single character wildcard ... use multicharacter wildcard instead?
                     return new LdapRoleModelCriteriaBuilder((config) -> {
                         String field = modelFieldNameToLdap(config, modelField);
                         return new EqualCondition(field, v, EscapeStrategy.NON_ASCII_CHARS_ONLY);
@@ -104,9 +106,6 @@ public class LdapRoleModelCriteriaBuilder extends LdapModelCriteriaBuilder<LdapR
             return roleMapperConfig.getRoleNameLdapAttribute();
         } else if (modelField.equals(RoleModel.SearchableFields.DESCRIPTION)) {
             return "description";
-        } else if (modelField.equals(RoleModel.SearchableFields.CLIENT_ID)) {
-            // TODO: find proper field for a description
-            return roleMapperConfig.getRoleNameLdapAttribute();
         } else {
             throw new CriterionNotSupportedException(modelField, null);
         }

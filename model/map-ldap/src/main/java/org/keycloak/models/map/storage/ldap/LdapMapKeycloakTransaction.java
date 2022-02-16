@@ -24,12 +24,15 @@ import java.util.stream.Collectors;
 
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.common.StringKeyConvertor;
 import org.keycloak.models.map.common.UpdatableEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
+import org.keycloak.models.map.storage.chm.MapFieldPredicates;
+import org.keycloak.models.map.storage.chm.MapModelCriteriaBuilder;
 
-// todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
 
     private final Config.Scope config;
@@ -106,15 +109,19 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
 
     protected static class EntityKey {
         private final String key;
+        private final String realmId;
+
+        public EntityKey(String realmId, String key) {
+            this.realmId = realmId;
+            this.key = key;
+        }
 
         public String getRealmId() {
             return realmId;
         }
 
-        private final String realmId;
-        public EntityKey(String realmId, String key) {
-            this.realmId = realmId;
-            this.key = key;
+        public String getKey() {
+            return key;
         }
 
         @Override
