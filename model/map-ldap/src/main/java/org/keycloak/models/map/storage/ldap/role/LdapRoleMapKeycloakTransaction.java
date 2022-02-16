@@ -25,6 +25,7 @@ import org.keycloak.models.map.role.MapRoleEntity;
 
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.QueryParameters;
+import org.keycloak.models.map.storage.chm.MapFieldPredicates;
 import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
@@ -42,7 +43,6 @@ import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
 import javax.naming.NamingException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -365,7 +365,16 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             }
         }
 
-        return Stream.concat(delegate.read(queryParameters), ldapStream).sorted(Comparator.comparing(MapRoleEntity::getName));
+        // TODO: search contents of current transaction for entries that have been modified
+        // TODO: remove elements from search result that have been deleted in current transaction
+
+        Stream<MapRoleEntity> result = Stream.concat(delegate.read(queryParameters), ldapStream);
+
+        if (!queryParameters.getOrderBy().isEmpty()) {
+            result = result.sorted(MapFieldPredicates.getComparator(queryParameters.getOrderBy().stream()));
+        }
+
+        return result;
     }
 
     private LDAPQuery getLdapQuery(LdapConfig ldapConfig, LdapRoleMapperConfig roleMapperConfig) {
