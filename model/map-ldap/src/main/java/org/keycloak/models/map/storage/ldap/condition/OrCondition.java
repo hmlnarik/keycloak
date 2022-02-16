@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.keycloak.storage.ldap.idm.query.internal;
+package org.keycloak.models.map.storage.ldap.condition;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class AndCondition implements Condition {
+public class OrCondition implements Condition {
 
     private final Condition[] innerConditions;
 
-    public AndCondition(Condition... innerConditions) {
+    public OrCondition(Condition... innerConditions) {
         this.innerConditions = innerConditions;
     }
 
@@ -48,7 +48,7 @@ public class AndCondition implements Condition {
 
     @Override
     public void applyCondition(StringBuilder filter) {
-        filter.append("(&");
+        filter.append("(|");
 
         for (Condition innerCondition : innerConditions) {
             innerCondition.applyCondition(filter);

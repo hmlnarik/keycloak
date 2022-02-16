@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.keycloak.storage.ldap.idm.query.internal;
+package org.keycloak.models.map.storage.ldap.condition;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-class CustomLDAPFilter implements Condition {
+public class CustomLDAPFilter implements Condition {
 
     private final String customFilter;
 

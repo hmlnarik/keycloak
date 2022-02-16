@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package org.keycloak.storage.ldap.idm.query.internal;
+package org.keycloak.models.map.storage.ldap.condition;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-class CustomLDAPFilter implements Condition {
+public class NotCondition implements Condition {
 
-    private final String customFilter;
+    private final Condition[] innerConditions;
 
-    public CustomLDAPFilter(String customFilter) {
-        this.customFilter = customFilter;
+    public NotCondition(Condition... innerConditions) {
+        this.innerConditions = innerConditions;
     }
 
     @Override
@@ -41,12 +41,20 @@ class CustomLDAPFilter implements Condition {
 
     @Override
     public void updateParameterName(String modelParamName, String ldapParamName) {
-
+        for (Condition innerCondition : innerConditions) {
+            innerCondition.updateParameterName(modelParamName, ldapParamName);
+        }
     }
 
     @Override
     public void applyCondition(StringBuilder filter) {
-        filter.append(customFilter);
+        filter.append("(!");
+
+        for (Condition innerCondition : innerConditions) {
+            innerCondition.applyCondition(filter);
+        }
+
+        filter.append(")");
     }
 
     @Override

@@ -22,9 +22,6 @@ import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ldap.role.LdapRoleModelCriteriaBuilder;
 import org.keycloak.storage.SearchableModelField;
 import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
-import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

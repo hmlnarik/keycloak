@@ -15,54 +15,47 @@
  * limitations under the License.
  */
 
-package org.keycloak.storage.ldap.idm.query.internal;
+package org.keycloak.models.map.storage.ldap.condition;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class NotCondition implements Condition {
+public abstract class NamedParameterCondition implements Condition {
 
-    private final Condition[] innerConditions;
+    private String parameterName;
+    private boolean binary;
 
-    public NotCondition(Condition... innerConditions) {
-        this.innerConditions = innerConditions;
+    public NamedParameterCondition(String parameterName) {
+        this.parameterName = parameterName;
     }
 
     @Override
     public String getParameterName() {
-        return null;
+        return parameterName;
     }
 
     @Override
     public void setParameterName(String parameterName) {
+        this.parameterName = parameterName;
     }
+
 
     @Override
     public void updateParameterName(String modelParamName, String ldapParamName) {
-        for (Condition innerCondition : innerConditions) {
-            innerCondition.updateParameterName(modelParamName, ldapParamName);
+        if (parameterName.equalsIgnoreCase(modelParamName)) {
+            this.parameterName = ldapParamName;
         }
-    }
-
-    @Override
-    public void applyCondition(StringBuilder filter) {
-        filter.append("(!");
-
-        for (Condition innerCondition : innerConditions) {
-            innerCondition.applyCondition(filter);
-        }
-
-        filter.append(")");
     }
 
     @Override
     public void setBinary(boolean binary) {
+        this.binary = binary;
     }
 
     @Override
     public boolean isBinary() {
-        return false;
+        return binary;
     }
 }

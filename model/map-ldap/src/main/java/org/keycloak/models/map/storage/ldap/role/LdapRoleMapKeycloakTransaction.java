@@ -29,15 +29,15 @@ import org.keycloak.models.map.storage.chm.MapFieldPredicates;
 import org.keycloak.models.map.storage.ldap.LdapConfig;
 import org.keycloak.models.map.storage.ldap.LdapMapKeycloakTransaction;
 import org.keycloak.models.map.storage.ldap.LdapRoleMapperConfig;
+import org.keycloak.models.map.storage.ldap.condition.CustomLDAPFilter;
+import org.keycloak.models.map.storage.ldap.condition.EqualCondition;
+import org.keycloak.models.map.storage.ldap.condition.NoopCondition;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.ldap.idm.model.LDAPDn;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.storage.ldap.idm.query.Condition;
 import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
-import org.keycloak.storage.ldap.idm.query.internal.CustomLDAPFilter;
-import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
 import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
-import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
 import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
 
 import javax.naming.NamingException;

@@ -19,13 +19,13 @@ package org.keycloak.models.map.storage.ldap.role;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.map.storage.CriterionNotSupportedException;
 import org.keycloak.models.map.storage.ldap.LdapModelCriteriaBuilder;
+import org.keycloak.models.map.storage.ldap.condition.EqualCondition;
+import org.keycloak.models.map.storage.ldap.condition.NoopCondition;
+import org.keycloak.models.map.storage.ldap.condition.NotCondition;
 import org.keycloak.models.map.storage.ldap.role.entity.LdapRoleEntity;
 import org.keycloak.storage.SearchableModelField;
 import org.keycloak.storage.ldap.idm.query.Condition;
 import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
-import org.keycloak.storage.ldap.idm.query.internal.EqualCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
 import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 import java.util.function.Function;

@@ -17,11 +17,11 @@
 package org.keycloak.models.map.storage.ldap;
 
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
+import org.keycloak.models.map.storage.ldap.condition.AndCondition;
+import org.keycloak.models.map.storage.ldap.condition.NoopCondition;
+import org.keycloak.models.map.storage.ldap.condition.NotCondition;
+import org.keycloak.models.map.storage.ldap.condition.OrCondition;
 import org.keycloak.storage.ldap.idm.query.Condition;
-import org.keycloak.storage.ldap.idm.query.internal.AndCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NoopCondition;
-import org.keycloak.storage.ldap.idm.query.internal.NotCondition;
-import org.keycloak.storage.ldap.idm.query.internal.OrCondition;
 import org.keycloak.storage.ldap.mappers.membership.role.RoleMapperConfig;
 
 import java.util.function.Function;

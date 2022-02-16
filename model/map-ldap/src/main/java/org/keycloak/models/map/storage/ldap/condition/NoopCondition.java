@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-package org.keycloak.storage.ldap.idm.query.internal;
+package org.keycloak.models.map.storage.ldap.condition;
 
 import org.keycloak.storage.ldap.idm.query.Condition;
-
-import java.util.Date;
 
 /**
  * @author Alexander Schwartz

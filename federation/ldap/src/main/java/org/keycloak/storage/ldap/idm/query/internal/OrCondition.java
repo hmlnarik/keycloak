@@ -22,7 +22,7 @@ import org.keycloak.storage.ldap.idm.query.Condition;
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
-public class OrCondition implements Condition {
+class OrCondition implements Condition {
 
     private final Condition[] innerConditions;
 
