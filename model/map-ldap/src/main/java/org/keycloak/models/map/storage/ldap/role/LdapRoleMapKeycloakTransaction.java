@@ -67,7 +67,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     // TODO: entries might get stale if a DN of an entry changes due to changes in the entity in the same transaction
     private final Map<String, String> dns = new HashMap<>();
 
-    public String readIdByDn(String dn) {
+    public String readIdByDn(String realmId, String dn) {
         String id = dns.get(dn);
         if (id == null) {
             for (Map.Entry<EntityKey, LdapRoleEntity> entry : entities.entrySet()) {
@@ -81,11 +81,10 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             return id;
         }
 
-        String realm = "master";
-        LdapConfig ldapConfig = new LdapConfig(config, realm);
+        LdapConfig ldapConfig = new LdapConfig(config, realmId);
 
         LDAPQuery ldapQuery = new LDAPQuery(null);
-        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm, null);
+        LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realmId, null);
 
         // For now, use same search scope, which is configured "globally" and used for user's search.
         ldapQuery.setSearchScope(ldapConfig.getSearchScope());

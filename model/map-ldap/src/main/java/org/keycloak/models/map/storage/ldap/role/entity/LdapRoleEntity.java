@@ -188,7 +188,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
         if (description != null) {
             ldapObject.setSingleAttribute("description", description);
         } else {
-            ldapObject.setSingleAttribute("description", "");
+            ldapObject.setAttribute("description", null);
         }
     }
 
@@ -205,7 +205,7 @@ public class LdapRoleEntity extends AbstractRoleEntity  {
                 // TODO: this will not work if users and role use the same!
                 continue;
             }
-            String roleId = transaction.readIdByDn(member);
+            String roleId = transaction.readIdByDn(getRealmId(), member);
             if (roleId == null) {
                 throw new NotImplementedException();
             }
