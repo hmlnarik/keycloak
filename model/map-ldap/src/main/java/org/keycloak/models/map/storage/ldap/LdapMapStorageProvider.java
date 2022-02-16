@@ -29,13 +29,13 @@ public class LdapMapStorageProvider implements MapStorageProvider {
     private final String SESSION_TX_PREFIX = "ldap-map-tx-";
 
     private final LdapMapStorageProviderFactory factory;
-    private final KeycloakSession session;
+
+    @Deprecated
     private final MapStorageProvider delegate;
 
-    public LdapMapStorageProvider(LdapMapStorageProviderFactory factory, KeycloakSession session,
+    public LdapMapStorageProvider(LdapMapStorageProviderFactory factory,
                                   MapStorageProvider delegate) {
         this.factory = factory;
-        this.session = session;
         this.delegate = delegate;
     }
 
@@ -48,17 +48,14 @@ public class LdapMapStorageProvider implements MapStorageProvider {
     @SuppressWarnings("unchecked")
     public <V extends AbstractEntity, M> MapStorage<V, M> getStorage(Class<M> modelType, Flag... flags) {
         MapStorage<V, M> delegateStorage = delegate.getStorage(modelType, flags);
-        return new MapStorage<V, M>() {
-            @Override
-            public MapKeycloakTransaction<V, M> createTransaction(KeycloakSession session) {
-                MapKeycloakTransaction<V, M> sessionTx = session.getAttribute(SESSION_TX_PREFIX + modelType.hashCode(), MapKeycloakTransaction.class);
-                if (sessionTx == null) {
-                    MapKeycloakTransaction<V, M> delegateTransaction = delegateStorage.createTransaction(session);
-                    sessionTx = factory.createTransaction(session, modelType, delegateTransaction);
-                    session.setAttribute(SESSION_TX_PREFIX + modelType.hashCode(), sessionTx);
-                }
-                return sessionTx;
+        return session -> {
+            MapKeycloakTransaction<V, M> sessionTx = session.getAttribute(SESSION_TX_PREFIX + modelType.hashCode(), MapKeycloakTransaction.class);
+            if (sessionTx == null) {
+                MapKeycloakTransaction<V, M> delegateTransaction = delegateStorage.createTransaction(session);
+                sessionTx = factory.createTransaction(session, modelType, delegateTransaction);
+                session.setAttribute(SESSION_TX_PREFIX + modelType.hashCode(), sessionTx);
             }
+            return sessionTx;
         };
     }
 

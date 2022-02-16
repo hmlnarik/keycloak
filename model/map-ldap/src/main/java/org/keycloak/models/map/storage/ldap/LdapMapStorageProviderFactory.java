@@ -43,10 +43,14 @@ public class LdapMapStorageProviderFactory implements
 
     public static final String PROVIDER_ID = "ldap-map-storage";
 
+    /*
+     * TODO: This delegate will disappear in the final implementation. It's a helper for development when an entity is not fully
+     * supported and the tree storage can't be configured for it yet.
+     */
+    @Deprecated
     private volatile MapStorageProvider delegate;
 
     private Config.Scope config;
-    private static final Logger logger = Logger.getLogger(LdapMapStorageProviderFactory.class);
 
     @SuppressWarnings("rawtypes")
     private static final Map<Class<?>, LdapRoleMapKeycloakTransaction.LdapRoleMapKeycloakTransactionFunction<KeycloakSession, Config.Scope, MapKeycloakTransaction, MapKeycloakTransaction>> MODEL_TO_TX = new HashMap<>();
@@ -61,7 +65,7 @@ public class LdapMapStorageProviderFactory implements
     @Override
     public MapStorageProvider create(KeycloakSession session) {
         lazyInit(session);
-        return new LdapMapStorageProvider(this, session, delegate);
+        return new LdapMapStorageProvider(this, delegate);
     }
 
     @Override
@@ -100,8 +104,6 @@ public class LdapMapStorageProviderFactory implements
             synchronized (this) {
                 if (delegate == null) {
                     delegate = session.getProvider(MapStorageProvider.class, "concurrenthashmap");
-
-                    /* TODO: connect to LDAP, print some diagnostics information */
                 }
             }
         }

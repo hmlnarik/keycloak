@@ -18,12 +18,10 @@ package org.keycloak.models.map.storage.ldap;
 
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
@@ -34,14 +32,14 @@ import org.keycloak.models.map.storage.QueryParameters;
 // todo: might extend LDAPTransaction in the future
 public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<E, M> {
 
-    private final MapKeycloakTransaction<E, M> delegate;
     private final Config.Scope config;
     private final KeycloakSession session;
+    private boolean active;
+    private boolean rollback;
 
-    public LdapMapKeycloakTransaction(KeycloakSession session, Config.Scope config, MapKeycloakTransaction<E, M> delegate) {
+    public LdapMapKeycloakTransaction(KeycloakSession session, Config.Scope config) {
         this.session = session;
         this.config = config;
-        this.delegate = delegate;
     }
 
     protected abstract static class MapTaskWithValue {
@@ -61,40 +59,49 @@ public abstract class LdapMapKeycloakTransaction<RE, E extends AbstractEntity & 
 
     protected final Map<EntityKey, RE> entities = new HashMap<>();
 
-    @Override
-    public E create(E mapEntity) {
-        return delegate.create(mapEntity);
-    }
-
-    @Override
-    public E read(String key) {
-        return delegate.read(key);
-    }
-
     protected abstract LdapModelCriteriaBuilder createLdapModelCriteriaBuilder();
 
     protected abstract LdapModelCriteriaBuilderForRealm createLdapModelCriteriaBuilderForRealm();
 
     protected abstract LdapModelCriteriaBuilderForClientId createLdapModelCriteriaBuilderForClientId();
 
-    @Override
-    public Stream<E> read(QueryParameters<M> queryParameters) {
-        throw new NotImplementedException("will have a common method here, soon");
-    }
-
-    @Override
     public long getCount(QueryParameters<M> queryParameters) {
-        return delegate.getCount(queryParameters);
+        return read(queryParameters).count();
     }
 
-    @Override
-    public boolean delete(String key) {
-        return delegate.delete(key);
-    }
-
-    @Override
     public long delete(QueryParameters<M> queryParameters) {
-        return delegate.delete(queryParameters);
+        return read(queryParameters).map(m -> delete(m.getId()) ? 1 : 0).collect(Collectors.summarizingLong(val -> val)).getSum();
+    }
+
+    @Override
+    public void begin() {
+        active = true;
+    }
+
+    @Override
+    public void commit() {
+        if (rollback) {
+            throw new RuntimeException("Rollback only!");
+        }
+    }
+
+    @Override
+    public void rollback() {
+    }
+
+    @Override
+    public void setRollbackOnly() {
+        rollback = true;
+    }
+
+    @Override
+    public boolean getRollbackOnly() {
+        return rollback;
+    }
+
+    @Override
+    public boolean isActive() {
+        return active;
     }
 
     protected static class EntityKey {

@@ -53,21 +53,22 @@ import java.util.stream.Stream;
 
 public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<LdapRoleEntity, MapRoleEntity, RoleModel> {
 
-    private final MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate;
     private final KeycloakSession session;
     private final Config.Scope config;
 
     public LdapRoleMapKeycloakTransaction(KeycloakSession session, Config.Scope config, MapKeycloakTransaction<MapRoleEntity, RoleModel> delegate) {
-        super(session, config, delegate);
+        super(session, config);
         this.session = session;
         this.config = config;
-        this.delegate = delegate;
     }
 
     // TODO: entries might get stale if a DN of an entry changes due to changes in the entity in the same transaction
     private final Map<String, String> dns = new HashMap<>();
 
     public String readIdByDn(String realmId, String dn) {
+        // TODO: this might not be necessary if the LDAP server would support an extended OID
+        // https://ldapwiki.com/wiki/LDAP_SERVER_EXTENDED_DN_OID
+
         String id = dns.get(dn);
         if (id == null) {
             for (Map.Entry<EntityKey, LdapRoleEntity> entry : entities.entrySet()) {
@@ -193,98 +194,93 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     @Override
     public boolean delete(String key) {
-        boolean delete = super.delete(key);
-        MapRoleEntity read = read(key);
-        if (read instanceof LdapRoleEntity) {
-            tasksOnCommit.add(new DeleteOperation((LdapRoleEntity) read) {
-                @Override
-                public void execute() {
-                    LdapConfig ldapConfig = new LdapConfig(config, entity.getRealmId());
-                    LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
-                    identityStore.remove(entity.getLdapObject());
-                }
-            });
-            delete = true;
+        LdapRoleEntity read = read(key);
+        if (read == null) {
+            throw new ModelException("unable to read entity with key " + key);
         }
-        return delete;
+        tasksOnCommit.add(new DeleteOperation(read) {
+            @Override
+            public void execute() {
+                LdapConfig ldapConfig = new LdapConfig(config, entity.getRealmId());
+                LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+                identityStore.remove(entity.getLdapObject());
+            }
+        });
+        return true;
     }
 
     @Override
-    public MapRoleEntity read(String key) {
-        MapRoleEntity val = delegate.read(key);
-        if (val == null) {
-            // for now, only support one realm, don't make realm part of the key
-            // https://github.com/keycloak/keycloak/discussions/10045
-            /*
-            StringTokenizer st = new StringTokenizer(key, ".");
-            if (!st.hasMoreTokens()) {
-                return null;
-            }
-            String realm = st.nextToken();
-            if (!st.hasMoreTokens()) {
-                return null;
-            }
-            String id = st.nextToken();
-             */
-            String realm = "master";
-            @SuppressWarnings("UnnecessaryLocalVariable") String id = key;
+    public LdapRoleEntity read(String key) {
+        // for now, only support one realm, don't make realm part of the key
+        // https://github.com/keycloak/keycloak/discussions/10045
+        /*
+        StringTokenizer st = new StringTokenizer(key, ".");
+        if (!st.hasMoreTokens()) {
+            return null;
+        }
+        String realm = st.nextToken();
+        if (!st.hasMoreTokens()) {
+            return null;
+        }
+        String id = st.nextToken();
+         */
+        String realm = "master";
+        @SuppressWarnings("UnnecessaryLocalVariable") String id = key;
 
-            // reuse an existing live entity
-            val = entities.get(new EntityKey(realm, id));
+        // reuse an existing live entity
+        LdapRoleEntity val = entities.get(new EntityKey(realm, id));
+
+        if (val == null) {
+            LdapConfig ldapConfig = new LdapConfig(config, realm);
+
+            // try to look it up as a realm role
+            val = lookupEntityById(realm, id, ldapConfig, null);
 
             if (val == null) {
-                LdapConfig ldapConfig = new LdapConfig(config, realm);
-
-                // try to look it up as a realm role
-                val = lookupEntityById(realm, id, ldapConfig, null);
-
-                if (val == null) {
-                    // try to look it up using a client role
-                    // currently the API doesn't allow to get a list of all keys, therefore we need a separate attribute
-                    // also, getArray is broken as it doesn't look up the parent's values if an entry is empty
-                    String[] clientIds = config.scope(realm).scope("clients").get("clientsToSearch").split("\\s*,\\s*");
-                    for (String clientId : clientIds) {
-                        val = lookupEntityById(realm, id, ldapConfig, clientId);
-                        if (val != null) {
-                            break;
-                        }
+                // try to look it up using a client role
+                // currently the API doesn't allow to get a list of all keys, therefore we need a separate attribute
+                // also, getArray is broken as it doesn't look up the parent's values if an entry is empty
+                String[] clientIds = config.scope(realm).scope("clients").get("clientsToSearch").split("\\s*,\\s*");
+                for (String clientId : clientIds) {
+                    val = lookupEntityById(realm, id, ldapConfig, clientId);
+                    if (val != null) {
+                        break;
                     }
                 }
+            }
 
-                if (val == null) {
-                    // try to find out the client ID
-                    LDAPQuery ldapQuery = new LDAPQuery(null);
+            if (val == null) {
+                // try to find out the client ID
+                LDAPQuery ldapQuery = new LDAPQuery(null);
 
-                    // For now, use same search scope, which is configured "globally" and used for user's search.
-                    ldapQuery.setSearchScope(ldapConfig.getSearchScope());
+                // For now, use same search scope, which is configured "globally" and used for user's search.
+                ldapQuery.setSearchScope(ldapConfig.getSearchScope());
 
-                    // remove prefix with placeholder to allow for a broad search
-                    ldapQuery.setSearchDn(config.scope(realm).scope("clients").get("roles.dn").replaceAll(".*\\{0},", ""));
+                // remove prefix with placeholder to allow for a broad search
+                ldapQuery.setSearchDn(config.scope(realm).scope("clients").get("roles.dn").replaceAll(".*\\{0},", ""));
 
-                    ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+                ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
 
-                    LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
+                LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
 
-                    List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
-                    if (ldapObjects.size() == 1) {
-                        // as the client ID is now known, search again with the specific configuration
-                        String clientId = ldapObjects.get(0).getDn().getParentDn().getFirstRdn().getAttrValue("ou");
-                        // TODO: re-use the ldapObject to create the entity instead of querying again
-                        val = lookupEntityById(realm, id, ldapConfig, clientId);
-                    }
+                List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
+                if (ldapObjects.size() == 1) {
+                    // as the client ID is now known, search again with the specific configuration
+                    String clientId = ldapObjects.get(0).getDn().getParentDn().getFirstRdn().getAttrValue("ou");
+                    // TODO: re-use the ldapObject to create the entity instead of querying again
+                    val = lookupEntityById(realm, id, ldapConfig, clientId);
                 }
+            }
 
-                if (val != null) {
-                    entities.put(new EntityKey(val.getRealmId(), val.getId()), (LdapRoleEntity) val);
-                }
-
+            if (val != null) {
+                entities.put(new EntityKey(val.getRealmId(), val.getId()), val);
             }
 
         }
         return val;
     }
 
-    private MapRoleEntity lookupEntityById(String realm, String id, LdapConfig ldapConfig, String clientId) {
+    private LdapRoleEntity lookupEntityById(String realm, String id, LdapConfig ldapConfig, String clientId) {
         LdapRoleMapperConfig roleMapperConfig = new LdapRoleMapperConfig(config, realm, clientId);
 
         LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
@@ -338,7 +334,7 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
             ldapQuery.addWhereCondition(condition);
         }
 
-        Stream<LdapRoleEntity> ldapStream;
+        Stream<MapRoleEntity> ldapStream;
 
         try {
             List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
@@ -367,13 +363,11 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         // TODO: search contents of current transaction for entries that have been modified
         // TODO: remove elements from search result that have been deleted in current transaction
 
-        Stream<MapRoleEntity> result = Stream.concat(delegate.read(queryParameters), ldapStream);
-
         if (!queryParameters.getOrderBy().isEmpty()) {
-            result = result.sorted(MapFieldPredicates.getComparator(queryParameters.getOrderBy().stream()));
+            ldapStream = ldapStream.sorted(MapFieldPredicates.getComparator(queryParameters.getOrderBy().stream()));
         }
 
-        return result;
+        return ldapStream;
     }
 
     private LDAPQuery getLdapQuery(LdapConfig ldapConfig, LdapRoleMapperConfig roleMapperConfig) {
@@ -404,14 +398,8 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
     }
 
     @Override
-    public void begin() {
-        delegate.begin();
-    }
-
-    @Override
     public void commit() {
-        delegate.commit();
-
+        super.commit();
         for (MapTaskWithValue mapTaskWithValue : tasksOnCommit) {
             mapTaskWithValue.execute();
         }
@@ -427,27 +415,11 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
     @Override
     public void rollback() {
-        delegate.rollback();
-
+        super.rollback();
         Iterator<MapTaskWithValue> iterator = tasksOnRollback.descendingIterator();
         while (iterator.hasNext()) {
             iterator.next().execute();
         }
-    }
-
-    @Override
-    public void setRollbackOnly() {
-        delegate.setRollbackOnly();
-    }
-
-    @Override
-    public boolean getRollbackOnly() {
-        return delegate.getRollbackOnly();
-    }
-
-    @Override
-    public boolean isActive() {
-        return delegate.isActive();
     }
 
     @Override
