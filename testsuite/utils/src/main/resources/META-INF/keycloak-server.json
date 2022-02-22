@@ -121,15 +121,15 @@
         "ldap-map-storage": {
             "master": {
                 "vendor": "other",
-                "usernameLDAPAttribute": "uid",
-                "rdnLDAPAttribute": "uid",
-                "uuidLDAPAttribute": "entryUUID",
+                "usernameLDAPAttribute": "sAMAccountName",
+                "rdnLDAPAttribute": "distinguishedName",
+                "uuidLDAPAttribute": "objectGUID",
                 "userObjectClasses": "inetOrgPerson, organizationalPerson",
-                "connectionUrl": "ldap://localhost:10389",
-                "usersDn": "ou=People,dc=keycloak,dc=org",
-                "bindDn": "uid=admin,ou=system",
-                "bindCredential": "secret",
-                "roles.dn": "ou=RealmRoles,dc=keycloak,dc=org",
+                "connectionUrl": "ldap://192.168.122.111:389",
+                "usersDn": "CN=Users,DC=ad,DC=keycloak,DC=local",
+                "bindDn": "CN=hudson,CN=Users,DC=ad,DC=keycloak,DC=local",
+                "bindCredential": "redhat",
+                "roles.dn": "OU=RealmRoles,OU=Roles,DC=ad,DC=keycloak,DC=local",
                 "membership.ldap.attribute": "member",
                 "role.name.ldap.attribute": "cn",
                 "role.object.classes": "groupOfNames",
@@ -138,7 +138,7 @@
                 "use.realm.roles.mapping": "true",
                 "clients": {
                     "clientsToSearch": "e44b2d1c-9b00-4f22-a8c1-d0aa1c48d7fb",
-                    "roles.dn": "ou={0},dc=keycloak,dc=org",
+                    "roles.dn": "ou={0},OU=Roles,DC=ad,DC=keycloak,DC=local",
                     "client": {
                         "e44b2d1c-9b00-4f22-a8c1-d0aa1c48d7fb": {
                             "roles.dn": "ou=FinanceRoles,dc=keycloak,dc=org"

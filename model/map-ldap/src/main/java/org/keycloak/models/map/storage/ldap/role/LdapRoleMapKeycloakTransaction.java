@@ -41,6 +41,7 @@ import org.keycloak.storage.ldap.idm.query.Condition;
 import org.keycloak.storage.ldap.idm.query.EscapeStrategy;
 import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
 import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
+import org.keycloak.storage.ldap.idm.store.ldap.LDAPUtil;
 
 import javax.naming.NamingException;
 import java.util.Arrays;
@@ -102,7 +103,8 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         ldapQuery.setSearchScope(ldapConfig.getSearchScope());
 
         // TODO: make dynamic
-        String rolesDn = "dc=keycloak,dc=org";
+//        String rolesDn = roleMapperConfig.getRolesDn();
+        String rolesDn = "DC=ad,DC=keycloak,DC=local";
         ldapQuery.setSearchDn(rolesDn);
 
         // TODO: read them properly to be able to store them in the transaction so they are cached?!
@@ -162,7 +164,8 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
         // Roles as groups need to have at least one member on most directories. Add ourselves as a member as a dummy.
         if (mapped.getLdapObject().getUuid() == null && mapped.getLdapObject().getAttributeAsSet(roleMapperConfig.getMembershipLdapAttribute()) == null) {
             // insert our own name as dummy member of this role to avoid a schema conflict in LDAP
-            mapped.getLdapObject().setAttribute(roleMapperConfig.getMembershipLdapAttribute(), Stream.of(mapped.getLdapObject().getDn().toString()).collect(Collectors.toSet()));
+//            mapped.getLdapObject().setAttribute(roleMapperConfig.getMembershipLdapAttribute(), Stream.of(mapped.getLdapObject().getDn().toString()).collect(Collectors.toSet()));
+            mapped.getLdapObject().setAttribute(roleMapperConfig.getMembershipLdapAttribute(), Stream.of(roleMapperConfig.getRolesDn().toString()).collect(Collectors.toSet()));
         }
 
         try {
@@ -274,7 +277,10 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
                 // remove prefix with placeholder to allow for a broad search
                 ldapQuery.setSearchDn(config.scope(realm).scope("clients").get("roles.dn").replaceAll(".*\\{0},", ""));
 
-                ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+                byte[] objectGUID = LDAPUtil.encodeObjectGUID(id);
+//                id = LDAPUtil.convertObjectGUIDToByteString(objectGUID);
+//                ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+                ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), objectGUID, EscapeStrategy.OCTET_STRING));
 
                 LDAPIdentityStore identityStore = new LDAPIdentityStore(session, ldapConfig);
 
@@ -302,7 +308,11 @@ public class LdapRoleMapKeycloakTransaction extends LdapMapKeycloakTransaction<L
 
         LDAPQuery ldapQuery = getLdapQuery(ldapConfig, roleMapperConfig);
 
-        ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+        // See org.keycloak.storage.ldap.idm.store.ldap.LDAPOperationManager.getFilterById(String)
+        byte[] objectGUID = LDAPUtil.encodeObjectGUID(id);
+
+//        ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), id, EscapeStrategy.DEFAULT));
+        ldapQuery.addWhereCondition(new EqualCondition(ldapConfig.getUuidLDAPAttributeName(), objectGUID, EscapeStrategy.OCTET_STRING));
 
         List<LDAPObject> ldapObjects = identityStore.fetchQueryResults(ldapQuery);
         if (ldapObjects.size() == 1) {
