@@ -125,8 +125,9 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
         public V getLowerEntity() {
             final TreeStorageNodeInstance<V> origin = getNode();
             final V entity = getEntity();
+            final StorageId entityId = entity == null ? null : new StorageId(origin.getId(), entity.getId());
             StorageId storageId = origin.getTreeAwareMapTransaction()
-              .map(t -> t.getOriginalStorageId(entity))
+              .map(t -> t.getOriginalStorageId(origin, entityId, () -> entity))
               .orElse(new StorageId(entity.getId()));
             TreeStorageNodeInstance<V>.WithEntity readObject;
             Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate;
@@ -143,7 +144,7 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
                 if (storageId.isLocal()) {
                     // We need to lookup all children for the object with the given ID as the node is not known.
                     AtomicReference<TreeStorageNodeInstance<V>.WithEntity> readObjectRef = new AtomicReference<>();
-                    readFromNodePredicate = tx.readFromNodePredicate(readObjectRef, storageId.getExternalId());
+                    readFromNodePredicate = tx.readFromNodePredicate(readObjectRef, storageId);
                     origin.findFirstBfs(readFromNodePredicate);
                 } else {
                     // Otherwise lookup the right child for the given ID
@@ -216,6 +217,10 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
             return pCloned;
         }
         return res;
+    }
+
+    public KeycloakSession getKeycloakSession() {
+        return session;
     }
 
     public TreeStorageNodeInstance<V> cloneNodeOnly() {

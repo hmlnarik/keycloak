@@ -19,7 +19,11 @@ package org.keycloak.models.map.storage.tree;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import org.keycloak.models.map.storage.criteria.ModelCriteriaNode;
 import org.keycloak.storage.StorageId;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * A {@link MapStorage} that is willing to participate in an inner node of a {@link TreeStorage}.
@@ -59,7 +63,7 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
      * Invalidates a value that became completely stale in this storage. The cached values are required to be
      * removed from this storage and refreshed upon next access.
      * <p>
-     * This might happen e.g. in case when this store caches values from LDAP, and the value was deleted from LDAP.
+     * This might happen e.g. in case when this store caches values from LDAP, and the object was deleted from LDAP.
      * @param value 
      */
     void invalidate(V value);
@@ -84,13 +88,16 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
      * of the storage node.
      * <p>
      * This is useful for e.g. to determine original LDAP ID from a cached object.
-     * @param thisStorageEntity
+     * @param thisStorageNode Node where this storage is
+     * @param thisStorageEntityIfLoaded
      * @return
      */
-    StorageId getOriginalStorageId(V entity);
+    StorageId getOriginalStorageId(TreeStorageNodeInstance<V> thisStorageNode, StorageId thisStorageNodeId, Supplier<V> thisStorageEntityLoader);
 
     /**
-     * Returns {@code true} if the given criteria are recognized and supported by this storage in bulk operations.
+     * Returns an non-empty {@link Optional} with individual condition nodes with criteria
+     * that are not recognized by this storage in bulk operations. If all criteria
+     * are recognized and supported by this storage, {@link Optional#empty()} is returned
      * <p>
      * TODO: should this be rather in some TreeAwareMapStorage rather than _transaction_ class?
      *
@@ -98,6 +105,6 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
      * @param criteria
      * @return See description
      */
-    boolean criteriaRecognized(DefaultModelCriteria<M> criteria);
+    Optional<Set<ModelCriteriaNode<M>>> getNotRecognizedCriteria(DefaultModelCriteria<M> criteria);
 
 }

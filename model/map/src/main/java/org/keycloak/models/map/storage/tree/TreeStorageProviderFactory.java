@@ -129,14 +129,14 @@ public class TreeStorageProviderFactory implements AmphibianProviderFactory<MapS
         return Profile.isFeatureEnabled(Profile.Feature.MAP_STORAGE);
     }
 
-    public <V extends AbstractEntity> TreeStorageNodePrescription forEntityClass(Class<V> clazz) {
-        return prescription.forEntityClass(clazz);
+    public <V extends AbstractEntity> TreeStorageNodePrescription forEntityClass(Class<V> entityClass) {
+        return prescription.forEntityClass(entityClass);
     }
 
     <V extends AbstractEntity, M> TreeStorage getStorage(Class<M> modelType, Flag... flags) {
         return storages.computeIfAbsent(modelType, cl -> {
             Class<V> entityClass = ModelEntityUtil.getEntityType(modelType);
-            return new TreeStorage<>(prescription.forEntityClass(entityClass), null, entityClass);
+            return new TreeStorage<>(forEntityClass(entityClass), null);
         });
     }
 }
