@@ -19,8 +19,6 @@ package org.keycloak.models.map.storage.tree;
 import org.keycloak.models.map.storage.ReadOnlyMapTransaction;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
-import org.keycloak.models.map.common.DeepCloner;
-import org.keycloak.models.map.common.delegate.PerFieldDelegateProvider;
 import org.keycloak.models.map.storage.CriterionNotSupportedException;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
@@ -33,19 +31,19 @@ import org.keycloak.models.map.storage.tree.TreeStorageNodeInstance.WithEntity;
 import org.keycloak.storage.SearchableModelField;
 import org.keycloak.storage.StorageId;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jboss.logging.Logger;
@@ -63,7 +61,7 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
     private final KeycloakSession session;
     private final TreeStorageNodeInstance<V> root;
     private final SearchableModelField<M> idField;
-    private final ConcurrentHashMap<TreeStorageNodeInstance<V>, MapKeycloakTransaction<V, ?>> transactions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MapKeycloakTransaction<V, ?>> transactions = new ConcurrentHashMap<>();
     private boolean active;
     private boolean rollback;
 
@@ -107,7 +105,7 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
 
     @SuppressWarnings("unchecked")
     public MapKeycloakTransaction<V, M> getTransaction(TreeStorageNodeInstance<V> node) {
-        return (MapKeycloakTransaction<V, M>) transactions.computeIfAbsent(node, this::createStorageTransaction);
+        return (MapKeycloakTransaction<V, M>) transactions.computeIfAbsent(node.getId(), this::createStorageTransaction);
     }
 
     private MapKeycloakTransaction<V, M> createStorageTransaction(TreeStorageNodeInstance<V> n) {
@@ -169,8 +167,57 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
      * @param readObjectRef
      * @return see description.
      */
-    Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate(AtomicReference<TreeStorageNodeInstance<V>.WithEntity> readObjectRef, String key) {
-        return nodePredicate(readObjectRef, n -> readFromNode(n, key));
+    Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate(AtomicReference<TreeStorageNodeInstance<V>.WithEntity> readObjectRef, StorageId key) {
+        // The ID of an object might change in between the nodes. For example, LDAP UUID would likely differ
+        // from the ID of JPA entity supplementing that object with additional attributes.
+        // The following map contains node and ID of the object as seen from a child node of that node:
+        // In the example above, one of the key could be the JPA node, and value the corresponding LDAP UUID.
+        Map<TreeStorageNodeInstance<V>, StorageId> idTransformedByParentNode = new HashMap<>();
+
+        // Indicator signalling that a node with a searched ID has already been found to allow for short-circuiting
+        AtomicBoolean passedTargetNode = new AtomicBoolean(false);
+
+        return nodePredicate(readObjectRef, n -> {
+            // short-circuiting takes place here
+            if (passedTargetNode.get()) {
+                return null;
+            }
+
+            // Ensure that the lookup checks the correct ID in each node. The ID of the same object might change across the
+            // nodes, e.g. LDAP user GUID might not match ID of the entity in JPA supplementing attributes to that user.
+            StorageId searchKey = n.getParent().map(idTransformedByParentNode::get).orElse(key);
+
+            if (Objects.equals(n.getId(), searchKey.getProviderId())) {
+                passedTargetNode.set(true);
+                return readFromNode(n, searchKey.getExternalId());
+            }
+
+            if (searchKey.isLocal()) {
+                V entity = readFromNode(n, searchKey.getExternalId());
+                if (entity != null) {
+                    return entity;  // Non-null result would cause finishing the search
+                }
+            }
+
+            // Now we know the object has not been found in this node.
+
+            // The searchKey is either node-less ("local" in StorageId nomenclature) and has not been found in this node,
+            // or is not targetted for this node.
+            // If it is not local, keep the key as is, as the node targetted by the ID would be one of the descendant nodes
+
+            StorageId keyToLookForInLowerNode;
+            if (searchKey.isLocal()) {
+                keyToLookForInLowerNode = n.getTreeAwareMapTransaction()
+                  .map(t -> t.getOriginalStorageId(n, searchKey, () -> getTransaction(n).read(searchKey.getExternalId())))
+                  .orElse(searchKey);
+            } else {
+                keyToLookForInLowerNode = searchKey;
+            }
+
+            idTransformedByParentNode.put(n, keyToLookForInLowerNode);
+
+            return null;
+        });
     }
 
     /**
@@ -214,11 +261,11 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
 
         final Optional<TreeAwareMapTransaction<V, Object>> treeStorageComponent = origin.getTreeAwareMapTransaction();
         StorageId storageId = treeStorageComponent
-          .map(t -> t.getOriginalStorageId(entity))
+          .map(t -> t.getOriginalStorageId(origin, new StorageId(origin.getId(), entity.getId()), () -> entity))
           .orElse(new StorageId(entity.getId()));
 
         if (storageId.isLocal()) {
-            LOG.warnf("Cannot validate entity %s", entity);
+            LOG.warnf("Cannot validate entity as its origin is unknown: %s", entity);
             return entity;
         }
 
@@ -266,7 +313,7 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
         }
 
         AtomicReference<TreeStorageNodeInstance<V>.WithEntity> readObjectRef = new AtomicReference<>();
-        Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate = readFromNodePredicate(readObjectRef, key);
+        Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate = readFromNodePredicate(readObjectRef, new StorageId(key));
 
         return authoritativeSubtree
           .map(tree -> tree.findFirstBfs(readFromNodePredicate).orElse(null))
@@ -306,7 +353,7 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
                       return null;
                   }
                   
-                  final Stream<V> values = getTransaction(node).read(queryParameters);
+                  final Stream<V> values = getTransaction(node).read(translateIds(node, queryParameters));
                   successfulParents.add(node);
                   node.forEachParent(successfulParents::add);
                   return values.map(v -> node.new WithEntity(v, this));
@@ -481,10 +528,16 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
         TreeStorageNodeInstance<V> subtree = root.asDetachedSubtree(
           n -> { TreeStorageNodeInstance<V> res = n.cloneNodeOnly(); maybeAuthoritativeNodes.replace(n, res); return res; },
           n -> transitiveParents.contains(n) 
-               || authoritativeNodes.containsKey(n) && n.<M>getTreeAwareMapTransaction().map(t -> (Boolean) t.criteriaRecognized(dmc)).orElse(false)
+               || authoritativeNodes.containsKey(n)     // Only add authoritative node if all criteria are recognized
+                  && n.<M>getTreeAwareMapTransaction()
+                        .map(t -> t.getNotRecognizedCriteria(dmc))
+                        .map(o -> ! o.isPresent())
+                        .orElse(true)   // if the TreeAwareMapTransaction does not exist on the map storage, then consider criteria as supported
         );
 
-        subtree.setNodeProperty(AUTHORITATIVE_NODES, maybeAuthoritativeNodes.values());
+        if (subtree != null) {
+            subtree.setNodeProperty(AUTHORITATIVE_NODES, maybeAuthoritativeNodes.values());
+        }
         maybeAuthoritativeNodes.values().forEach(n -> n.setNodeAuthoritative(true));
         return Optional.of(subtree);
     }
@@ -499,6 +552,11 @@ public class TreeStorageTransaction<V extends AbstractEntity, M> implements MapK
 
     private String getTreePropertyString(String property) {
         return root.getTreeProperty(property, String.class).orElse(null);
+    }
+
+    private QueryParameters<M> translateIds(TreeStorageNodeInstance<V> node, QueryParameters<M> queryParameters) {
+        // TODO!!
+        return queryParameters;
     }
 
 

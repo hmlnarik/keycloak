@@ -34,12 +34,10 @@ public class TreeStorage<V extends AbstractEntity, M> implements MapStorage<V, M
 
     protected final TreeStorageNodePrescription root;
     protected final SearchableModelField<M> idField;
-    private final Class<V> entityClass;
 
-    public TreeStorage(TreeStorageNodePrescription root, SearchableModelField<M> idField, Class<V> entityClass) {
+    public TreeStorage(TreeStorageNodePrescription root, SearchableModelField<M> idField) {
         this.root = root;
         this.idField = idField;
-        this.entityClass = entityClass;
     }
 
     public V read(String key) {
