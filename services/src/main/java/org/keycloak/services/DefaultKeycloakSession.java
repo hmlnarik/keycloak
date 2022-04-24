@@ -214,7 +214,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
 
     @Override
     public GroupProvider groupStorageManager() {
-        return getDatastoreProvider().groups();
+        return groups();
     }
 
 
