@@ -21,7 +21,6 @@ import org.keycloak.Config;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.models.LDAPConstants;
 import org.keycloak.models.map.storage.ldap.role.config.LdapMapRoleMapperConfig;
-import org.keycloak.storage.UserStorageProvider;
 
 import javax.naming.directory.SearchControls;
 import java.util.Collection;
@@ -271,12 +270,12 @@ public class LdapMapConfig {
         return Boolean.parseBoolean(config.getFirst(LDAPConstants.START_TLS));
     }
 
-    public UserStorageProvider.EditMode getEditMode() {
+    public EditMode getEditMode() {
         String editModeString = config.getFirst(LDAPConstants.EDIT_MODE);
         if (editModeString == null) {
-            return UserStorageProvider.EditMode.READ_ONLY;
+            return EditMode.READ_ONLY;
         } else {
-            return UserStorageProvider.EditMode.valueOf(editModeString);
+            return EditMode.valueOf(editModeString);
         }
     }
 
@@ -299,4 +298,27 @@ public class LdapMapConfig {
         copy.remove(LDAPConstants.BIND_CREDENTIAL);
         return copy + ", binaryAttributes: " + binaryAttributeNames;
     }
+
+    /**
+     * Optional type that can be used by implementations to
+     * describe edit mode of user storage
+     *
+     */
+    enum EditMode {
+        /**
+         * user storage is read-only
+         */
+        READ_ONLY,
+        /**
+         * user storage is writable
+         *
+         */
+        WRITABLE,
+        /**
+         * updates to user are stored locally and not synced with user storage.
+         *
+         */
+        UNSYNCED
+    }
+
 }
