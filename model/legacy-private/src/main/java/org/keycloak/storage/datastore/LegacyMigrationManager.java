@@ -87,28 +87,12 @@ public class LegacyMigrationManager implements MigrationManager {
             new MigrateTo18_0_0()
     };
 
-    public static final ModelVersion RHSSO_VERSION_7_0_KEYCLOAK_VERSION = new ModelVersion("1.9.8");
-    public static final ModelVersion RHSSO_VERSION_7_1_KEYCLOAK_VERSION = new ModelVersion("2.5.5");
-    public static final ModelVersion RHSSO_VERSION_7_2_KEYCLOAK_VERSION = new ModelVersion("3.4.3");
-    public static final ModelVersion RHSSO_VERSION_7_3_KEYCLOAK_VERSION = new ModelVersion("4.8.3");
-    public static final ModelVersion RHSSO_VERSION_7_4_KEYCLOAK_VERSION = new ModelVersion("9.0.3");
-
-    private static final Map<Pattern, ModelVersion> PATTERN_MATCHER = new LinkedHashMap<>();
-    static {
-        PATTERN_MATCHER.put(Pattern.compile("^7\\.0\\.\\d+\\.GA$"), RHSSO_VERSION_7_0_KEYCLOAK_VERSION);
-        PATTERN_MATCHER.put(Pattern.compile("^7\\.1\\.\\d+\\.GA$"), RHSSO_VERSION_7_1_KEYCLOAK_VERSION);
-        PATTERN_MATCHER.put(Pattern.compile("^7\\.2\\.\\d+\\.GA$"), RHSSO_VERSION_7_2_KEYCLOAK_VERSION);
-        PATTERN_MATCHER.put(Pattern.compile("^7\\.3\\.\\d+\\.GA$"), RHSSO_VERSION_7_3_KEYCLOAK_VERSION);
-        PATTERN_MATCHER.put(Pattern.compile("^7\\.4\\.\\d+\\.GA$"), RHSSO_VERSION_7_4_KEYCLOAK_VERSION);
-    }
-
     private final KeycloakSession session;
 
     public LegacyMigrationManager(KeycloakSession session) {
         this.session = session;
     }
 
-    @Override
     public void migrate() {
         session.setAttribute(Constants.STORAGE_BATCH_ENABLED, Boolean.getBoolean("keycloak.migration.batch-enabled"));
         session.setAttribute(Constants.STORAGE_BATCH_SIZE, Integer.getInteger("keycloak.migration.batch-size"));
@@ -136,32 +120,45 @@ public class LegacyMigrationManager implements MigrationManager {
         Version.RESOURCES_VERSION = model.getResourcesTag();
     }
 
-    @Override
+    public static final ModelVersion RHSSO_VERSION_7_0_KEYCLOAK_VERSION = new ModelVersion("1.9.8");
+    public static final ModelVersion RHSSO_VERSION_7_1_KEYCLOAK_VERSION = new ModelVersion("2.5.5");
+    public static final ModelVersion RHSSO_VERSION_7_2_KEYCLOAK_VERSION = new ModelVersion("3.4.3");
+    public static final ModelVersion RHSSO_VERSION_7_3_KEYCLOAK_VERSION = new ModelVersion("4.8.3");
+    public static final ModelVersion RHSSO_VERSION_7_4_KEYCLOAK_VERSION = new ModelVersion("9.0.3");
+
+    private static final Map<Pattern, ModelVersion> PATTERN_MATCHER = new LinkedHashMap<>();
+    static {
+        PATTERN_MATCHER.put(Pattern.compile("^7\\.0\\.\\d+\\.GA$"), RHSSO_VERSION_7_0_KEYCLOAK_VERSION);
+        PATTERN_MATCHER.put(Pattern.compile("^7\\.1\\.\\d+\\.GA$"), RHSSO_VERSION_7_1_KEYCLOAK_VERSION);
+        PATTERN_MATCHER.put(Pattern.compile("^7\\.2\\.\\d+\\.GA$"), RHSSO_VERSION_7_2_KEYCLOAK_VERSION);
+        PATTERN_MATCHER.put(Pattern.compile("^7\\.3\\.\\d+\\.GA$"), RHSSO_VERSION_7_3_KEYCLOAK_VERSION);
+        PATTERN_MATCHER.put(Pattern.compile("^7\\.4\\.\\d+\\.GA$"), RHSSO_VERSION_7_4_KEYCLOAK_VERSION);
+    }
+
     public void migrate(RealmModel realm, RealmRepresentation rep, boolean skipUserDependent) {
-        session.setAttribute(Constants.STORAGE_BATCH_ENABLED, Boolean.getBoolean("keycloak.migration.batch-enabled"));
-        session.setAttribute(Constants.STORAGE_BATCH_SIZE, Integer.getInteger("keycloak.migration.batch-size"));
-        MigrationModel model = session.getProvider(DeploymentStateProvider.class).getMigrationModel();
+        ModelVersion stored = null;
+        if (rep.getKeycloakVersion() != null) {
+            stored = convertRHSSOVersionToKeycloakVersion(rep.getKeycloakVersion());
+            if (stored == null) {
+                stored = new ModelVersion(rep.getKeycloakVersion());
+            }
+        }
+        if (stored == null) {
+            stored = migrations[0].getVersion();
+        }
 
-        ModelVersion currentVersion = new ModelVersion(Version.VERSION_KEYCLOAK);
-        ModelVersion latestUpdate = migrations[migrations.length-1].getVersion();
-        ModelVersion databaseVersion = model.getStoredVersion() != null ? new ModelVersion(model.getStoredVersion()) : null;
-
-        if (databaseVersion == null || databaseVersion.lessThan(latestUpdate)) {
-            for (Migration m : migrations) {
-                if (databaseVersion == null || databaseVersion.lessThan(m.getVersion())) {
-                    if (databaseVersion != null) {
-                        logger.debugf("Migrating older model to %s", m.getVersion());
-                    }
-                    m.migrate(session);
+        for (Migration m : migrations) {
+            if (stored == null || stored.lessThan(m.getVersion())) {
+                if (stored != null) {
+                    logger.debugf("Migrating older json representation to %s", m.getVersion());
+                }
+                try {
+                    m.migrateImport(session, realm, rep, skipUserDependent);
+                } catch (Exception e) {
+                    logger.error("Failed to migrate json representation for version: " + m.getVersion(), e);
                 }
             }
         }
-
-        if (databaseVersion == null || databaseVersion.lessThan(currentVersion)) {
-            model.setStoredVersion(currentVersion.toString());
-        }
-
-        Version.RESOURCES_VERSION = model.getResourcesTag();
     }
 
     public static ModelVersion convertRHSSOVersionToKeycloakVersion(String version) {

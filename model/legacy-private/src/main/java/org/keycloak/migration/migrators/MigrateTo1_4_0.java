@@ -29,6 +29,7 @@ import org.keycloak.models.utils.DefaultAuthenticationFlows;
 import org.keycloak.models.utils.DefaultRequiredActions;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.representations.idm.RealmRepresentation;
+import org.keycloak.storage.UserStorageUtil;
 
 import java.util.Arrays;
 import java.util.List;
@@ -55,8 +56,7 @@ public class MigrateTo1_4_0 implements Migration {
         }
         ImpersonationConstants.setupImpersonationService(session, realm);
 
-        // TODO: changed the order of execution here ... does that matter?
-        // migrateLDAPMappers(session, realm);
+        migrateLDAPMappers(session, realm);
         migrateUsers(session, realm);
     }
 
@@ -64,6 +64,19 @@ public class MigrateTo1_4_0 implements Migration {
     public void migrateImport(KeycloakSession session, RealmModel realm, RealmRepresentation rep, boolean skipUserDependent) {
         migrateRealm(session, realm);
 
+    }
+
+    private void migrateLDAPMappers(KeycloakSession session, RealmModel realm) {
+        List<String> mandatoryInLdap = Arrays.asList("username", "username-cn", "first name", "last name");
+        UserStorageUtil.getUserStorageProvidersStream(realm)
+                .filter(providerModel -> Objects.equals(providerModel.getProviderId(), LDAPConstants.LDAP_PROVIDER))
+                .forEachOrdered(providerModel -> realm.getComponentsStream(providerModel.getId())
+                        .filter(mapper -> mandatoryInLdap.contains(mapper.getName()))
+                        .forEach(mapper -> {
+                            mapper = new ComponentModel(mapper);  // don't want to modify cache
+                            mapper.getConfig().putSingle("is.mandatory.in.ldap", "true");
+                            realm.updateComponent(mapper);
+                        }));
     }
 
     private void migrateUsers(KeycloakSession session, RealmModel realm) {

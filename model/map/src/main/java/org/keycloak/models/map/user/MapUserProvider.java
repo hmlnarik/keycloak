@@ -455,12 +455,6 @@ public class MapUserProvider implements UserProvider.Streams, UserCredentialStor
     public void preRemove(RealmModel realm, ComponentModel component) {
         String componentId = component.getId();
         LOG.tracef("preRemove[ComponentModel](%s, %s)%s", realm, componentId, getShortStackTrace());
-        /*
-        TODO: why?
-        if (component.getProviderType().equals(UserStorageProvider.class.getName())) {
-            removeImportedUsers(realm, componentId);
-        }
-         */
         if (component.getProviderType().equals(ClientStorageProvider.class.getName())) {
             DefaultModelCriteria<UserModel> mcb = criteria();
             mcb = mcb.compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())

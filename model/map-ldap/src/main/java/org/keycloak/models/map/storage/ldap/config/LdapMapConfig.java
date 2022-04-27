@@ -270,15 +270,6 @@ public class LdapMapConfig {
         return Boolean.parseBoolean(config.getFirst(LDAPConstants.START_TLS));
     }
 
-    public EditMode getEditMode() {
-        String editModeString = config.getFirst(LDAPConstants.EDIT_MODE);
-        if (editModeString == null) {
-            return EditMode.READ_ONLY;
-        } else {
-            return EditMode.valueOf(editModeString);
-        }
-    }
-
     public void addBinaryAttribute(String attrName) {
         binaryAttributeNames.add(attrName);
     }
@@ -298,27 +289,4 @@ public class LdapMapConfig {
         copy.remove(LDAPConstants.BIND_CREDENTIAL);
         return copy + ", binaryAttributes: " + binaryAttributeNames;
     }
-
-    /**
-     * Optional type that can be used by implementations to
-     * describe edit mode of user storage
-     *
-     */
-    enum EditMode {
-        /**
-         * user storage is read-only
-         */
-        READ_ONLY,
-        /**
-         * user storage is writable
-         *
-         */
-        WRITABLE,
-        /**
-         * updates to user are stored locally and not synced with user storage.
-         *
-         */
-        UNSYNCED
-    }
-
 }
