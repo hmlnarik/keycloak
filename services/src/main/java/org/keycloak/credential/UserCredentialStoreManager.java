@@ -24,6 +24,7 @@ import org.keycloak.models.UserCredentialManager;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.cache.CachedUserModel;
 import org.keycloak.models.cache.OnUserCache;
+import org.keycloak.storage.DatastoreProvider;
 import org.keycloak.storage.StorageId;
 
 import java.util.Arrays;
@@ -42,14 +43,6 @@ public class UserCredentialStoreManager
 
     public UserCredentialStoreManager(KeycloakSession session) {
         this.session = session;
-    }
-
-    protected UserCredentialStore getStoreForUser(UserModel user) {
-        if (StorageId.isLocalStorage(user)) {
-            return (UserCredentialStore) session.userLocalStorage();
-        } else {
-            return (UserCredentialStore) session.userFederatedStorage();
-        }
     }
 
     @Override
@@ -164,22 +157,9 @@ public class UserCredentialStoreManager
     // TODO: This can't be moved to a specific user, as the user is can't be determined by the caller looking at the input
     @Override
     public CredentialValidationOutput authenticate(KeycloakSession session, RealmModel realm, CredentialInput input) {
-        Stream<CredentialAuthentication> credentialAuthenticationStream = Stream.empty();
-
-        /* TODO
-        Stream<CredentialAuthentication> credentialAuthenticationStream = ;
-        credentialAuthenticationStream = Stream.concat(credentialAuthenticationStream,
-                UserStorageProvidersTestUtils.getEnabledStorageProviders(realm, CredentialAuthentication.class));
-
-         */
-
+        Stream<CredentialAuthentication> credentialAuthenticationStream = session.getProvider(DatastoreProvider.class).credentialAuthenticationStream(realm);
         credentialAuthenticationStream = Stream.concat(credentialAuthenticationStream,
                 getCredentialProviders(session, CredentialAuthentication.class));
-
-        // TODO: remove
-        if (session.userLocalStorage() instanceof CredentialAuthentication) {
-            credentialAuthenticationStream = Stream.concat(credentialAuthenticationStream, Stream.of((CredentialAuthentication) session.userLocalStorage()));
-        }
 
         return credentialAuthenticationStream
                 .filter(credentialAuthentication -> credentialAuthentication.supportsCredentialAuthenticationFor(input.getType()))
@@ -205,14 +185,4 @@ public class UserCredentialStoreManager
 
     }
 
-    private boolean isValid(UserModel user) {
-        return user != null && user.getServiceAccountClientLink() == null;
-    }
-    
-    private void throwExceptionIfInvalidUser(UserModel user) {
-        if (user == null || isValid(user)) {
-            return;
-        }
-        throw new RuntimeException("You can not manage credentials for this user");
-    }
 }
