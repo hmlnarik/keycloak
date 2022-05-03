@@ -137,7 +137,7 @@ public class UserPropertyFileStorage implements UserLookupProvider.Streams, User
 
                 @Override
                 public SingleUserCredentialManager getUserCredentialManager() {
-                    return session.getProvider(SingleUserCredentialManagerProvider.class).create(realm, this);
+                    return new LegacySingleUserCredentialManager(session, realm, this);
                 }
             };
         } else {
@@ -149,7 +149,7 @@ public class UserPropertyFileStorage implements UserLookupProvider.Streams, User
 
                 @Override
                 public SingleUserCredentialManager getUserCredentialManager() {
-                    return session.getProvider(SingleUserCredentialManagerProvider.class).create(realm, this);
+                    return new LegacySingleUserCredentialManager(session, realm, this);
                 }
             };
         }
