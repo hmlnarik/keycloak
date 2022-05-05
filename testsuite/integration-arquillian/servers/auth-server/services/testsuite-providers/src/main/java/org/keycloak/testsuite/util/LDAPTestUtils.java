@@ -66,7 +66,7 @@ public class LDAPTestUtils {
 
         UserCredentialModel creds = UserCredentialModel.password(password);
 
-        session.userCredentialManager().updateCredential(realm, user, creds);
+        user.getUserCredentialManager().updateCredential(creds);
         return user;
     }
 
@@ -79,7 +79,7 @@ public class LDAPTestUtils {
         if (password == null) {
             return;
         }
-        session.userCredentialManager().updateCredential(appRealm, user, (UserCredentialModel) UserCredentialModel.password(username));
+        user.getUserCredentialManager().updateCredential((UserCredentialModel) UserCredentialModel.password(username));
     }
 
     public static LDAPObject addLDAPUser(LDAPStorageProvider ldapProvider, RealmModel realm, final String username,
