@@ -23,6 +23,7 @@ import org.keycloak.authentication.authenticators.broker.IdpCreateUserIfUniqueAu
 import org.keycloak.broker.saml.SAMLIdentityProviderConfig;
 import org.keycloak.broker.saml.mappers.UsernameTemplateMapper;
 import org.keycloak.broker.saml.mappers.UsernameTemplateMapper.Target;
+import org.keycloak.common.Profile;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
 import org.keycloak.models.AuthenticationExecutionModel.Requirement;
@@ -45,6 +46,7 @@ import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.storage.ldap.mappers.UserAttributeLDAPStorageMapper;
 import org.keycloak.storage.ldap.mappers.UserAttributeLDAPStorageMapperFactory;
 import org.keycloak.testsuite.Assert;
+import org.keycloak.testsuite.ProfileAssume;
 import org.keycloak.testsuite.broker.KcSamlBrokerConfiguration;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.updaters.Creator;
@@ -100,6 +102,12 @@ public class LDAPSamlIdPInitiatedVaryingLetterCaseTest extends AbstractLDAPTest 
     @Override
     protected LDAPRule getLDAPRule() {
         return ldapRule;
+    }
+
+    @Before
+    public void before() {
+        // don't run this test when map storage is enabled, as map storage doesn't support LDAP, yet
+        ProfileAssume.assumeFeatureDisabled(Profile.Feature.MAP_STORAGE);
     }
 
     @Override
