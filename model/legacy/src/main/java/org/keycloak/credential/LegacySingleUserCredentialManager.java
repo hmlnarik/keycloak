@@ -20,7 +20,7 @@ package org.keycloak.credential;
 import org.keycloak.common.util.reflections.Types;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.SingleUserCredentialManager;
+import org.keycloak.models.SingleEntityCredentialManager;
 import org.keycloak.models.UserModel;
 import org.keycloak.storage.AbstractStorageManager;
 import org.keycloak.storage.StorageId;
@@ -40,19 +40,19 @@ import java.util.stream.Stream;
  *
  * @author Alexander Schwartz
  */
-public class LegacySingleUserCredentialManager extends AbstractStorageManager<UserStorageProvider, UserStorageProviderModel> implements SingleUserCredentialManager {
+public class LegacySingleUserCredentialManager extends AbstractStorageManager<UserStorageProvider, UserStorageProviderModel> implements SingleEntityCredentialManager {
 
     private final UserModel user;
     private final KeycloakSession session;
     private final RealmModel realm;
-    private final LegacySingleUserCredentialManagerStrategy strategy;
+    private final LegacySingleEntityCredentialManagerStrategy strategy;
 
     public LegacySingleUserCredentialManager(KeycloakSession session, RealmModel realm, UserModel user) {
         super(session, UserStorageProviderFactory.class, UserStorageProvider.class, UserStorageProviderModel::new, "user");
         this.user = user;
         this.session = session;
         this.realm = realm;
-        this.strategy = new LegacySingleUserCredentialManagerStrategy(session, realm, user);
+        this.strategy = new LegacySingleEntityCredentialManagerStrategy(session, realm, user);
     }
 
     @Override
