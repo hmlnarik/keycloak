@@ -24,7 +24,6 @@ import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,7 +43,26 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
                   .map(n -> n.flashToModelCriteriaBuilder(mcb))
                   .filter(Objects::nonNull)
                   .toArray(n -> (C[]) Array.newInstance(mcb.getClass(), n));
-                return operands.length == 0 ? null : mcb.and(operands);
+                return operands.length == 0 ? null :
+                  operands.length == 1 ? operands[0] : mcb.and(operands);
+            }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                ModelCriteriaNode<M> res = andNode();
+                int i = 0;
+                for (ModelCriteriaNode<M> child : node.getChildren()) {
+                    child = child.partiallyEvaluate(atomicFormulaInstantiator);
+                    switch (child.getNodeOperator()) {
+                        case __FALSE__:
+                            return falseNode();
+                        case __TRUE__:
+                            break;
+                        default:
+                            res.addChild(child);
+                            i++;
+                    }
+                }
+                return i == 0 ? trueNode() :
+                  (i == 1 ? res.getChildren().get(0) : res);
             }
             @Override public String toString(ModelCriteriaNode<?> node) {
                 return "(" + node.getChildren().stream().map(ModelCriteriaNode::toString).collect(Collectors.joining(" && ")) + ")";
@@ -59,7 +77,26 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
                   .map(n -> n.flashToModelCriteriaBuilder(mcb))
                   .filter(Objects::nonNull)
                   .toArray(n -> (C[]) Array.newInstance(mcb.getClass(), n));
-                return operands.length == 0 ? null : mcb.or(operands);
+                return operands.length == 0 ? null :
+                  operands.length == 1 ? operands[0] : mcb.or(operands);
+            }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                ModelCriteriaNode<M> res = orNode();
+                int i = 0;
+                for (ModelCriteriaNode<M> child : node.getChildren()) {
+                    child = child.partiallyEvaluate(atomicFormulaInstantiator);
+                    switch (child.getNodeOperator()) {
+                        case __FALSE__:
+                            break;
+                        case __TRUE__:
+                            return trueNode();
+                        default:
+                            res.addChild(child);
+                            i++;
+                    }
+                }
+                return i == 0 ? falseNode() :
+                  (i == 1 ? res.getChildren().get(0) : res);
             }
             @Override public String toString(ModelCriteriaNode<?> node) {
                 return "(" + node.getChildren().stream().map(ModelCriteriaNode::toString).collect(Collectors.joining(" || ")) + ")";
@@ -69,8 +106,21 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
                 return mcb.not(node.getChildren().iterator().next().flashToModelCriteriaBuilder(mcb));
             }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                ModelCriteriaNode<M> child = node.getChildren().get(0).partiallyEvaluate(atomicFormulaInstantiator);
+                switch (child.getNodeOperator()) {
+                    case __FALSE__:
+                        return trueNode();
+                    case __TRUE__:
+                        return falseNode();
+                    default:
+                        ModelCriteriaNode<M> res = notNode();
+                        res.addChild(child);
+                        return res;
+                }
+            }
             @Override public String toString(ModelCriteriaNode<?> node) {
-                return "! " + node.getChildren().iterator().next().toString();
+                return "! " + node.getChildren().get(0);
             }
         },
         ATOMIC_FORMULA {
@@ -81,6 +131,9 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
                   node.simpleOperatorArguments
                 );
             }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                return atomicFormulaInstantiator.instantiate(node.field, node.simpleOperator, node.simpleOperatorArguments);
+            }
             @Override public String toString(ModelCriteriaNode<?> node) {
                 return node.field.getName() + " " + node.simpleOperator + " " + Arrays.deepToString(node.simpleOperatorArguments);
             }
@@ -88,6 +141,9 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         __FALSE__ {
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
                 return mcb.or((C[]) Array.newInstance(mcb.getClass(), 0));
+            }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                return node;
             }
             @Override public String toString(ModelCriteriaNode<?> node) {
                 return "__FALSE__";
@@ -97,6 +153,9 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
                 return mcb.and((C[]) Array.newInstance(mcb.getClass(), 0));
             }
+            @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+                return node;
+            }
             @Override public String toString(ModelCriteriaNode<?> node) {
                 return "__TRUE__";
             }
@@ -105,7 +164,11 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
 
         public abstract <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcbCreator, ModelCriteriaNode<M> node);
         public abstract String toString(ModelCriteriaNode<?> node);
+        public abstract <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator);
     }
+
+    private static final ModelCriteriaNode<?> TRUE_NODE = new ModelCriteriaNode<>(ExtOperator.__TRUE__);
+    private static final ModelCriteriaNode<?> FALSE_NODE = new ModelCriteriaNode<>(ExtOperator.__FALSE__);
 
     private final ExtOperator nodeOperator;
 
@@ -115,7 +178,31 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
 
     private final Object[] simpleOperatorArguments;
 
-    public ModelCriteriaNode(SearchableModelField<? super M> field, Operator simpleOperator, Object[] simpleOperatorArguments) {
+    public static <M> ModelCriteriaNode<M> atomicFormula(SearchableModelField<? super M> field, Operator simpleOperator, Object[] simpleOperatorArguments) {
+        return new ModelCriteriaNode<>(field, simpleOperator, simpleOperatorArguments);
+    }
+
+    public static <M> ModelCriteriaNode<M> trueNode() {
+        return (ModelCriteriaNode<M>) TRUE_NODE;
+    }
+
+    public static <M> ModelCriteriaNode<M> falseNode() {
+        return (ModelCriteriaNode<M>) FALSE_NODE;
+    }
+
+    public static <M> ModelCriteriaNode<M> andNode() {
+        return new ModelCriteriaNode<>(ExtOperator.AND);
+    }
+
+    public static <M> ModelCriteriaNode<M> orNode() {
+        return new ModelCriteriaNode<>(ExtOperator.OR);
+    }
+
+    public static <M> ModelCriteriaNode<M> notNode() {
+        return new ModelCriteriaNode<>(ExtOperator.NOT);
+    }
+
+    private ModelCriteriaNode(SearchableModelField<? super M> field, Operator simpleOperator, Object[] simpleOperatorArguments) {
         super(Collections.emptyMap());
         this.simpleOperator = simpleOperator;
         this.field = field;
@@ -134,7 +221,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         }
     }
 
-    public ModelCriteriaNode(ExtOperator nodeOperator) {
+    private ModelCriteriaNode(ExtOperator nodeOperator) {
         super(Collections.emptyMap());
         this.nodeOperator = nodeOperator;
         this.simpleOperator = null;
@@ -142,20 +229,12 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         this.simpleOperatorArguments = null;
     }
 
-    private ModelCriteriaNode(ExtOperator nodeOperator, Operator simpleOperator, SearchableModelField<? super M> field, Object[] simpleOperatorArguments) {
-        super(Collections.emptyMap());
-        this.nodeOperator = nodeOperator;
-        this.simpleOperator = simpleOperator;
-        this.field = field;
-        this.simpleOperatorArguments = simpleOperatorArguments;
-    }
-
     public ExtOperator getNodeOperator() {
         return nodeOperator;
     }
 
     public ModelCriteriaNode<M> cloneTree() {
-        return cloneTree(ModelCriteriaNode::new, ModelCriteriaNode::new);
+        return partiallyEvaluate(ModelCriteriaNode::atomicFormula);
     }
 
     @FunctionalInterface
@@ -163,12 +242,8 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         public ModelCriteriaNode<M> instantiate(SearchableModelField<? super M> field, Operator operator, Object[] operatorArguments);
     }
 
-    public ModelCriteriaNode<M> cloneTree(AtomicFormulaInstantiator<M> atomicFormulaInstantiator, Function<ExtOperator, ModelCriteriaNode<M>> booleanNodeInstantiator) {
-        return cloneTree(n -> 
-          n.getNodeOperator() == ExtOperator.ATOMIC_FORMULA
-            ? atomicFormulaInstantiator.instantiate(n.field, n.simpleOperator, n.simpleOperatorArguments)
-            : booleanNodeInstantiator.apply(n.nodeOperator)
-        );
+    public ModelCriteriaNode<M> partiallyEvaluate(AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
+        return nodeOperator.evaluate(this, atomicFormulaInstantiator);
     }
 
     public boolean isFalseNode() {
