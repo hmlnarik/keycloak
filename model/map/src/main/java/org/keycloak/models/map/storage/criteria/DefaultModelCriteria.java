@@ -17,6 +17,7 @@
 package org.keycloak.models.map.storage.criteria;
 
 import org.keycloak.models.map.storage.ModelCriteriaBuilder;
+import org.keycloak.models.map.storage.criteria.ModelCriteriaNode.AtomicFormulaInstantiator;
 import org.keycloak.models.map.storage.criteria.ModelCriteriaNode.ExtOperator;
 import org.keycloak.storage.SearchableModelField;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,9 +42,13 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
         return (DefaultModelCriteria<M>) INSTANCE;
     }
 
+    public ModelCriteriaNode<M> getNode() {
+        return node;
+    }
+
     @Override
     public DefaultModelCriteria<M> compare(SearchableModelField<? super M> modelField, Operator op, Object... value) {
-        return compare(new ModelCriteriaNode<>(modelField, op, value));
+        return compare(ModelCriteriaNode.atomicFormula(modelField, op, value));
     }
 
     private DefaultModelCriteria<M> compare(final ModelCriteriaNode<M> nodeToAdd) {
@@ -55,7 +60,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             targetNode = node.cloneTree();
             targetNode.addChild(nodeToAdd);
         } else {
-            targetNode = new ModelCriteriaNode<>(ExtOperator.AND);
+            targetNode = ModelCriteriaNode.andNode();
             targetNode.addChild(node.cloneTree());
             targetNode.addChild(nodeToAdd);
         }
@@ -69,7 +74,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             return compare(mcbs[0].node);
         }
 
-        final ModelCriteriaNode<M> targetNode = new ModelCriteriaNode<>(ExtOperator.AND);
+        final ModelCriteriaNode<M> targetNode = ModelCriteriaNode.andNode();
         AtomicBoolean hasFalseNode = new AtomicBoolean(false);
         for (DefaultModelCriteria<M> mcb : mcbs) {
             final ModelCriteriaNode<M> nodeToAdd = mcb.node;
@@ -80,13 +85,13 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
               .forEach(targetNode::addChild);
 
             if (hasFalseNode.get()) {
-                return compare(new ModelCriteriaNode<>(ExtOperator.__FALSE__));
+                return compare(ModelCriteriaNode.falseNode());
             }
         }
 
         if (targetNode.hasNoChildren()) {
             // AND on empty set of formulae is TRUE: It does hold that there all formulae are satisfied
-            return compare(new ModelCriteriaNode<>(ExtOperator.__TRUE__));
+            return compare(ModelCriteriaNode.trueNode());
         }
 
         return compare(targetNode);
@@ -98,7 +103,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             return compare(mcbs[0].node);
         }
 
-        final ModelCriteriaNode<M> targetNode = new ModelCriteriaNode<>(ExtOperator.OR);
+        final ModelCriteriaNode<M> targetNode = ModelCriteriaNode.orNode();
         AtomicBoolean hasTrueNode = new AtomicBoolean(false);
         for (DefaultModelCriteria<M> mcb : mcbs) {
             final ModelCriteriaNode<M> nodeToAdd = mcb.node;
@@ -109,13 +114,13 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
               .forEach(targetNode::addChild);
 
             if (hasTrueNode.get()) {
-                return compare(new ModelCriteriaNode<>(ExtOperator.__TRUE__));
+                return compare(ModelCriteriaNode.trueNode());
             }
         }
 
         if (targetNode.hasNoChildren()) {
             // OR on empty set of formulae is FALSE: It does not hold that there is at least one satisfied formula
-            return compare(new ModelCriteriaNode<>(ExtOperator.__FALSE__));
+            return compare(ModelCriteriaNode.falseNode());
         }
 
         return compare(targetNode);
@@ -128,7 +133,7 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
             return compare(toBeChild.getChildren().get(0).cloneTree());
         }
 
-        final ModelCriteriaNode<M> targetNode = new ModelCriteriaNode<>(ExtOperator.NOT);
+        final ModelCriteriaNode<M> targetNode = ModelCriteriaNode.notNode();
         targetNode.addChild(toBeChild.cloneTree());
         return compare(targetNode);
     }
@@ -157,22 +162,41 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
 
     @FunctionalInterface
     public interface AtomicFormulaTester<M> {
+        /**
+         * Partial function which can evaluate the boolean expression {@code field (operator) operatorArguments}.
+         * @param field
+         * @param operator
+         * @param operatorArguments
+         * @return {@code True} or {@code False} if the expression can be evaluated, {@code null} otherwise.
+         */
         public Boolean test(SearchableModelField<? super M> field, Operator operator, Object[] operatorArguments);
     }
 
     public DefaultModelCriteria<M> partiallyEvaluate(AtomicFormulaTester<M> tester) {
-        return new DefaultModelCriteria<>(node.cloneTree((field, operator, operatorArguments) -> {
+        return partiallyEvaluate((AtomicFormulaInstantiator<M>) (field, operator, operatorArguments) -> {
             Boolean res = tester.test(field, operator, operatorArguments);
             if (res == null) {
-                return new ModelCriteriaNode<>(field, operator, operatorArguments);
+                return ModelCriteriaNode.atomicFormula(field, operator, operatorArguments);
             } else {
-                return new ModelCriteriaNode<>(res ? ExtOperator.__TRUE__ : ExtOperator.__FALSE__);
+                return res ? ModelCriteriaNode.trueNode() : ModelCriteriaNode.falseNode();
             }
-        }, ModelCriteriaNode::new));
+          });
+    }
+
+    private DefaultModelCriteria<M> partiallyEvaluate(AtomicFormulaInstantiator<M> transformer) {
+        return new DefaultModelCriteria<>(node.partiallyEvaluate(transformer));
     }
 
     public boolean isEmpty() {
         return node == null;
+    }
+
+    public boolean isAlwaysTrue() {
+        return node != null && optimize().getNode().isTrueNode();
+    }
+
+    public boolean isAlwaysFalse() {
+        return node != null && optimize().getNode().isFalseNode();
     }
 
     @Override
