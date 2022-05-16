@@ -21,7 +21,7 @@ import org.keycloak.credential.CredentialInput;
 import org.keycloak.credential.CredentialInputUpdater;
 import org.keycloak.credential.CredentialInputValidator;
 import org.keycloak.credential.CredentialModel;
-import org.keycloak.credential.LegacySingleEntityCredentialManager;
+import org.keycloak.credential.LegacySingleUserCredentialManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.SingleEntityCredentialManager;
@@ -168,7 +168,7 @@ public class PassThroughFederatedUserStorageProvider implements
 
             @Override
             public SingleEntityCredentialManager credentialManager() {
-                return new LegacySingleEntityCredentialManager(session, realm, this);
+                return new LegacySingleUserCredentialManager(session, realm, this);
             }
         };
     }

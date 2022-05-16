@@ -45,14 +45,14 @@ import java.util.stream.Stream;
  *
  * @author Alexander Schwartz
  */
-public class MapSingleEntityCredentialManager implements SingleEntityCredentialManager {
+public class MapSingleUserCredentialManager implements SingleEntityCredentialManager {
 
     private final UserModel user;
     private final KeycloakSession session;
     private final RealmModel realm;
     private final SingleEntityCredentialManagerStrategy strategy;
 
-    public MapSingleEntityCredentialManager(KeycloakSession session, RealmModel realm, UserModel user, MapUserEntity entity) {
+    public MapSingleUserCredentialManager(KeycloakSession session, RealmModel realm, UserModel user, MapUserEntity entity) {
         this.user = user;
         this.session = session;
         this.realm = realm;
