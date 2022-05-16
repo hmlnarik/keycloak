@@ -150,6 +150,11 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
         return mcb == null ? null : node.flashToModelCriteriaBuilder(mcb);
     }
 
+    @Override
+    public DefaultModelCriteria<M>[] newArray(int length) {
+        return (DefaultModelCriteria<M>[]) new DefaultModelCriteria[length];
+    }
+
     /**
      * Optimizes this formula into another {@code ModelCriteriaBuilder}, using the values of
      * {@link ExtOperator#__TRUE__} and {@link ExtOperator#__FALSE__} accordingly.

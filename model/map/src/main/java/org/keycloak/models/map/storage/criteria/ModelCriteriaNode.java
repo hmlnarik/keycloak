@@ -20,7 +20,6 @@ import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
 import org.keycloak.models.map.storage.tree.DefaultTreeNode;
 import org.keycloak.storage.SearchableModelField;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
@@ -42,7 +41,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
                 final C[] operands = node.getChildren().stream()
                   .map(n -> n.flashToModelCriteriaBuilder(mcb))
                   .filter(Objects::nonNull)
-                  .toArray(n -> (C[]) Array.newInstance(mcb.getClass(), n));
+                  .toArray(mcb::newArray);
                 return operands.length == 0 ? null :
                   operands.length == 1 ? operands[0] : mcb.and(operands);
             }
@@ -76,7 +75,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
                 final C[] operands = node.getChildren().stream()
                   .map(n -> n.flashToModelCriteriaBuilder(mcb))
                   .filter(Objects::nonNull)
-                  .toArray(n -> (C[]) Array.newInstance(mcb.getClass(), n));
+                  .toArray(mcb::newArray);
                 return operands.length == 0 ? null :
                   operands.length == 1 ? operands[0] : mcb.or(operands);
             }
@@ -140,7 +139,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         },
         __FALSE__ {
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
-                return mcb.or((C[]) Array.newInstance(mcb.getClass(), 0));
+                return mcb.or(mcb.newArray(0));
             }
             @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
                 return node;
@@ -151,7 +150,7 @@ public class ModelCriteriaNode<M> extends DefaultTreeNode<ModelCriteriaNode<M>> 
         },
         __TRUE__ {
             @Override public <M, C extends ModelCriteriaBuilder<M, C>> C apply(C mcb, ModelCriteriaNode<M> node) {
-                return mcb.and((C[]) Array.newInstance(mcb.getClass(), 0));
+                return mcb.and(mcb.newArray(0));
             }
             @Override public <M> ModelCriteriaNode<M> evaluate(ModelCriteriaNode<M> node, AtomicFormulaInstantiator<M> atomicFormulaInstantiator) {
                 return node;
