@@ -45,12 +45,12 @@ public class MapSingleEntityCredentialManagerStrategy implements SingleEntityCre
 
     @Override
     public void validateCredentials(List<CredentialInput> toValidate) {
-        entity.userCredentialManager().validateCredentials(toValidate);
+        entity.credentialManager().validateCredentials(toValidate);
     }
 
     @Override
     public boolean updateCredential(CredentialInput input) {
-        return entity.userCredentialManager().updateCredential(input);
+        return entity.credentialManager().updateCredential(input);
     }
 
     @Override

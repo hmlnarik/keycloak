@@ -33,7 +33,7 @@ import org.keycloak.credential.CredentialInput;
 import org.keycloak.credential.CredentialInputUpdater;
 import org.keycloak.credential.CredentialInputValidator;
 import org.keycloak.credential.CredentialModel;
-import org.keycloak.credential.LegacySingleEntityCredentialManager;
+import org.keycloak.credential.LegacySingleUserCredentialManager;
 import org.keycloak.credential.hash.PasswordHashProvider;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
@@ -105,7 +105,7 @@ public class BackwardsCompatibilityUserStorage implements UserLookupProvider, Us
 
             @Override
             public SingleEntityCredentialManager credentialManager() {
-                return new LegacySingleEntityCredentialManager(session, realm, this);
+                return new LegacySingleUserCredentialManager(session, realm, this);
             }
         };
     }

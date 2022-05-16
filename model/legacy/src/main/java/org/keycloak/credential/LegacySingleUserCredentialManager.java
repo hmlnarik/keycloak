@@ -40,14 +40,14 @@ import java.util.stream.Stream;
  *
  * @author Alexander Schwartz
  */
-public class LegacySingleEntityCredentialManager extends AbstractStorageManager<UserStorageProvider, UserStorageProviderModel> implements SingleEntityCredentialManager {
+public class LegacySingleUserCredentialManager extends AbstractStorageManager<UserStorageProvider, UserStorageProviderModel> implements SingleEntityCredentialManager {
 
     private final UserModel user;
     private final KeycloakSession session;
     private final RealmModel realm;
     private final LegacySingleEntityCredentialManagerStrategy strategy;
 
-    public LegacySingleEntityCredentialManager(KeycloakSession session, RealmModel realm, UserModel user) {
+    public LegacySingleUserCredentialManager(KeycloakSession session, RealmModel realm, UserModel user) {
         super(session, UserStorageProviderFactory.class, UserStorageProvider.class, UserStorageProviderModel::new, "user");
         this.user = user;
         this.session = session;

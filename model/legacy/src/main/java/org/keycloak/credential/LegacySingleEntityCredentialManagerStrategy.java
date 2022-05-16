@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Strategy for {@link LegacySingleEntityCredentialManager} to handle classic local storage including federation.
+ * Strategy for {@link LegacySingleUserCredentialManager} to handle classic local storage including federation.
  *
  * @author Alexander Schwartz
  */

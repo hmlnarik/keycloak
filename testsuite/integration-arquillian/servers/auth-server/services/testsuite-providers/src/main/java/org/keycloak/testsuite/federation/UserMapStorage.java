@@ -21,7 +21,7 @@ import org.keycloak.component.ComponentModel;
 import org.keycloak.credential.CredentialInput;
 import org.keycloak.credential.CredentialInputUpdater;
 import org.keycloak.credential.CredentialInputValidator;
-import org.keycloak.credential.LegacySingleEntityCredentialManager;
+import org.keycloak.credential.LegacySingleUserCredentialManager;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.LDAPConstants;
@@ -146,7 +146,7 @@ public class UserMapStorage implements UserLookupProvider.Streams, UserStoragePr
 
                 @Override
                 public SingleEntityCredentialManager credentialManager() {
-                    return new LegacySingleEntityCredentialManager(session, realm, this);
+                    return new LegacySingleUserCredentialManager(session, realm, this);
                 }
             };
         }

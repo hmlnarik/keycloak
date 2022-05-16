@@ -330,7 +330,7 @@ public class UserAdapter implements CachedUserModel.Streams {
             }
 
             @Override
-            public void invalidateCacheForUser() {
+            public void invalidateCacheForEntity() {
                 if (!userRegisteredForInvalidation) {
                     userProviderCache.registerUserInvalidation(realm, cached);
                     userRegisteredForInvalidation = true;
