@@ -17,6 +17,7 @@
 package org.keycloak.models.map.storage;
 
 import org.keycloak.storage.SearchableModelField;
+import java.lang.reflect.Array;
 
 /**
  * Builder for criteria that can be used to limit results obtained from the store.
@@ -171,5 +172,15 @@ public interface ModelCriteriaBuilder<M, Self extends ModelCriteriaBuilder<M, Se
      * @throws CriterionNotSupportedException If the operator is not supported for the given field.
      */
     Self not(Self builder);
+
+    /**
+     * Returns a new array of the {@code Self} objects.
+     * <b>If overridden once, this has to be overridden in each descendant!</b>
+     * @param length Length of the array
+     * @return See description
+     */
+    default Self[] newArray(int length) {
+        return (Self[]) Array.newInstance(getClass(), length);
+    }
 
 }
