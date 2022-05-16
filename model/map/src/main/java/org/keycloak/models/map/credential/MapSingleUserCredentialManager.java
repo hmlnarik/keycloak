@@ -51,11 +51,13 @@ public class MapSingleUserCredentialManager implements SingleEntityCredentialMan
     private final KeycloakSession session;
     private final RealmModel realm;
     private final SingleEntityCredentialManagerStrategy strategy;
+    private final MapUserEntity entity;
 
     public MapSingleUserCredentialManager(KeycloakSession session, RealmModel realm, UserModel user, MapUserEntity entity) {
         this.user = user;
         this.session = session;
         this.realm = realm;
+        this.entity = entity;
         this.strategy = new MapSingleEntityCredentialManagerStrategy(entity);
     }
 
@@ -144,50 +146,37 @@ public class MapSingleUserCredentialManager implements SingleEntityCredentialMan
 
     @Override
     public Stream<String> getDisableableCredentialTypesStream() {
-        // TODO: ask the store
-        return getCredentialProviders(session, CredentialInputUpdater.class)
-                        .flatMap(updater -> updater.getDisableableCredentialTypesStream(realm, user));
+        return Stream.concat(entity.credentialManager().getDisableableCredentialTypesStream(),
+                        getCredentialProviders(session, CredentialInputUpdater.class)
+                                .flatMap(updater -> updater.getDisableableCredentialTypesStream(realm, user)))
+                .distinct();
     }
 
     @Override
     public boolean isConfiguredFor(String type) {
-        // TODO: ask the store
-        return isConfiguredLocally(type);
+        return entity.credentialManager().isConfiguredFor(type) ||
+                getCredentialProviders(session, CredentialInputValidator.class)
+                        .anyMatch(validator -> validator.supportsCredentialType(type) && validator.isConfiguredFor(realm, user, type));
     }
 
     @Override
+    @Deprecated
     public boolean isConfiguredLocally(String type) {
-        return getCredentialProviders(session, CredentialInputValidator.class)
-                .anyMatch(validator -> validator.supportsCredentialType(type) && validator.isConfiguredFor(realm, user, type));
+        throw new IllegalArgumentException("this is not supported for map storage");
     }
 
     @Override
+    @Deprecated
     public Stream<String> getConfiguredUserStorageCredentialTypesStream() {
-        // TODO ask the store
-        return getCredentialProviders(session, CredentialProvider.class).map(CredentialProvider::getType)
-                .filter(credentialType -> UserStorageCredentialConfigured.CONFIGURED == isConfiguredThroughUserStorage(realm, user, credentialType));
+        // used in the old admin console for users to determine if a password is set for a user
+        // not used in the new admin console
+        return Stream.empty();
     }
 
     @Override
+    @Deprecated
     public CredentialModel createCredentialThroughProvider(CredentialModel model) {
-        throwExceptionIfInvalidUser(user);
-        return session.getKeycloakSessionFactory()
-                .getProviderFactoriesStream(CredentialProvider.class)
-                .map(f -> session.getProvider(CredentialProvider.class, f.getId()))
-                .filter(provider -> Objects.equals(provider.getType(), model.getType()))
-                .map(cp -> cp.createCredential(realm, user, cp.getCredentialFromModel(model)))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private enum UserStorageCredentialConfigured {
-        CONFIGURED,
-        USER_STORAGE_DISABLED,
-        NOT_CONFIGURED
-    }
-
-    private UserStorageCredentialConfigured isConfiguredThroughUserStorage(RealmModel realm, UserModel user, String type) {
-        return UserStorageCredentialConfigured.NOT_CONFIGURED;
+        throw new IllegalArgumentException("this is not supported for map storage");
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

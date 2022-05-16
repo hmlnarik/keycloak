@@ -20,6 +20,7 @@ package org.keycloak.models.map.credential;
 import org.keycloak.credential.CredentialInput;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Standard implementation for a {@link MapSingleEntityCredentialManagerEntity} where the store doesn't provide
@@ -35,5 +36,15 @@ public class DefaultMapSingleEntityCredentialManagerEntity implements MapSingleE
     @Override
     public boolean updateCredential(CredentialInput input) {
         return false;
+    }
+
+    @Override
+    public boolean isConfiguredFor(String type) {
+        return false;
+    }
+
+    @Override
+    public Stream<String> getDisableableCredentialTypesStream() {
+        return Stream.empty();
     }
 }
