@@ -18,37 +18,37 @@ public abstract class SingleEntityCredentialManagerCacheAdapter implements Singl
         this.singleEntityCredentialManager = singleEntityCredentialManager;
     }
 
-    public abstract void invalidateCacheForUser();
+    public abstract void invalidateCacheForEntity();
 
     @Override
     public boolean isValid(List<CredentialInput> inputs) {
         // validating a password might still update its hashes, similar logic might apply to OTP logic
         // instead of having each
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.isValid(inputs);
     }
 
     @Override
     public boolean updateCredential(CredentialInput input) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.updateCredential(input);
     }
 
     @Override
     public void updateStoredCredential(CredentialModel cred) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         singleEntityCredentialManager.updateStoredCredential(cred);
     }
 
     @Override
     public CredentialModel createStoredCredential(CredentialModel cred) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.createStoredCredential(cred);
     }
 
     @Override
     public boolean removeStoredCredentialById(String id) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.removeStoredCredentialById(id);
     }
 
@@ -74,19 +74,19 @@ public abstract class SingleEntityCredentialManagerCacheAdapter implements Singl
 
     @Override
     public boolean moveStoredCredentialTo(String id, String newPreviousCredentialId) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.moveStoredCredentialTo(id, newPreviousCredentialId);
     }
 
     @Override
     public void updateCredentialLabel(String credentialId, String userLabel) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         singleEntityCredentialManager.updateCredentialLabel(credentialId, userLabel);
     }
 
     @Override
     public void disableCredentialType(String credentialType) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         singleEntityCredentialManager.disableCredentialType(credentialType);
     }
 
@@ -112,7 +112,7 @@ public abstract class SingleEntityCredentialManagerCacheAdapter implements Singl
 
     @Override
     public CredentialModel createCredentialThroughProvider(CredentialModel model) {
-        invalidateCacheForUser();
+        invalidateCacheForEntity();
         return singleEntityCredentialManager.createCredentialThroughProvider(model);
     }
 
