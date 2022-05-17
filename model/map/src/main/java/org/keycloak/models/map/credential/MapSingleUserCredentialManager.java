@@ -194,7 +194,15 @@ public class MapSingleUserCredentialManager implements SingleEntityCredentialMan
     @Override
     @Deprecated
     public CredentialModel createCredentialThroughProvider(CredentialModel model) {
-        throw new IllegalArgumentException("this is not supported for map storage");
+        // this is still called when importing/creating a user via RepresentationToModel.createCredentials
+        throwExceptionIfInvalidUser(user);
+        return session.getKeycloakSessionFactory()
+                .getProviderFactoriesStream(CredentialProvider.class)
+                .map(f -> session.getProvider(CredentialProvider.class, f.getId()))
+                .filter(provider -> Objects.equals(provider.getType(), model.getType()))
+                .map(cp -> cp.createCredential(realm, user, cp.getCredentialFromModel(model)))
+                .findFirst()
+                .orElse(null);
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
