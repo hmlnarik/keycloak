@@ -3,6 +3,7 @@ package org.keycloak.services.legacysessionsupport;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
+import org.keycloak.models.LegacySessionSupportProvider;
 
 /**
  * @author Alexander Schwartz
