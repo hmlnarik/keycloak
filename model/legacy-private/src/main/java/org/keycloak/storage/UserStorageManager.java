@@ -88,7 +88,7 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     }
 
     private UserFederatedStorageProvider getFederatedStorage() {
-        return session.userFederatedStorage();
+        return UserStorageUtil.userFederatedStorage(session);
     }
 
     /**
