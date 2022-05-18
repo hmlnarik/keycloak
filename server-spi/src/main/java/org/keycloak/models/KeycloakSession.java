@@ -209,6 +209,7 @@ public interface KeycloakSession {
      *
      * @return may be null if cache is disabled
      */
+    @Deprecated
     UserCache userCache();
 
     /**
