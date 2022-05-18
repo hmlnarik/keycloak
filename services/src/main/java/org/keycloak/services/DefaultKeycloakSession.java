@@ -173,7 +173,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
     public UserProvider userLocalStorage() {
         if (log.isEnabled(Logger.Level.WARN)) {
             // check if warning is enabled first before constructing the exception that is expensive to construct
-            log.warn("The semantics of this method have changed: If you require to talk to the local storage, consider calling LegacyDatastoreProvider#userLocalStorage() instead.", new RuntimeException());
+            log.warn("The semantics of this method have changed: Please see the migration guide on how to migrate", new RuntimeException());
         }
         return users();
     }
@@ -336,7 +336,6 @@ public class DefaultKeycloakSession implements KeycloakSession {
             return null;
         }
 
-        @SuppressWarnings("unchecked")
         ComponentFactory<T, T> componentFactory = (ComponentFactory<T, T>) providerFactory;
         T provider = componentFactory.create(this, componentModel);
         enlistForClose(provider);
