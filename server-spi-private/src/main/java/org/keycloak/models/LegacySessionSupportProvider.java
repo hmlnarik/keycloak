@@ -1,6 +1,5 @@
-package org.keycloak.services.legacysessionsupport;
+package org.keycloak.models;
 
-import org.keycloak.models.UserCredentialManager;
 import org.keycloak.provider.Provider;
 
 /**

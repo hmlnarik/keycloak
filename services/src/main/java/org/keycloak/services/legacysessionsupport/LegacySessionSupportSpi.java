@@ -1,5 +1,6 @@
 package org.keycloak.services.legacysessionsupport;
 
+import org.keycloak.models.LegacySessionSupportProvider;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.Spi;
 
