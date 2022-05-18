@@ -1,6 +1,6 @@
 package org.keycloak.services.legacysessionsupport;
 
-import org.keycloak.models.RealmProvider;
+import org.keycloak.models.LegacySessionSupportProvider;
 import org.keycloak.provider.ProviderFactory;
 
 /**
