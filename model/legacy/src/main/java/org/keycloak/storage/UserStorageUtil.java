@@ -2,6 +2,7 @@ package org.keycloak.storage;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.cache.UserCache;
 import org.keycloak.storage.federated.UserFederatedStorageProvider;
 
 import java.util.stream.Stream;
@@ -23,6 +24,10 @@ public class UserStorageUtil {
 
     public static UserFederatedStorageProvider userFederatedStorage(KeycloakSession session) {
         return session.getProvider(UserFederatedStorageProvider.class);
+    }
+
+    public static UserCache userCache(KeycloakSession session) {
+        return session.getProvider(UserCache.class);
     }
 
 }
