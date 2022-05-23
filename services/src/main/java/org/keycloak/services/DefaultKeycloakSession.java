@@ -17,6 +17,7 @@
 package org.keycloak.services;
 
 import org.jboss.logging.Logger;
+import org.keycloak.common.util.StackUtil;
 import org.keycloak.component.ComponentFactory;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.jose.jws.DefaultTokenManager;
@@ -171,10 +172,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
     @Override
     @Deprecated
     public UserProvider userLocalStorage() {
-        if (log.isEnabled(Logger.Level.WARN)) {
-            // check if warning is enabled first before constructing the exception that is expensive to construct
-            log.warn("The semantics of this method have changed: Please see the migration guide on how to migrate", new RuntimeException());
-        }
+        log.warnf("The semantics of this method have changed: Please see the migration guide on how to migrate.%s", StackUtil.getShortStackTrace());
         return users();
     }
 
