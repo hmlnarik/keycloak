@@ -639,10 +639,13 @@ public class GenerateEntityImplementationsProcessor extends AbstractGenerateEnti
                     pw.println("package " + packageName + ";");
                 }
 
-                pw.println("public class " + mapSimpleClassName + " implements " + className + " {");
+                pw.println("public class " + mapSimpleClassName + " implements " + className + ", org.keycloak.models.map.common.delegate.HasDelegateProvider<" + className + "> {");
                 pw.println("    private final org.keycloak.models.map.common.delegate.DelegateProvider<" + className + "> delegateProvider;");
                 pw.println("    public " + mapSimpleClassName + "(org.keycloak.models.map.common.delegate.DelegateProvider<" + className + "> delegateProvider) {");
                 pw.println("        this.delegateProvider = delegateProvider;");
+                pw.println("    }");
+                pw.println("    public org.keycloak.models.map.common.delegate.DelegateProvider<" + className + "> getDelegateProvider() {");
+                pw.println("        return this.delegateProvider;");
                 pw.println("    }");
 
                 getAllAbstractMethods(e)
