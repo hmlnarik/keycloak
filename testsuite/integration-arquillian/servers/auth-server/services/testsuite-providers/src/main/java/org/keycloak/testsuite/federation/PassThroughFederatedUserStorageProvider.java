@@ -166,11 +166,6 @@ public class PassThroughFederatedUserStorageProvider implements
             @Override
             public void setUsername(String username) {
             }
-
-            @Override
-            public SingleEntityCredentialManager credentialManager() {
-                return new LegacySingleUserCredentialManager(session, realm, this);
-            }
         };
     }
 }
