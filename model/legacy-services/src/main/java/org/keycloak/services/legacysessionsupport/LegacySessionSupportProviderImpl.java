@@ -51,12 +51,4 @@ public class LegacySessionSupportProviderImpl implements LegacySessionSupportPro
         return session.getProvider(UserCache.class);
     }
 
-    @Override
-    public void clearUserCache() {
-        UserCache userCache = userCache();
-        if (userCache != null) {
-            userCache.clear();
-        }
-    }
-
 }

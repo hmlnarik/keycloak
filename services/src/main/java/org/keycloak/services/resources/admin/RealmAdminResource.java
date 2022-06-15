@@ -91,6 +91,7 @@ import org.keycloak.models.utils.RepresentationToModel;
 import org.keycloak.models.utils.StripSecretsUtils;
 import org.keycloak.partialimport.PartialImportManager;
 import org.keycloak.protocol.oidc.TokenManager;
+import org.keycloak.provider.InvalidationHandler;
 import org.keycloak.representations.adapters.action.GlobalRequestResult;
 import org.keycloak.representations.idm.AdminEventRepresentation;
 import org.keycloak.representations.idm.ClientRepresentation;
@@ -439,10 +440,7 @@ public class RealmAdminResource {
             adminEvent.operation(OperationType.UPDATE).representation(StripSecretsUtils.strip(rep)).success();
             
             if (rep.isDuplicateEmailsAllowed() != null && rep.isDuplicateEmailsAllowed() != wasDuplicateEmailsAllowed) {
-                LegacySessionSupportProvider legacySessionSupportProvider = session.getProvider(LegacySessionSupportProvider.class);
-                if (legacySessionSupportProvider != null) {
-                    legacySessionSupportProvider.clearUserCache();
-                }
+                session.invalidate(InvalidationHandler.ObjectType.REALM, realm.getId());
             }
             
             return Response.noContent().build();

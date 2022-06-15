@@ -32,10 +32,4 @@ public interface LegacySessionSupportProvider extends Provider {
 
     @Deprecated
     UserProvider userCache();
-
-    /**
-     * Clears the cache if a cache is enabled for the legacy cache, and does nothing if there is no cache configured.
-     */
-    @Deprecated
-    void clearUserCache();
 }
