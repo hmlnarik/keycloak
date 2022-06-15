@@ -78,6 +78,7 @@ import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.Constants;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.LegacySessionSupportProvider;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.RealmModel;
@@ -85,7 +86,6 @@ import org.keycloak.models.RequiredActionProviderModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.cache.CacheRealmProvider;
-import org.keycloak.models.cache.UserCache;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.ModelToRepresentation;
 import org.keycloak.models.utils.RepresentationToModel;
@@ -440,8 +440,10 @@ public class RealmAdminResource {
             adminEvent.operation(OperationType.UPDATE).representation(StripSecretsUtils.strip(rep)).success();
             
             if (rep.isDuplicateEmailsAllowed() != null && rep.isDuplicateEmailsAllowed() != wasDuplicateEmailsAllowed) {
-                UserCache cache = session.getProvider(UserCache.class);
-                if (cache != null) cache.clear();
+                LegacySessionSupportProvider legacySessionSupportProvider = session.getProvider(LegacySessionSupportProvider.class);
+                if (legacySessionSupportProvider != null) {
+                    legacySessionSupportProvider.clearUserCache();
+                }
             }
             
             return Response.noContent().build();
@@ -1090,23 +1092,6 @@ public class RealmAdminResource {
         auth.realm().requireManageRealm();
 
         CacheRealmProvider cache = session.getProvider(CacheRealmProvider.class);
-        if (cache != null) {
-            cache.clear();
-        }
-
-        adminEvent.operation(OperationType.ACTION).resourcePath(session.getContext().getUri()).success();
-    }
-
-    /**
-     * Clear user cache
-     *
-     */
-    @Path("clear-user-cache")
-    @POST
-    public void clearUserCache() {
-        auth.realm().requireManageRealm();
-
-        UserCache cache = session.getProvider(UserCache.class);
         if (cache != null) {
             cache.clear();
         }
