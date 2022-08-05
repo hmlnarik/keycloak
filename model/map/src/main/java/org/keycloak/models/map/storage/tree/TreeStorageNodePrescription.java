@@ -32,6 +32,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.storage.MapStorageProviderFactory.Completeness;
 import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 
@@ -172,6 +173,8 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
         return restricted.computeIfAbsent(targetEntityClass, c -> {
             HashMap<String, Object> treeProperties = new HashMap<>(restrictConfigMap(targetEntityClass, getTreeProperties()));
             treeProperties.put(TreeProperties.MODEL_CLASS, ModelEntityUtil.getModelType(targetEntityClass));
+            treeProperties.put(TreeProperties.ENTITY_CLASS, targetEntityClass);
+            treeProperties.put(TreeProperties.ENTITY_ID_FIELD, ModelEntityUtil.getIdField(targetEntityClass));
             return cloneTree(n -> n.forEntityClass(targetEntityClass, treeProperties));
         });
     }
@@ -190,7 +193,9 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
             return null;
         }
 
-        return new TreeStorageNodePrescription(treeProperties, nodeProperties, edgeProperties);
+        final TreeStorageNodePrescription res = new TreeStorageNodePrescription(treeProperties, nodeProperties, edgeProperties);
+        res.setId(this.getId());
+        return res;
     }
 
     /**
@@ -334,6 +339,10 @@ public class TreeStorageNodePrescription extends DefaultTreeNode<TreeStorageNode
     @Override
     protected String getLabel() {
         return getId() + getNodeProperty(NodeProperties.STORAGE_PROVIDER, String.class).map(s -> " [" + s + "]").orElse("");
+    }
+
+    public Completeness getStorageCompleteness() {
+        return getNodeProperty(NodeProperties.STORAGE_COMPLETENESS, Completeness.class).orElse(Completeness.PARTIAL);
     }
 
     /**

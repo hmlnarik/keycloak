@@ -10,12 +10,38 @@ import java.util.Arrays;
 
 import org.junit.Test;
 import org.keycloak.models.map.client.MapClientEntity;
-import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.client.MapClientEntityFields;
+import org.keycloak.models.map.common.ParameterizedEntityField;
+import org.keycloak.models.map.storage.MapStorageProviderFactory.Completeness;
+import org.keycloak.models.map.storage.mapper.MappingEntityFieldDelegate;
+import org.keycloak.models.map.storage.tree.config.MapperTranslator.AttributeValueConversionMapper;
+import org.keycloak.models.map.storage.mapper.MappersMap;
+import org.keycloak.models.map.storage.mapper.TemplateMapper;
+import org.keycloak.testsuite.model.storage.tree.sample.PartialStorageProviderFactory.DictFieldDescriptorGetter;
+import java.util.Optional;
 
 public class DictTest {
+
+    @SuppressWarnings("unchecked")
+    <V extends MapClientEntity> V getMappedEntity(Class<V> entityClass, Dict entity) {
+        MappersMap<V, Dict> clientMappers = new MappersMap<>();
+        clientMappers.add((ParameterizedEntityField<V>) ParameterizedEntityField.from(MapClientEntityFields.ID),
+          TemplateMapper.forTemplate("{NAME}", DictFieldDescriptorGetter.INSTANCE, String.class));
+        clientMappers.put((ParameterizedEntityField<V>) ParameterizedEntityField.from(MapClientEntityFields.CLIENT_ID),
+          TemplateMapper.forTemplate("{NAME}", DictFieldDescriptorGetter.INSTANCE, String.class));
+        clientMappers.put((ParameterizedEntityField<V>) ParameterizedEntityField.from(MapClientEntityFields.ENABLED),
+          TemplateMapper.forTemplate("{ENABLED}", DictFieldDescriptorGetter.INSTANCE, Boolean.class));
+        clientMappers.put((ParameterizedEntityField<V>) ParameterizedEntityField.from(MapClientEntityFields.ATTRIBUTES, "logo"),
+          new AttributeValueConversionMapper(TemplateMapper.forTemplate("{LOGO}", DictFieldDescriptorGetter.INSTANCE, String.class)));
+
+        return Optional.of(clientMappers)
+          .map(mappers -> MappingEntityFieldDelegate.delegate(mappers, entity, entityClass, Completeness.PARTIAL))
+          .orElse(null);
+    }
+
     @Test
     public void testDictClientFromMap() {
-        MapClientEntity mce = Dict.clientDelegate(DeepCloner.DUMB_CLONER);
+        MapClientEntity mce = getMappedEntity(MapClientEntity.class, Dict.clientDelegate());
         assertThat(mce.getClientId(), nullValue());
         assertThat(mce.isEnabled(), nullValue());
         assertThat(mce.getAttribute("logo"), nullValue());
@@ -35,7 +61,7 @@ public class DictTest {
 
     @Test
     public void testDictClientFromEntity() {
-        MapClientEntity mce = Dict.clientDelegate(DeepCloner.DUMB_CLONER);
+        MapClientEntity mce = getMappedEntity(MapClientEntity.class, Dict.clientDelegate());
         
         assertThat(Dict.asDict(mce).get(Dict.CLIENT_FIELD_NAME), nullValue());
         assertThat(Dict.asDict(mce).get(Dict.CLIENT_FIELD_ENABLED), nullValue());

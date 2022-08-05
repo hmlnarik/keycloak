@@ -37,11 +37,16 @@ import org.keycloak.models.map.authorization.entity.MapResourceEntity;
 import org.keycloak.models.map.authorization.entity.MapResourceServerEntity;
 import org.keycloak.models.map.authorization.entity.MapScopeEntity;
 import org.keycloak.models.map.client.MapClientEntity;
+import org.keycloak.models.map.client.MapClientEntityFields;
 import org.keycloak.models.map.clientscope.MapClientScopeEntity;
+import org.keycloak.models.map.clientscope.MapClientScopeEntityFields;
 import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.ParameterizedEntityField;
 import org.keycloak.models.map.group.MapGroupEntity;
 import org.keycloak.models.map.loginFailure.MapUserLoginFailureEntity;
 import org.keycloak.models.map.realm.MapRealmEntity;
+import org.keycloak.models.map.realm.MapRealmEntityFields;
 import org.keycloak.models.map.role.MapRoleEntity;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.user.MapUserConsentEntity;
@@ -66,9 +71,13 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.keycloak.models.map.storage.CriterionNotSupportedException;
+import org.keycloak.models.map.storage.ModelEntityUtil;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import static org.keycloak.models.UserSessionModel.CORRESPONDING_SESSION_ID;
 
 /**
@@ -94,23 +103,24 @@ public class MapFieldPredicates {
     public static final Map<SearchableModelField<UserSessionModel>, UpdatePredicatesFunc<Object, MapUserSessionEntity, UserSessionModel>> USER_SESSION_PREDICATES = basePredicates(UserSessionModel.SearchableFields.ID);
 
     @SuppressWarnings("unchecked")
-    private static final Map<Class<?>, Map> PREDICATES = new HashMap<>();
+    private static final Map<Class<?>, Map> PREDICATES;
     private static final Map<SearchableModelField<?>, Comparator<?>> COMPARATORS = new IdentityHashMap<>();
+    public static final Map<SearchableModelField<?>, ParameterizedEntityField<?>> MODEL_TO_ENTITY_FIELD = new IdentityHashMap<>();
 
     static {
-        put(REALM_PREDICATES, RealmModel.SearchableFields.NAME,                   MapRealmEntity::getName);
-        putIncomparable(REALM_PREDICATES, RealmModel.SearchableFields.CLIENT_INITIAL_ACCESS,  MapRealmEntity::getClientInitialAccesses);
-        put(REALM_PREDICATES, RealmModel.SearchableFields.COMPONENT_PROVIDER_TYPE, MapFieldPredicates::checkRealmsWithComponentType);
+        put(REALM_PREDICATES, RealmModel.SearchableFields.NAME,                   MapRealmEntityFields.NAME);
+        put(REALM_PREDICATES, RealmModel.SearchableFields.CLIENT_INITIAL_ACCESS,  MapRealmEntityFields.CLIENT_INITIAL_ACCESSES);
+        put(REALM_PREDICATES, RealmModel.SearchableFields.COMPONENT_PROVIDER_TYPE, MapRealmEntityFields.COMPONENTS, MapFieldPredicates::checkRealmsWithComponentType);
 
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.REALM_ID,             MapClientEntity::getRealmId);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.CLIENT_ID,            MapClientEntity::getClientId);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.SCOPE_MAPPING_ROLE,   MapFieldPredicates::checkScopeMappingRole);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ENABLED,              MapClientEntity::isEnabled);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ALWAYS_DISPLAY_IN_CONSOLE, MapClientEntity::isAlwaysDisplayInConsole);
-        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ATTRIBUTE,            MapFieldPredicates::checkClientAttributes);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.REALM_ID,             MapClientEntityFields.REALM_ID);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.CLIENT_ID,            MapClientEntityFields.CLIENT_ID);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.SCOPE_MAPPING_ROLE,   MapClientEntityFields.SCOPE_MAPPINGS, MapFieldPredicates::checkScopeMappingRole);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ENABLED,              MapClientEntityFields.ENABLED);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ALWAYS_DISPLAY_IN_CONSOLE, MapClientEntityFields.ALWAYS_DISPLAY_IN_CONSOLE);
+        put(CLIENT_PREDICATES, ClientModel.SearchableFields.ATTRIBUTE,            MapClientEntityFields.ATTRIBUTES, MapFieldPredicates::checkClientAttributes);
 
-        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.REALM_ID,  MapClientScopeEntity::getRealmId);
-        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.NAME,      MapClientScopeEntity::getName);
+        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.REALM_ID,  MapClientScopeEntityFields.REALM_ID);
+        put(CLIENT_SCOPE_PREDICATES, ClientScopeModel.SearchableFields.NAME,      MapClientScopeEntityFields.NAME);
 
         put(GROUP_PREDICATES, GroupModel.SearchableFields.REALM_ID,               MapGroupEntity::getRealmId);
         put(GROUP_PREDICATES, GroupModel.SearchableFields.NAME,                   MapGroupEntity::getName);
@@ -197,21 +207,52 @@ public class MapFieldPredicates {
     }
 
     static {
-        PREDICATES.put(RealmModel.class,                        REALM_PREDICATES);
-        PREDICATES.put(ClientModel.class,                       CLIENT_PREDICATES);
-        PREDICATES.put(ClientScopeModel.class,                  CLIENT_SCOPE_PREDICATES);
-        PREDICATES.put(RoleModel.class,                         ROLE_PREDICATES);
-        PREDICATES.put(GroupModel.class,                        GROUP_PREDICATES);
-        PREDICATES.put(UserModel.class,                         USER_PREDICATES);
-        PREDICATES.put(RootAuthenticationSessionModel.class,    AUTHENTICATION_SESSION_PREDICATES);
-        PREDICATES.put(ResourceServer.class,                    AUTHZ_RESOURCE_SERVER_PREDICATES);
-        PREDICATES.put(Resource.class,                          AUTHZ_RESOURCE_PREDICATES);
-        PREDICATES.put(Scope.class,                             AUTHZ_SCOPE_PREDICATES);
-        PREDICATES.put(PermissionTicket.class,                  AUTHZ_PERMISSION_TICKET_PREDICATES);
-        PREDICATES.put(Policy.class,                            AUTHZ_POLICY_PREDICATES);
-        PREDICATES.put(UserSessionModel.class,                  USER_SESSION_PREDICATES);
-        PREDICATES.put(AuthenticatedClientSessionModel.class,   CLIENT_SESSION_PREDICATES);
-        PREDICATES.put(UserLoginFailureModel.class,             USER_LOGIN_FAILURE_PREDICATES);
+        Map<Class<?>, Map> predicates = new HashMap<>();
+        predicates.put(RealmModel.class,                        Collections.unmodifiableMap(REALM_PREDICATES));
+        predicates.put(ClientModel.class,                       Collections.unmodifiableMap(CLIENT_PREDICATES));
+        predicates.put(ClientScopeModel.class,                  Collections.unmodifiableMap(CLIENT_SCOPE_PREDICATES));
+        predicates.put(RoleModel.class,                         Collections.unmodifiableMap(ROLE_PREDICATES));
+        predicates.put(GroupModel.class,                        Collections.unmodifiableMap(GROUP_PREDICATES));
+        predicates.put(UserModel.class,                         Collections.unmodifiableMap(USER_PREDICATES));
+        predicates.put(RootAuthenticationSessionModel.class,    Collections.unmodifiableMap(AUTHENTICATION_SESSION_PREDICATES));
+        predicates.put(ResourceServer.class,                    Collections.unmodifiableMap(AUTHZ_RESOURCE_SERVER_PREDICATES));
+        predicates.put(Resource.class,                          Collections.unmodifiableMap(AUTHZ_RESOURCE_PREDICATES));
+        predicates.put(Scope.class,                             Collections.unmodifiableMap(AUTHZ_SCOPE_PREDICATES));
+        predicates.put(PermissionTicket.class,                  Collections.unmodifiableMap(AUTHZ_PERMISSION_TICKET_PREDICATES));
+        predicates.put(Policy.class,                            Collections.unmodifiableMap(AUTHZ_POLICY_PREDICATES));
+        predicates.put(UserSessionModel.class,                  Collections.unmodifiableMap(USER_SESSION_PREDICATES));
+        predicates.put(AuthenticatedClientSessionModel.class,   Collections.unmodifiableMap(CLIENT_SESSION_PREDICATES));
+        predicates.put(UserLoginFailureModel.class,             Collections.unmodifiableMap(USER_LOGIN_FAILURE_PREDICATES));
+        PREDICATES = Collections.unmodifiableMap(predicates);
+    }
+
+    private static final String SEARCHABLE_FIELD_NAME_ID = ClientModel.SearchableFields.ID.getName();
+    /**
+     * Map which to a model class assigns a corresponding searchable ID field.
+     */
+    public static final Map<Class<?>, SearchableModelField<?>> SEARCHABLE_FIELD_IDS = PREDICATES.entrySet().stream()
+      .collect(Collectors.toMap(
+        Map.Entry::getKey,
+        me -> ((Set<SearchableModelField<?>>) me.getValue().keySet()).stream().filter((SearchableModelField f) -> SEARCHABLE_FIELD_NAME_ID.equals(f.getName())).findAny().orElse(null)
+      ));
+
+    static {
+        SEARCHABLE_FIELD_IDS.forEach((modelClass, searchableField) -> MODEL_TO_ENTITY_FIELD.put(searchableField, ParameterizedEntityField.from(ModelEntityUtil.getIdField(ModelEntityUtil.getEntityType(modelClass)))));
+    }
+
+    private static final String SEARCHABLE_FIELD_NAME_REALM_ID = ClientModel.SearchableFields.REALM_ID.getName();
+    /**
+     * Map which to a model class assigns a corresponding searchable ID field.
+     */
+    public static final Map<Class<?>, SearchableModelField<?>> SEARCHABLE_FIELD_REALM_IDS = new IdentityHashMap<>();
+    static {
+        // Cannot use streams to construct SEARCHABLE_FIELD_REALM_IDS because some of the values are null and that leads to NPE
+        for (Entry<Class<?>, Map> me : PREDICATES.entrySet()) {
+            final Class<?> modelClass = me.getKey();
+            final Set<SearchableModelField<?>> sf = me.getValue().keySet();
+            sf.stream().filter(f -> SEARCHABLE_FIELD_NAME_REALM_ID.equals(f.getName())).findAny()
+              .ifPresent(f -> SEARCHABLE_FIELD_REALM_IDS.put(modelClass, f));
+        }
     }
 
     private static <K, V extends AbstractEntity, M, L extends Comparable<L>> void put(
@@ -219,6 +260,17 @@ public class MapFieldPredicates {
       SearchableModelField<M> field, Function<V, L> extractor) {
         COMPARATORS.put(field, Comparator.comparing(extractor));
         map.put(field, (mcb, op, values) -> mcb.fieldCompare(op, extractor, values));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K, V extends AbstractEntity, M> void put(
+      Map<SearchableModelField<M>, UpdatePredicatesFunc<K, V, M>> map,
+      SearchableModelField<M> field, EntityField<V> entityField) {
+        if (Comparable.class.isAssignableFrom(entityField.getFieldClass())) {
+            COMPARATORS.put(field, Comparator.comparing((V v) -> (Comparable) entityField.get(v)));
+        }
+        MODEL_TO_ENTITY_FIELD.put(field, ParameterizedEntityField.from(entityField));
+        map.put(field, (mcb, op, values) -> mcb.fieldCompare(op, entityField::get, values));
     }
 
     private static <K, V extends AbstractEntity, M> void putIncomparable(
@@ -230,6 +282,13 @@ public class MapFieldPredicates {
     private static <K, V extends AbstractEntity, M> void put(
       Map<SearchableModelField<M>, UpdatePredicatesFunc<K, V, M>> map,
       SearchableModelField<M> field, UpdatePredicatesFunc<K, V, M> function) {
+        map.put(field, function);
+    }
+
+    private static <K, V extends AbstractEntity, M> void put(
+      Map<SearchableModelField<M>, UpdatePredicatesFunc<K, V, M>> map,
+      SearchableModelField<M> field, EntityField<V> entityField, UpdatePredicatesFunc<K, V, M> function) {
+        MODEL_TO_ENTITY_FIELD.put(field, ParameterizedEntityField.from(entityField));
         map.put(field, function);
     }
 

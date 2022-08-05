@@ -297,7 +297,7 @@ public class LdapRoleEntity extends UpdatableEntity.Impl implements EntityFieldD
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<MapRoleEntity>> & EntityField<MapRoleEntity>> void set(EF field, T value) {
+    public <T> void set(EntityField<MapRoleEntity>field, T value) {
         BiConsumer<LdapRoleEntity, Object> consumer = SETTERS.get(field);
         if (consumer == null) {
             throw new ModelException("unsupported field for setters " + field);
@@ -306,7 +306,7 @@ public class LdapRoleEntity extends UpdatableEntity.Impl implements EntityFieldD
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<MapRoleEntity>> & EntityField<MapRoleEntity>> void collectionAdd(EF field, T value) {
+    public <T> void collectionAdd(EntityField<MapRoleEntity>field, T value) {
         BiConsumer<LdapRoleEntity, Object> consumer = ADDERS.get(field);
         if (consumer == null) {
             throw new ModelException("unsupported field for setters " + field);
@@ -315,7 +315,7 @@ public class LdapRoleEntity extends UpdatableEntity.Impl implements EntityFieldD
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<MapRoleEntity>> & EntityField<MapRoleEntity>> Object collectionRemove(EF field, T value) {
+    public <T> Object collectionRemove(EntityField<MapRoleEntity>field, T value) {
         BiFunction<LdapRoleEntity, Object, Object> consumer = REMOVERS.get(field);
         if (consumer == null) {
             throw new ModelException("unsupported field for setters " + field);
@@ -324,7 +324,7 @@ public class LdapRoleEntity extends UpdatableEntity.Impl implements EntityFieldD
     }
 
     @Override
-    public <EF extends Enum<? extends EntityField<MapRoleEntity>> & EntityField<MapRoleEntity>> Object get(EF field) {
+    public Object get(EntityField<MapRoleEntity>field) {
         Function<LdapRoleEntity, Object> consumer = GETTERS.get(field);
         if (consumer == null) {
             throw new ModelException("unsupported field for getters " + field);

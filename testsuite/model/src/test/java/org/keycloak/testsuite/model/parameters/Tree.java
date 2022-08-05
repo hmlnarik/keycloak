@@ -27,6 +27,8 @@ import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.MapStorageSpi;
 import org.keycloak.models.map.storage.chm.ConcurrentHashMapStorageProviderFactory;
 import org.keycloak.models.map.storage.tree.TreeStorageProviderFactory;
+import org.keycloak.models.map.storage.mapper.MapperSpi;
+import org.keycloak.models.map.storage.mapper.TemplateMapperProvider;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.Spi;
 import org.keycloak.sessions.AuthenticationSessionSpi;
@@ -53,6 +55,7 @@ public class Tree extends KeycloakModelParameters {
     static final Set<Class<? extends Spi>> ALLOWED_SPIS = ImmutableSet.<Class<? extends Spi>>builder()
       .add(AuthenticationSessionSpi.class)
       .add(MapStorageSpi.class)
+      .add(MapperSpi.class)
 
       .build();
 
@@ -63,6 +66,8 @@ public class Tree extends KeycloakModelParameters {
       .add(ConcurrentHashMapStorageProviderFactory.class)
 
       .add(MapStorageProviderFactory.class)
+
+      .add(TemplateMapperProvider.class)
       .build();
 
     private final AtomicInteger counter = new AtomicInteger();

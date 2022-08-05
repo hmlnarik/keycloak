@@ -60,12 +60,6 @@ public abstract class PartialMappingTransaction<V extends AbstractEntity, M, R e
           : id -> idMapper.backToMap(id);
     }
 
-//    private static Object getId(String id, Map<String, Object> key2Values) {
-//        return (key2Values == null || key2Values.size() != 1)
-//          ? null
-//          : key2Values.values().iterator().next();
-//    }
-//
     @Override
     public V create(V value) {
         return createMappingDelegate(createRaw(value));

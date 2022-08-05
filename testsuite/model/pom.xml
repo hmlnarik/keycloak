@@ -335,6 +335,15 @@
         </profile>
 
         <profile>
+            <id>tree-changing-id</id>
+            <properties>
+                <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
+                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <tree.configResource>/tree-storage-provider/tree-changingId-partial.yaml</tree.configResource>
+            </properties>
+        </profile>
+
+        <profile>
             <id>hot-rod</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>

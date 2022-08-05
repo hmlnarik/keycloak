@@ -19,7 +19,6 @@ package org.keycloak.models.map.storage.ldap;
 
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.StringKeyConverter;
-import org.keycloak.models.map.common.StringKeyConverter;
 import org.keycloak.models.map.storage.chm.MapModelCriteriaBuilder;
 import org.keycloak.storage.SearchableModelField;
 

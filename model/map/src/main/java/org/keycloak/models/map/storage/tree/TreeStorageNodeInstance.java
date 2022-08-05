@@ -16,6 +16,7 @@
  */
 package org.keycloak.models.map.storage.tree;
 
+import org.keycloak.models.map.storage.mapper.MappingEntityFieldDelegate;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.MapStorageProviderFactory.Flag;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
@@ -32,11 +33,18 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.delegate.DelegateProvider;
+import org.keycloak.models.map.common.delegate.EntityFieldDelegate;
+import org.keycloak.models.map.common.delegate.HasDelegateProvider;
+import org.keycloak.models.map.common.delegate.HasEntityFieldDelegate;
 import org.keycloak.models.map.common.delegate.PerFieldDelegateProvider;
+import org.keycloak.models.map.storage.MapStorageProviderFactory.Completeness;
 import org.keycloak.models.map.storage.tree.TreeStorageNodePrescription.FieldContainedStatus;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
+import org.keycloak.models.map.common.delegate.HasRawEntity;
+import org.keycloak.models.map.storage.mapper.MappersMap;
 
 /**
  * Instance of the tree storage that is based on a prescription ({@link TreeStorageNodePrescription}),
@@ -60,6 +68,7 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
         private final TreeStorageTransaction<V, ?> tx;
 
         public WithEntity(V entity, TreeStorageTransaction<V, ?> tx) {
+            Objects.requireNonNull(entity);
             this.entity = entity;
             this.tx = tx;
         }
@@ -124,45 +133,68 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
          */
         public V getLowerEntity() {
             final TreeStorageNodeInstance<V> origin = getNode();
-            final V entity = getEntity();
-            final StorageId entityId = entity == null ? null : new StorageId(origin.getId(), entity.getId());
-            StorageId storageId = origin.getTreeAwareMapTransaction()
-              .map(t -> t.getOriginalStorageId(origin, entityId, () -> entity))
+            final StorageId thisEntityId = new StorageId(origin.getId(), entity.getId());
+            StorageId originalEntityId = tx.getTreeAwareMapTransaction(origin)
+              .map(t -> t.getOriginalStorageId(origin, thisEntityId, this::getRawEntity))
               .orElse(new StorageId(entity.getId()));
             TreeStorageNodeInstance<V>.WithEntity readObject;
             Predicate<TreeStorageNodeInstance<V>> readFromNodePredicate;
 
             // Usually the storage ID will be known and will be a direct child:
-            final Optional<TreeStorageNodeInstance<V>> directChild = origin.getChild(storageId.getProviderId());
+            final Optional<TreeStorageNodeInstance<V>> directChild = origin.getChild(originalEntityId.getProviderId());
             readObject = directChild
-              .map(dc -> tx.readFromNode(dc, storageId.getExternalId()))
+              .map(dc -> tx.readRawAndValidateFromNode(dc, originalEntityId.getExternalId()))
               .map(e -> directChild.get().new WithEntity(e, tx))
               .orElse(null);
 
             // If not a direct child or the child has been removed:
             if (! directChild.isPresent()) {
-                if (storageId.isLocal()) {
-                    // We need to lookup all children for the object with the given ID as the node is not known.
+                if (originalEntityId.isLocal()) {
+                    // We need to inspect all children looking for the object with the given ID as the node is not known.
                     AtomicReference<TreeStorageNodeInstance<V>.WithEntity> readObjectRef = new AtomicReference<>();
-                    readFromNodePredicate = tx.readFromNodePredicate(readObjectRef, storageId);
+                    readFromNodePredicate = tx.readFromNodePredicate(readObjectRef, originalEntityId);
                     origin.findFirstBfs(readFromNodePredicate);
+                    readObject = readObjectRef.get();
                 } else {
                     // Otherwise lookup the right child for the given ID
-                    final Optional<TreeStorageNodeInstance<V>> indirectChild = origin.findFirstBfs(n -> Objects.equals(storageId.getProviderId(), n.getId()));
-                    readObject = indirectChild
-                      .map(dc -> tx.readFromNode(dc, storageId.getExternalId()))
-                      .map(e -> indirectChild.get().new WithEntity(e, tx))
+                    final Optional<TreeStorageNodeInstance<V>> indirectChildById = origin.findFirstBfs(n -> Objects.equals(originalEntityId.getProviderId(), n.getId()));
+                    readObject = indirectChildById
+                      .map(dc -> tx.readRawAndValidateFromNode(dc, originalEntityId.getExternalId()))
+                      .map(e -> indirectChildById.get().new WithEntity(e, tx))
                       .orElse(null);
                 }
             }
 
             if (readObject == null) {
                 // TODO: This should lead to invalidation of the entity in the origin node
-                origin.getTreeAwareMapTransaction().ifPresent(t -> t.invalidate(entity));
+                tx.getTreeAwareMapTransaction(origin).ifPresent(t -> t.invalidate(entity));
                 throw new IllegalStateException("Entity is in illegal state: " + entity);
             }
 
             return readObject.wrapLazyDelegationToLowerEntity();
+        }
+
+        @SuppressWarnings("unchecked")
+        private <R> R getRawEntity() {
+            Object r = entity;
+            while (r != null) {
+                if (r instanceof HasEntityFieldDelegate) {
+                    EntityFieldDelegate d = ((HasEntityFieldDelegate) r).getEntityFieldDelegate();
+                    if (d instanceof HasRawEntity) {
+                        r = ((HasRawEntity) d).getRawEntity();
+                    } else {
+                        return (R) r;
+                    }
+                } else if (r instanceof HasDelegateProvider) {
+                    DelegateProvider d = ((HasDelegateProvider) r).getDelegateProvider();
+                    if (d instanceof HasRawEntity) {
+                        r = ((HasRawEntity) d).getRawEntity();
+                    } else {
+                        return (R) r;
+                    }
+                }
+            }
+            return (R) r;
         }
     }
 
@@ -242,17 +274,18 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
         Class<M> modelClass = getTreeProperty(MODEL_CLASS, Class.class).orElseThrow(() -> new IllegalStateException("Undefined model class."));
         @SuppressWarnings("unchecked")
         Optional<StorageSupplier> storageSupplier = getNodeProperty(NodeProperties.STORAGE_SUPPLIER, StorageSupplier.class);
-        return storageSupplier
+
+        final MapStorage<V, M> res = storageSupplier
           .map(supp -> (MapStorage<V, M>) supp.getStorage(session, modelClass, flags))
           .orElse(EmptyMapStorage.<V, M>getInstance());
-    }
 
-    @SuppressWarnings("unchecked")
-    public <M> Optional<TreeAwareMapTransaction<V, M>> getTreeAwareMapTransaction() {
-        MapStorage<V, M> res = getStorage();
-        return res instanceof TreeAwareMapTransaction
-          ? Optional.of((TreeAwareMapTransaction<V, M>) res)
-          : Optional.empty();
+        if (res instanceof MapStorage.Partial) {
+            final Optional<MappersMap> mappersMap = getNodeProperty(NodeProperties.STORE_MAPPERS, MappersMap.class);
+
+            mappersMap.ifPresent(((MapStorage.Partial) res)::setMappers);
+        }
+
+        return res;
     }
 
     public AuthoritativeStatus getAuthoritativeStatus(DefaultModelCriteria<?> criteria) {
@@ -289,8 +322,8 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
         return prescription.isCacheFor(field, parameter);
     }
 
-    public FieldContainedStatus isPrimarySourceFor(Enum<? extends EntityField<V>> field, Object parameter) {
-        return prescription.isPrimarySourceFor((EntityField<?>) field, parameter);
+    public FieldContainedStatus isPrimarySourceFor(EntityField<V> field, Object parameter) {
+        return prescription.isPrimarySourceFor(field, parameter);
     }
 
     void setNodeAuthoritative(boolean authoritative) {
@@ -300,5 +333,32 @@ public class TreeStorageNodeInstance<V extends AbstractEntity>
     public boolean isNodeAuthoritative() {
         return nodeAuthoritative;
     }
+
+    public Completeness getStorageCompleteness() {
+        return prescription.getStorageCompleteness();
+    }
+
+    public Class<V> getEntityClass() {
+        return getTreeProperty(TreeProperties.ENTITY_CLASS, Class.class).orElseThrow(() -> new IllegalArgumentException("Unknown entity class"));
+    }
+
+    public <M> Class<M> getModelClass() {
+        return getTreeProperty(TreeProperties.MODEL_CLASS, Class.class).orElseThrow(() -> new IllegalArgumentException("Unknown model class"));
+    }
+
+    /**
+     * Applies mappers (if any) to the entity in this node.
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    V getMappedEntity(Object entity) {
+        if (entity == null) {
+            return null;
+        }
+        return (V) getNodeProperty(NodeProperties.STORE_MAPPERS, MappersMap.class)
+          .map(mappers -> MappingEntityFieldDelegate.delegate(mappers, entity, getEntityClass(), getStorageCompleteness()))
+          .orElse((V) entity);
+    }
+
 
 }

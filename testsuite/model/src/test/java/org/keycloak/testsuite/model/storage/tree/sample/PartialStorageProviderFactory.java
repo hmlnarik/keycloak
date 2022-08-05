@@ -27,22 +27,27 @@ import org.keycloak.component.ComponentModelScope;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.models.map.client.MapClientEntity;
 import org.keycloak.models.map.common.AbstractEntity;
-import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.MapStorageProvider;
 import org.keycloak.models.map.storage.MapStorageProviderFactory;
 import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.tree.config.ConfigTranslator.MapStoreComponentConfig;
+import org.keycloak.models.map.storage.mapper.MapperProviderFactory.FieldDescriptorGetter;
+import org.keycloak.models.map.storage.mapper.MapperProviderFactory.MapperFieldDescriptor;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  *
  * @author hmlnarik
  */
-public class PartialStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory {
+public class PartialStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory.Partial {
 
     private static final Logger LOG = Logger.getLogger(PartialStorageProviderFactory.class);
     public static final String PROVIDER_ID = "partial";
@@ -52,11 +57,11 @@ public class PartialStorageProviderFactory implements AmphibianProviderFactory<M
 
         @Override
         @SuppressWarnings("unchecked")
-        public <V extends AbstractEntity, M> DictStorage<V, M> getStorage(Class<M> modelType, Flag... flags) {
+        public <V extends AbstractEntity, M> MapStorage<V, M> getStorage(Class<M> modelType, Flag... flags) {
             if (modelType != ClientModel.class) {
                 throw new UnsupportedOperationException("Unsupported model type.");
             }
-            return getStorageFor(modelType);
+            return (MapStorage<V, M>) getStorageFor(modelType);
         }
 
         @Override
@@ -66,15 +71,16 @@ public class PartialStorageProviderFactory implements AmphibianProviderFactory<M
 
     private final ConcurrentMap<Class<?>, DictStorage<?, ?>> store = new ConcurrentHashMap<>();
 
-    static final DeepCloner CLONER = new DeepCloner.Builder()
-      .constructor(MapClientEntity.class, Dict::clientDelegate)
-      .build();
+    static final Map<Class<?>, Supplier<Dict>> CREATOR = new HashMap<>();
+    static {
+        CREATOR.put(ClientModel.class, Dict::clientDelegate);
+    }
 
     private final MapStorageProvider providerInstance = new Provider();
 
     @SuppressWarnings("unchecked")
     private <V extends AbstractEntity, M> DictStorage<V, M> getStorageFor(Class<M> modelType) {
-        return (DictStorage<V, M>) store.computeIfAbsent(modelType, c -> new DictStorage<>(CLONER, new LinkedList<V>()));
+        return (DictStorage<V, M>) store.computeIfAbsent(modelType, c -> new DictStorage<>(ModelEntityUtil.getEntityType(modelType), new LinkedList<>(), CREATOR.get(modelType)));
     }
 
     @Override
@@ -101,23 +107,28 @@ public class PartialStorageProviderFactory implements AmphibianProviderFactory<M
 
     private void addContents(String name, List<Map<String, Object>> fieldValues) {
         Class<?> modelClass = ModelEntityUtil.getModelClass(name);
-        Class<? extends AbstractEntity> entityClass = ModelEntityUtil.getEntityType(modelClass);
         if (modelClass == null) {
             LOG.warnf("Ignoring unknown entity %s", name);
             return;
         }
 
-        DictStorage<AbstractEntity, ?> entStore = getStorageFor(modelClass);
-        List<AbstractEntity> internalStore = entStore.getStore();
+        DictStorage<?, ?> entStore = getStorageFor(modelClass);
+        List<Dict> internalStore = entStore.getStore();
 
         for (Map<String, Object> m : fieldValues) {
-            AbstractEntity entity = CLONER.newInstance(entityClass);
+            Dict entity = (Dict) CREATOR.get(modelClass).get();
             internalStore.add(entity);
-            Dict<?> ent = Dict.asDict(entity);
             for (Map.Entry<String, Object> e : m.entrySet()) {
-                ent.put(e.getKey(), e.getValue());
+                entity.put(e.getKey(), e.getValue());
             }
         }
+    }
+
+    @Override
+    public FieldDescriptorGetter<?> getFieldDescriptorGetter(Class<? extends AbstractEntity> entityClass) {
+        // Dict is used for all entity areas, so entityClass does not matter
+
+        return new DictFieldDescriptorGetter();
     }
 
     @Override
@@ -133,6 +144,44 @@ public class PartialStorageProviderFactory implements AmphibianProviderFactory<M
     @Override
     public String getHelpText() {
         return "TESTS: Partial storage";
+    }
+
+    public static class DictFieldDescriptorGetter implements FieldDescriptorGetter<Dict> {
+
+        public static final DictFieldDescriptorGetter INSTANCE = new DictFieldDescriptorGetter();
+        private static final Map<String, Class<?>> FIELD_TYPES = Map.of(
+          Dict.CLIENT_FIELD_ENABLED, Boolean.class
+//          Dict.CLIENT_FIELD_LOGO, byte[].class
+        );
+
+        private final class DictMapperFieldDescriptor implements MapperFieldDescriptor<Dict> {
+
+            private final String fieldName;
+
+            public DictMapperFieldDescriptor(String fieldName) {
+                this.fieldName = fieldName;
+            }
+
+            @Override
+            public Function<Dict, Object> fieldGetter() {
+                return dict -> dict.get(fieldName);
+            }
+
+            @Override
+            public BiConsumer<Dict, Object> fieldSetter() {
+                return (dict, o) -> dict.put(fieldName, o);
+            }
+
+            @Override
+            public Class<?> getFieldClass() {
+                return FIELD_TYPES.getOrDefault(fieldName, String.class);
+            }
+        }
+
+        @Override
+        public MapperFieldDescriptor<Dict> getFieldDescriptor(String fieldName) {
+            return new DictMapperFieldDescriptor(fieldName);
+        }
     }
 
 }

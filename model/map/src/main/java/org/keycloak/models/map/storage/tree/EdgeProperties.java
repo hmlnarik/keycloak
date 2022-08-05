@@ -16,6 +16,9 @@
  */
 package org.keycloak.models.map.storage.tree;
 
+import org.keycloak.models.map.storage.mapper.DirectMapper;
+import org.keycloak.models.map.storage.mapper.Mapper;
+
 /**
  *
  * @author hmlnarik

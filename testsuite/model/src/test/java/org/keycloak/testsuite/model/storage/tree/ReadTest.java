@@ -28,21 +28,34 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.models.map.client.MapClientEntity;
+import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.ParameterizedEntityField;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.MapStorageProvider;
+import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
+import org.keycloak.models.map.storage.ModelEntityUtil;
+import org.keycloak.models.map.storage.QueryParameters;
+import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import org.keycloak.models.map.storage.mapper.ConstantMapper;
+import org.keycloak.models.map.storage.mapper.MappersMap;
 import org.keycloak.models.map.storage.tree.NodeProperties;
 import org.keycloak.models.map.storage.tree.TreeStorage;
 import org.keycloak.models.map.storage.tree.TreeStorageNodePrescription;
 import org.keycloak.models.map.storage.tree.TreeStorageProvider;
 import org.keycloak.models.map.storage.tree.TreeStorageProviderFactory;
+import org.keycloak.storage.SearchableModelField;
 import org.keycloak.testsuite.model.KeycloakModelTest;
 import org.keycloak.testsuite.model.RequireProvider;
 import org.keycloak.testsuite.model.storage.tree.sample.PartialStorageProviderFactory;
+import java.util.Optional;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assume.assumeTrue;
+import static org.keycloak.models.ClientModel.SearchableFields.ID;
+import static org.keycloak.models.ClientModel.SearchableFields.REALM_ID;
 
 /**
  *
@@ -83,7 +96,7 @@ public class ReadTest extends KeycloakModelTest {
     }
 
     @Test
-    public void testGetClient() {
+    public void testReadClient() {
         withRealm(realmId, (session, realm) -> {
             MapStorageProvider store = session.getComponentProvider(MapStorageProvider.class, treeStorageId1);
             MapStorage<MapClientEntity, ClientModel> storage = store.getStorage(ClientModel.class);
@@ -108,12 +121,49 @@ public class ReadTest extends KeycloakModelTest {
     }
     
     @Test
+    public void testReadClientQueryParameters() {
+        withRealm(realmId, (session, realm) -> {
+            MapStorageProvider store = session.getComponentProvider(MapStorageProvider.class, treeStorageId1);
+            MapStorage<MapClientEntity, ClientModel> storage = store.getStorage(ClientModel.class);
+
+            // This is the same code as
+            if (storage instanceof MapStorage.WithContextMappers && session.getContext().getRealm() != null && session.getContext().getRealm().getId() != null) {
+                SearchableModelField<ClientModel> searchableRealmIdField = ModelEntityUtil.getSearchableRealmIdField(ClientModel.class);
+                final Optional<ParameterizedEntityField<MapClientEntity>> rid = ModelEntityUtil.fromSearchableField(searchableRealmIdField, null);
+                // Add top-level mapper for realm ID
+                rid.map(ef -> new MappersMap<MapClientEntity, MapClientEntity>(ef, new ConstantMapper<>(session.getContext().getRealm().getId(), String.class)))
+                  .ifPresent(((MapStorage.WithContextMappers) storage)::setContextMappers);
+            }
+
+            MapKeycloakTransaction<MapClientEntity, ClientModel> tr = storage.createTransaction(session);
+
+            MapClientEntity cl;
+
+            cl = tr.read(QueryParameters.withCriteria(DefaultModelCriteria.<ClientModel>criteria()
+              .compare(ID, Operator.EQ, "client1"))
+            ).findAny().orElse(null);
+            assertThat(cl, notNullValue());
+            assertThat(cl.getId(), is("client1"));
+            assertThat(cl.getClientId(), is("client1"));
+            assertThat(cl.isEnabled(), is(Boolean.FALSE));
+
+            cl = tr.read(QueryParameters.withCriteria(DefaultModelCriteria.<ClientModel>criteria()
+              .compare(ID, Operator.EQ, "client2").compare(REALM_ID, Operator.EQ, realmId))
+            ).findAny().orElse(null);
+            assertThat(cl, notNullValue());
+            assertThat(cl.getId(), is("client2"));
+            assertThat(cl.getClientId(), is("client2"));
+            assertThat(cl.isEnabled(), is(Boolean.TRUE));
+            assertThat(cl.getAttribute("logo"), contains("AQIDBAUGBwgJCgsMDQ4P"));
+            return null;
+        });
+    }
+
+    @Test
     public void testComposability() {
         withRealm(realmId, (session, realm) -> {
             TreeStorageProvider store = (TreeStorageProvider) session.getComponentProvider(MapStorageProvider.class, treeStorageId1);
-            final TreeStorageNodePrescription cf = store.getConfigurationFor(MapClientEntity.class);
-            final TreeStorageNodePrescription firstPartialStorage = cf.findFirstDfs(n -> n.getNodeProperty(NodeProperties.STORAGE_PROVIDER, String.class).map(PartialStorageProviderFactory.PROVIDER_ID::equals).orElse(false)).orElse(null);
-            assumeThat("There is no partial storage", firstPartialStorage, notNullValue());
+            TreeStorageNodePrescription firstPartialStorage = assumePartialStorageBasedConfiguration(store);
             assumeTrue("Partial storage has no parent in this instance", firstPartialStorage.getParent().isPresent());
 
             TreeStorage<MapClientEntity, ClientModel> storage = store.getStorage(ClientModel.class);
@@ -126,6 +176,19 @@ public class ReadTest extends KeycloakModelTest {
             assertThat(cl.isEnabled(), is(Boolean.FALSE));
             return null;
         });
+    }
+
+    private TreeStorageNodePrescription assumePartialStorageBasedConfiguration(final TreeStorageProvider store) {
+        final TreeStorageNodePrescription cf = store.getConfigurationFor(MapClientEntity.class);
+        final TreeStorageNodePrescription firstPartialStorage = cf
+          .findFirstDfs(n -> n.getNodeProperty(NodeProperties.STORAGE_PROVIDER, String.class)
+            .map(PartialStorageProviderFactory.PROVIDER_ID::equals)
+            .orElse(false)
+          ).orElse(null);
+
+        assumeThat("There is no partial storage", firstPartialStorage, notNullValue());
+
+        return firstPartialStorage;
     }
 
 

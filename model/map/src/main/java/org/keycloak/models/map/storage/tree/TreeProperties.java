@@ -23,6 +23,8 @@ package org.keycloak.models.map.storage.tree;
 public final class TreeProperties {
 
     public static final String MODEL_CLASS = "model-class";
+    public static final String ENTITY_CLASS = "entity-class";
+    public static final String ENTITY_ID_FIELD = "entity-id-field";
     public static final String DEFAULT_STORE_CREATE = "default-create";
     public static final String DEFAULT_STORE_READ = "default-read";
 

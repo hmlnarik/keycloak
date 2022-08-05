@@ -319,7 +319,7 @@ public class DeepCloner {
     }
 
     @SuppressWarnings("unchecked")
-    public <V> V entityFieldDelegate(V delegate, EntityFieldDelegate<V> delegateProvider) {
+    public <V extends AbstractEntity> V entityFieldDelegate(V delegate, EntityFieldDelegate<V> delegateProvider) {
         return entityFieldDelegate((Class<V>) delegate.getClass(), delegateProvider);
     }
 

@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  *
  * @author hmlnarik
  */
-class CriteriaOperator {
+public class CriteriaOperator {
 
     private static final EnumMap<Operator, Function<Object[], Predicate<Object>>> OPERATORS = new EnumMap<>(Operator.class);
 

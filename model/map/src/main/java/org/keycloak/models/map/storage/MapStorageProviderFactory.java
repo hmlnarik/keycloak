@@ -17,6 +17,9 @@
 package org.keycloak.models.map.storage;
 
 import org.keycloak.component.ComponentFactory;
+import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.storage.tree.config.MapperTranslator.NativeEntityFieldAccessors;
+import org.keycloak.models.map.storage.mapper.MapperProviderFactory.FieldDescriptorGetter;
 import org.keycloak.provider.ProviderFactory;
 
 /**
@@ -24,7 +27,36 @@ import org.keycloak.provider.ProviderFactory;
  * @author hmlnarik
  */
 public interface MapStorageProviderFactory extends ProviderFactory<MapStorageProvider>, ComponentFactory<MapStorageProvider, MapStorageProvider> {
-    
+
     public interface Flag {}
+
+    public enum Completeness {
+        /**
+         * Native Keycloak storage stores all fields of an entity of type {@code V}.
+         */
+        NATIVE,
+
+        /**
+         * Partial Keycloak storage stores only some fields of an entity of type {@code V},
+         * the other fields are often supplemented by a native Keycloak storage operating
+         * on top of a partial storage.
+         */
+        PARTIAL
+    }
+
+    FieldDescriptorGetter<?> getFieldDescriptorGetter(Class<? extends AbstractEntity> entityClass);
+
+    public interface Native extends MapStorageProviderFactory {
+
+        @Override
+        default FieldDescriptorGetter<?> getFieldDescriptorGetter(Class<? extends AbstractEntity> entityClass) {
+            return NativeEntityFieldAccessors.forClass(entityClass);
+        }
+
+    }
+
+    public interface Partial extends MapStorageProviderFactory {
+
+    }
 
 }

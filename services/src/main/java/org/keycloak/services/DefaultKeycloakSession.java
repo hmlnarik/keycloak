@@ -63,6 +63,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -351,9 +352,9 @@ public class DefaultKeycloakSession implements KeycloakSession {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Provider> T getComponentProvider(Class<T> clazz, String componentId, Function<KeycloakSessionFactory, ComponentModel> modelGetter) {
-        Integer hash = clazz.hashCode() + componentId.hashCode();
-        T provider = (T) providers.get(hash);
         final RealmModel realm = getContext().getRealm();
+        Integer hash = Objects.hash(clazz, realm, componentId);
+        T provider = (T) providers.get(hash);
 
         // KEYCLOAK-11890 - Avoid using HashMap.computeIfAbsent() to implement logic in outer if() block below,
         // since per JDK-8071667 the remapping function should not modify the map during computation. While

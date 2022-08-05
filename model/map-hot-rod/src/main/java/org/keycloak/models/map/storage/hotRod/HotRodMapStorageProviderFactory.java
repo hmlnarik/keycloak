@@ -71,7 +71,7 @@ import org.keycloak.sessions.RootAuthenticationSessionModel;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HotRodMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory, EnvironmentDependentProviderFactory {
+public class HotRodMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory.Native, EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "hotrod";
     private static final Logger LOG = Logger.getLogger(HotRodMapStorageProviderFactory.class);

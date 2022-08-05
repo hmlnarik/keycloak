@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  *
  * @author hmlnarik
  */
-public class MapModelCriteriaBuilder<K, V extends AbstractEntity, M> implements ModelCriteriaBuilder<M, MapModelCriteriaBuilder<K, V, M>> {
+public class MapModelCriteriaBuilder<K, V extends AbstractEntity, M> implements ModelCriteriaBuilder<M, MapModelCriteriaBuilder<K, V, M>>, Predicate<V> {
 
     @FunctionalInterface
     public interface UpdatePredicatesFunc<K, V extends AbstractEntity, M> {
@@ -59,12 +59,16 @@ public class MapModelCriteriaBuilder<K, V extends AbstractEntity, M> implements 
 
     @Override
     public MapModelCriteriaBuilder<K, V, M> compare(SearchableModelField<? super M> modelField, Operator op, Object... values) {
-        UpdatePredicatesFunc<K, V, M> method = fieldPredicates.get(modelField);
+        UpdatePredicatesFunc<K, V, M> method = getUpdatePredicatesFunc(modelField);
         if (method == null) {
             throw new IllegalArgumentException("Filter not implemented for field " + modelField);
         }
 
         return method.apply(this, op, values);
+    }
+
+    protected UpdatePredicatesFunc<K, V, M> getUpdatePredicatesFunc(SearchableModelField<? super M> modelField) {
+        return fieldPredicates.get(modelField);
     }
 
     @SafeVarargs
@@ -164,6 +168,10 @@ public class MapModelCriteriaBuilder<K, V extends AbstractEntity, M> implements 
         return instantiateNewInstance(this.keyFilter, resEntityFilter);
     }
 
+    protected boolean isModified() {
+        return entityFilter != ALWAYS_TRUE || keyFilter != ALWAYS_TRUE;
+    }
+
     /**
      * Return a new instance for nodes in this criteria tree.
      *
@@ -172,5 +180,10 @@ public class MapModelCriteriaBuilder<K, V extends AbstractEntity, M> implements 
      */
     protected MapModelCriteriaBuilder<K, V, M> instantiateNewInstance(Predicate<? super K> indexReadFilter, Predicate<? super V> sequentialReadFilter) {
         return new MapModelCriteriaBuilder<>(keyConverter, fieldPredicates, indexReadFilter, sequentialReadFilter);
+    }
+
+    @Override
+    public boolean test(V v) {
+        return v != null && keyFilter.test(keyConverter.fromStringSafe(v.getId())) && entityFilter.test(v);
     }
 }

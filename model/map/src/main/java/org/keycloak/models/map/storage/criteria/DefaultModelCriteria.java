@@ -178,17 +178,17 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
     }
 
     public DefaultModelCriteria<M> partiallyEvaluate(AtomicFormulaTester<M> tester) {
-        return partiallyEvaluate((AtomicFormulaInstantiator<M>) (field, operator, operatorArguments) -> {
-            Boolean res = tester.test(field, operator, operatorArguments);
+        return partiallyEvaluate((AtomicFormulaInstantiator<M>) node -> {
+            Boolean res = tester.test(node.field, node.getSimpleOperator(), node.getSimpleOperatorArguments());
             if (res == null) {
-                return ModelCriteriaNode.atomicFormula(field, operator, operatorArguments);
+                return ModelCriteriaNode.atomicFormula(node);
             } else {
                 return res ? ModelCriteriaNode.trueNode() : ModelCriteriaNode.falseNode();
             }
           });
     }
 
-    private DefaultModelCriteria<M> partiallyEvaluate(AtomicFormulaInstantiator<M> transformer) {
+    public DefaultModelCriteria<M> partiallyEvaluate(AtomicFormulaInstantiator<M> transformer) {
         return new DefaultModelCriteria<>(node.partiallyEvaluate(transformer));
     }
 
@@ -197,11 +197,11 @@ public class DefaultModelCriteria<M> implements ModelCriteriaBuilder<M, DefaultM
     }
 
     public boolean isAlwaysTrue() {
-        return node != null && optimize().getNode().isTrueNode();
+        return node != null && getNode().isTrueNode();
     }
 
     public boolean isAlwaysFalse() {
-        return node != null && optimize().getNode().isFalseNode();
+        return node != null && getNode().isFalseNode();
     }
 
     @Override

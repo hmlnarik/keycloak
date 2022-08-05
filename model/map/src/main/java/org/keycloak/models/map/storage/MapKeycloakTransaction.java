@@ -88,4 +88,5 @@ public interface MapKeycloakTransaction<V extends AbstractEntity, M> extends Key
      */
     long delete(QueryParameters<M> queryParameters);
 
+
 }

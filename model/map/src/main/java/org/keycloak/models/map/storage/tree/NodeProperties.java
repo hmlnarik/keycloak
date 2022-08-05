@@ -17,7 +17,12 @@
 package org.keycloak.models.map.storage.tree;
 
 import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.storage.MapStorageProviderFactory.Completeness;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import org.keycloak.models.map.storage.mapper.DirectMapper;
+import org.keycloak.models.map.storage.mapper.Mapper;
+import org.keycloak.models.map.storage.mapper.MappersMap;
+import java.util.Collection;
 
 /**
  *
@@ -85,4 +90,46 @@ public final class NodeProperties {
      */
     public static final String CACHE_FOR_EXCLUDED = "___cache-for-excluded___";
 
+
+    /**
+     * Defines a {@link MappersMap} which maps an entity field to an entity mapper. The mappers
+     * are applied <i>after</i> the entity is loaded from the store, and <i>before</i> it is stored in the store.
+     * <p>
+     * The direction <i>there</i> (realized by {@link Mapper#there} method)
+     * is to obtain a value seen in the upper node
+     * from values stored in the lower node. For example, if a mapping exists
+     * for a field {@code id} to a mapper {@code mapper}, then:
+     * <ul>
+     * <li>Applying {@link Mapper#there mapper.there(entity)}
+     *     would compute the value of {@code id} field as viewed in the upper
+     *     entity from the values of the lower entity {@code entity}.</li>
+     * <li>Applying {@link Mapper#back mapper.back(entity, value)}
+     *     would set the value of all fields in the lower entity that
+     *     the {@code id} field in the upper entity is composed of.</li>
+     * </ul>
+     * <p>
+     *
+     * @see Mapper
+     * @see DirectMapper
+     */
+    public static final String STORE_MAPPERS = "partial-store-mappers";
+
+    /**
+     * Defines a {@code Map<ParameterizedEntityField, Set<ParameterizedEntityField>>}. This map maintains
+     * a mapping of a <code>(field -> { depField1, depField2, ...})</code>
+     * where {@code depFieldN} is seen from the upper node
+     * and {@code field} is stored in the lower node; meaning of the map is that value
+     * of each {@code depFieldN} field depends on the {@code field} field.
+     * In other words, a change in {@code field} in the lower node changes value
+     * of each {@code depFieldN} field in the upper node.
+     * <p>
+     * For example, if the following templates were active for fields: <code>attributes.original=original{id}</code>
+     * and <code>clientId=client{id}</code>, this map would contain an entry <code>id={attributes.original,clientId}</code>.
+     */
+    public static final String FIELD_COMPONENTS_OF_MAPPERS = "mapper-field-components";
+
+    /**
+     * Defines a {@link Completeness} of the storage.
+     */
+    public static final String STORAGE_COMPLETENESS = "storage-completeness";
 }

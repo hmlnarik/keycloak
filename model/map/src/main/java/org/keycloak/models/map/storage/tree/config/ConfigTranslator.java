@@ -18,7 +18,10 @@ package org.keycloak.models.map.storage.tree.config;
 
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.component.ComponentModel;
+import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.map.storage.MapStorageProvider;
+import org.keycloak.models.map.storage.MapStorageProviderFactory;
+import org.keycloak.models.map.storage.MapStorageProviderFactory.Completeness;
 import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.tree.NodeProperties;
 import org.keycloak.models.map.storage.tree.StorageSupplier;
@@ -55,13 +58,16 @@ public class ConfigTranslator {
 
     public static final String CHILD_STORES = "child-stores";
     public static final String STORES = "stores";
+    public static final String MAPPERS = "mappers";
     public static final String COMPONENT = "component";
     public static final String ONLY = "only";
 
+    private final KeycloakSessionFactory factory;
     private final String realmId;
     private final String uniqueId;
 
-    public ConfigTranslator(String realmId, String uniqueId) {
+    public ConfigTranslator(KeycloakSessionFactory factory, String realmId, String uniqueId) {
+        this.factory = factory;
         this.realmId = realmId;
         this.uniqueId = uniqueId;
     }
@@ -141,14 +147,16 @@ public class ConfigTranslator {
         }
 
         TreeStorageNodePrescription res = new TreeStorageNodePrescription(treeProperties);
+        res.setId(".");
         c.forEach(res::addChild);
         return res;
     }
 
-    private static final Pattern TREE_STORE_INTERNAL_OPTIONS = Pattern.compile(
+    private static final Pattern TREE_STORE_RESERVED_OPTIONS = Pattern.compile(
         Pattern.quote(STORES) + "|"
       + Pattern.quote(CHILD_STORES) + "|"
       + Pattern.quote(COMPONENT) + "|"
+      + Pattern.quote(MAPPERS) + "\\[\\S+\\]|"
       + Pattern.quote(ONLY) + "\\[\\S+\\]"
     );
 
@@ -158,9 +166,18 @@ public class ConfigTranslator {
         TreeStorageNodePrescription res = new TreeStorageNodePrescription(treeProperties, nodeProperties, edgeProperties);
         
         final String providerId = providerMap.keySet().iterator().next();
+        MapStorageProviderFactory mspf = (MapStorageProviderFactory) factory.getProviderFactory(MapStorageProvider.class, providerId);
+
+        if (mspf == null) {
+            throw new IllegalArgumentException("Unknown storage type: " + providerId);
+        }
+
         Map<String, Object> providerConfigMap = getMap(providerMap, providerId);
         final StorageSupplier storageSupplier;
 
+        // Step 1: Determine storage supplier
+        //    1.1. Either the config is stored in a realm component (storage configuration is in component config),
+        //    1.2. Or the storage config is stored directly in the providerMap
         if (providerId.equals(COMPONENT)) {
             Object properties = providerMap.get(COMPONENT);
             String componentId = properties instanceof String ? (String) properties : getString(providerConfigMap, "id");
@@ -168,6 +185,8 @@ public class ConfigTranslator {
                 LOG.warnf("Invalid component definition, component ID expected near %s: %s", providerId, properties);
                 return null;
             }
+            res.setId(componentId);
+            // Load config from the component
             // Component ID; this is not completely finished as of now
             storageSupplier = (session, modelClass, flags) -> {
                 final MapStorageProvider provider = session.getComponentProvider(MapStorageProvider.class, componentId);
@@ -176,9 +195,13 @@ public class ConfigTranslator {
                 }
                 return provider.getStorage(modelClass, flags);
             };
+            throw new IllegalArgumentException("Configuration by component is not supported at this moment");
         } else {
+            // explicit configuration
+            final String virtualComponentId = providerId + "-" + uniqueId + suffix;
+            String componentId = getString(providerConfigMap, "id");
+            res.setId(componentId == null ? virtualComponentId : componentId);
             storageSupplier = (session, modelClass, flags) -> {
-                final String virtualComponentId = providerId + "-" + uniqueId + suffix;
                 final MapStorageProvider provider = session.getComponentProvider(MapStorageProvider.class, virtualComponentId, ksf -> getStoreConfig(virtualComponentId, providerId, nodeProperties));
                 if (provider == null) {
                     throw new IllegalArgumentException("Cannot construct a map storage provider for component " + virtualComponentId);
@@ -186,33 +209,54 @@ public class ConfigTranslator {
                 return provider.getStorage(modelClass, flags);
             };
         }
-        
+
         nodeProperties.put(NodeProperties.STORAGE_SUPPLIER, storageSupplier);
         nodeProperties.put(NodeProperties.STORAGE_PROVIDER, providerId);
+        nodeProperties.put(NodeProperties.STORAGE_COMPLETENESS, mspf instanceof MapStorageProviderFactory.Partial ? Completeness.PARTIAL : Completeness.NATIVE);
 
         if (providerConfigMap == null) {
             return res;
         }
 
+        // Step 2: Convert the map with storage provider configuration into tree node and edge options
+        //    2.1. All keys that are not reserved are put directly into node properties
+        //    2.2. All keys that are under "only[M]" are put into the node as node properties that are
+        //         restricted to model type M
+        //    2.3. Parse mappers
+        MapperTranslator mapperTranslator = new MapperTranslator(factory);
         for (Entry<String, Object> me : providerConfigMap.entrySet()) {
             String configKey = me.getKey();
-            if (! TREE_STORE_INTERNAL_OPTIONS.matcher(configKey).matches()) {
+            if (! TREE_STORE_RESERVED_OPTIONS.matcher(configKey).matches()) {
                 nodeProperties.put(configKey, me.getValue());
-            }
-
-            if (configKey.startsWith(ONLY + "[")) {
+            } else if (configKey.startsWith(ONLY + "[")) {
                 final String entityRestriction = configKey.substring(ONLY.length() + 1, configKey.length() - 1);
                 Class<Object> mc = ModelEntityUtil.getModelClass(entityRestriction);
                 if (mc == null || ! (me.getValue() instanceof Map)) {
-                    nodeProperties.put(configKey, me.getValue());
+                    LOG.warnf("Illegal use of \"only\" key, ignoring: %s", configKey);
                 } else {
                     @SuppressWarnings("unchecked")
                     Map<String, ?> restrictedConfig = (Map<String, ?>) me.getValue();
+                    // TODO: Should all props go to nodeProperties?
                     restrictedConfig.forEach((k, v) -> nodeProperties.put(k + "[" + entityRestriction + "]", v));
+                }
+            } else if (configKey.startsWith(MAPPERS + "[")) {
+                final String entityRestriction = configKey.substring(MAPPERS.length() + 1, configKey.length() - 1);
+                Class<Object> mc = ModelEntityUtil.getModelClass(entityRestriction);
+                if (mc == null || ! (me.getValue() instanceof Map)) {
+                    LOG.warnf("Invalid key, unknown model name: %s", configKey);
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, ?> restrictedConfig = (Map<String, ?>) me.getValue();
+                    mapperTranslator.parse(ModelEntityUtil.getEntityType(mc), restrictedConfig, mspf);
                 }
             }
         }
 
+        if (! mapperTranslator.getMappers().isEmpty()) {
+            nodeProperties.put(NodeProperties.STORE_MAPPERS, mapperTranslator.getMappers());
+        }
+
+        // Step 3: Parse all the child stores
         final List<Object> childStores = getList(providerConfigMap, CHILD_STORES);
         if (childStores != null) {
             AtomicInteger i = new AtomicInteger();

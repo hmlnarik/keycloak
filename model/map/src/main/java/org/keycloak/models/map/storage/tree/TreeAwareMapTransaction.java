@@ -17,10 +17,13 @@
 package org.keycloak.models.map.storage.tree;
 
 import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.common.ParameterizedEntityField;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 import org.keycloak.models.map.storage.criteria.ModelCriteriaNode;
+import org.keycloak.models.map.storage.mapper.Mapper;
 import org.keycloak.storage.StorageId;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -31,7 +34,7 @@ import java.util.function.Supplier;
  * @param <V>
  * @param <M>
  */
-public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
+public interface TreeAwareMapTransaction<V extends AbstractEntity, R extends AbstractEntity, M> {
 
     /**
      * Called after an entity is instantiated (read or created) by a storage that is
@@ -61,7 +64,7 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
 
     /**
      * Invalidates a value that became completely stale in this storage. The cached values are required to be
-     * removed from this storage and refreshed upon next access.
+     * refreshed upon next access of this object.
      * <p>
      * This might happen e.g. in case when this store caches values from LDAP, and the object was deleted from LDAP.
      * @param value 
@@ -89,10 +92,10 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
      * <p>
      * This is useful for e.g. to determine original LDAP ID from a cached object.
      * @param thisStorageNode Node where this storage is
-     * @param thisStorageEntityIfLoaded
+     * @param thisStorageRawEntityLoader Method that supplies raw (no mappers applied) object from the storage
      * @return
      */
-    StorageId getOriginalStorageId(TreeStorageNodeInstance<V> thisStorageNode, StorageId thisStorageNodeId, Supplier<V> thisStorageEntityLoader);
+    StorageId getOriginalStorageId(TreeStorageNodeInstance<V> thisStorageNode, StorageId idInThisStorage, Supplier<R> thisStorageRawEntityLoader);
 
     /**
      * Returns an non-empty {@link Optional} with individual condition nodes with criteria
@@ -106,5 +109,6 @@ public interface TreeAwareMapTransaction<V extends AbstractEntity, M> {
      * @return See description
      */
     Optional<Set<ModelCriteriaNode<M>>> getNotRecognizedCriteria(DefaultModelCriteria<M> criteria);
+
 
 }

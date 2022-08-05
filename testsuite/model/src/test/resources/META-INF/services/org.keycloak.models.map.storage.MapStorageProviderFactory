@@ -16,3 +16,4 @@
 #
 
 org.keycloak.testsuite.model.storage.tree.sample.PartialStorageProviderFactory
+org.keycloak.testsuite.model.storage.tree.sample.ChangingIdStorageProviderFactory

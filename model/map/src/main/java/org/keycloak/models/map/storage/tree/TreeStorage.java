@@ -20,24 +20,19 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
-import org.keycloak.models.map.storage.tree.TreeNode.PathOrientation;
-import org.keycloak.storage.SearchableModelField;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
+import org.keycloak.models.map.storage.mapper.MappersMap;
 import org.jboss.logging.Logger;
-import static org.keycloak.models.map.storage.tree.TreeProperties.DEFAULT_STORE_CREATE;
 
-public class TreeStorage<V extends AbstractEntity, M> implements MapStorage<V, M> {
+public class TreeStorage<V extends AbstractEntity, M> implements MapStorage<V, M>, MapStorage.WithContextMappers<V, V> {
 
     private static final Logger LOG = Logger.getLogger(TreeStorage.class);
 
     protected final TreeStorageNodePrescription root;
-    protected final SearchableModelField<M> idField;
 
-    public TreeStorage(TreeStorageNodePrescription root, SearchableModelField<M> idField) {
+    private MappersMap<V, V> contextMappers;
+
+    public TreeStorage(TreeStorageNodePrescription root) {
         this.root = root;
-        this.idField = idField;
     }
 
     public V read(String key) {
@@ -115,6 +110,11 @@ public class TreeStorage<V extends AbstractEntity, M> implements MapStorage<V, M
 
     @Override
     public MapKeycloakTransaction<V, M> createTransaction(KeycloakSession session) {
-        return new TreeStorageTransaction<>(session, root.instantiate(session), idField);
+        return new TreeStorageTransaction<>(session, root.instantiate(session), this.contextMappers);
+    }
+
+    @Override
+    public void setContextMappers(MappersMap<V, V> contextMappers) {
+        this.contextMappers = contextMappers;
     }
 }

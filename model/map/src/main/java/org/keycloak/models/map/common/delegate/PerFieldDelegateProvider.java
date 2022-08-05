@@ -23,7 +23,6 @@ import org.keycloak.models.map.storage.tree.TreeStorageNodeInstance;
 import org.keycloak.models.map.storage.tree.TreeStorageNodePrescription.FieldContainedStatus;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -60,7 +59,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <K, EF extends Enum<? extends EntityField<V>> & EntityField<V>> Object mapRemove(EF field, K key) {
+    public <K> Object mapRemove(EntityField<V> field, K key) {
         Objects.requireNonNull(key, "Key must not be null");
         boolean needsSetEntity = false;
         boolean needsSetLowerEntity = false;
@@ -98,7 +97,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <K, T, EF extends Enum<? extends EntityField<V>> & EntityField<V>> void mapPut(EF field, K key, T value) {
+    public <K, T> void mapPut(EntityField<V> field, K key, T value) {
         Objects.requireNonNull(key, "Key must not be null");
         boolean needsSetEntity = false;
         boolean needsSetLowerEntity = false;
@@ -133,7 +132,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <K, EF extends Enum<? extends EntityField<V>> & EntityField<V>> Object mapGet(EF field, K key) {
+    public <K> Object mapGet(EntityField<V> field, K key) {
         Objects.requireNonNull(key, "Key must not be null");
         switch (node.isCacheFor(field, key).max(() -> node.isPrimarySourceFor(field, key))) {
             case FULLY:
@@ -145,7 +144,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<V>> & EntityField<V>> Object collectionRemove(EF field, T value) {
+    public <T> Object collectionRemove(EntityField<V> field, T value) {
         boolean needsSetEntity = false;
         boolean needsSetLowerEntity = false;
 
@@ -182,7 +181,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<V>> & EntityField<V>> void collectionAdd(EF field, T value) {
+    public <T> void collectionAdd(EntityField<V> field, T value) {
         boolean needsSetEntity = false;
         boolean needsSetLowerEntity = false;
 
@@ -219,7 +218,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
 
     @Override
     @SuppressWarnings("unchecked")
-    public <EF extends Enum<? extends EntityField<V>> & EntityField<V>> Object get(EF field) {
+    public Object get(EntityField<V> field) {
         switch (node.isCacheFor(field, null).max(() -> node.isPrimarySourceFor(field, null))) {
             case FULLY:
                 return field.get(entity);
@@ -250,7 +249,7 @@ public class PerFieldDelegateProvider<V extends AbstractEntity> implements Entit
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<V>> & EntityField<V>> void set(EF field, T value) {
+    public <T> void set(EntityField<V> field, T value) {
         boolean needsSetEntity = false;
         boolean needsSetLowerEntity = false;
 

@@ -31,6 +31,10 @@
                     <annotationProcessors>
                         <annotationProcessor>org.keycloak.models.map.processor.GenerateEntityImplementationsProcessor</annotationProcessor>
                     </annotationProcessors>
+                    <compilerArgs>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>10000</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
