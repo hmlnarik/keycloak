@@ -58,7 +58,7 @@ public interface ModelCriteriaBuilder<M, Self extends ModelCriteriaBuilder<M, Se
      * The operators are very basic ones for this use case. In the real scenario,
      * new operators can be added, possibly with different arity, e.g. {@code IN}.
      * The {@link ModelCriteriaBuilder#compare} method would need an adjustment
-     * then, likely to taky vararg {@code value} instead of single value as it
+     * then, likely to take vararg {@code value} instead of single value as it
      * is now.
      */
     public enum Operator {

@@ -16,6 +16,8 @@
  */
 package org.keycloak.storage;
 
+import java.util.Objects;
+
 /**
  *
  * @author hmlnarik
@@ -36,6 +38,16 @@ public class SearchableModelField<M> {
 
     public Class<?> getFieldType() {
         return fieldClass;
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return (this == obj);
     }
 
     @Override

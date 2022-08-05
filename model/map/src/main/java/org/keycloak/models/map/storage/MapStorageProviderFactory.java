@@ -17,14 +17,62 @@
 package org.keycloak.models.map.storage;
 
 import org.keycloak.component.ComponentFactory;
+import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.storage.tree.config.MapperTranslator.NativeEntityFieldAccessors;
+import org.keycloak.models.map.storage.mapper.MapperProviderFactory.FieldDescriptorGetter;
 import org.keycloak.provider.ProviderFactory;
 
 /**
- *
+ * Interface denoting a map storage provider factory. For better code maintenance, prefer using
+ * {@link Native} or {@link Partial} over {@code MapStorageProviderFactory}.
  * @author hmlnarik
  */
 public interface MapStorageProviderFactory extends ProviderFactory<MapStorageProvider>, ComponentFactory<MapStorageProvider, MapStorageProvider> {
-    
+
     public interface Flag {}
+
+    public enum Completeness {
+        /**
+         * Native Keycloak storage stores all fields of an entity of type {@code V}.
+         */
+        NATIVE,
+
+        /**
+         * Partial Keycloak storage stores only some fields of an entity of type {@code V},
+         * the other fields are often supplemented by a native Keycloak storage operating
+         * on top of a partial storage.
+         */
+        PARTIAL
+    }
+
+    /**
+     * Returns a
+     * @param entityClass
+     * @return
+     */
+    FieldDescriptorGetter<?> getFieldDescriptorGetter(Class<? extends AbstractEntity> entityClass);
+
+    /**
+     * This interface is implemented by a provider factory of a <b>native</b> map storage, i.e. a map storage capable of storing
+     * all fields.
+     * @see Partial
+     */
+    public interface Native extends MapStorageProviderFactory {
+
+        @Override
+        default FieldDescriptorGetter<?> getFieldDescriptorGetter(Class<? extends AbstractEntity> entityClass) {
+            return NativeEntityFieldAccessors.forClass(entityClass);
+        }
+
+    }
+
+    /**
+     * This interface is implemented by a provider factory of a <b>partial</b> map storage, i.e. a map storage capable of storing
+     * only a subset of fields for at least one area.
+     * @see Partial
+     */
+    public interface Partial extends MapStorageProviderFactory {
+
+    }
 
 }

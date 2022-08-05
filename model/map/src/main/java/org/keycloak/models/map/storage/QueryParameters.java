@@ -1,6 +1,9 @@
 package org.keycloak.models.map.storage;
 
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import org.keycloak.models.map.storage.criteria.ModelCriteriaNode;
+import org.keycloak.models.map.storage.criteria.ModelCriteriaNode.AtomicFormulaInstantiator;
+import org.keycloak.models.map.storage.criteria.PartialModelCriteriaNode;
 import org.keycloak.storage.SearchableModelField;
 
 import java.util.LinkedList;
@@ -27,6 +30,22 @@ public class QueryParameters<M> {
 
     public QueryParameters(DefaultModelCriteria<M> mcb) {
         this.mcb = mcb;
+    }
+
+    public QueryParameters<M> transform(AtomicFormulaInstantiator<M> transformer) {
+        QueryParameters<M> res = new QueryParameters<>(mcb == null ? null : mcb.partiallyEvaluate(transformer));
+        res.limit = limit;
+        res.offset = offset;
+        res.orderBy.addAll(orderBy);
+        return res;
+    }
+
+    public QueryParameters<M> restrictToPartial() {
+        return transform(node -> (node instanceof PartialModelCriteriaNode) ? node.cloneNode() : ModelCriteriaNode.trueNode());
+    }
+
+    public QueryParameters<M> restrictToRemainder() {
+        return transform(node -> (node instanceof PartialModelCriteriaNode) ? ModelCriteriaNode.trueNode() : node.cloneNode());
     }
 
     /**

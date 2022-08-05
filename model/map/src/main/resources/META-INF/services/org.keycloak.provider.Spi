@@ -16,3 +16,4 @@
 #
 
 org.keycloak.models.map.storage.MapStorageSpi
+org.keycloak.models.map.storage.mapper.MapperSpi

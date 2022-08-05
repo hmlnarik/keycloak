@@ -17,10 +17,11 @@ public interface EntityField<E> {
      */
     String getName();
     /**
-     * Returns name of this field in lowercase with words separated by a dash ({@code -}).
+     * Returns name of this field in camel case with first word starting with lower case letter and 
+     * further words starting with a capital letter.
      * @return
      */
-    String getNameDashed();
+    String getNameCamelCase();
     /**
      * Returns the value of this field.
      *
@@ -50,6 +51,19 @@ public interface EntityField<E> {
             c.add(value);
         }
     }
+
+    /**
+     * Clears the collection stored in this field.
+     * @param e Entity
+     * @throws ClassCastException If this field is not a collection.
+     */
+    default void collectionClear(E e) {
+        Collection<?> c = (Collection<?>) get(e);
+        if (c != null) {
+            c.clear();
+        }
+    }
+
     /**
      * Removes an element from the collection stored in this field.
      * @param e Entity
@@ -61,6 +75,18 @@ public interface EntityField<E> {
     default <T> Object collectionRemove(E e, T value) {
         Collection<?> c = (Collection<?>) get(e);
         return c == null ? null : c.remove(value);
+    }
+
+    /**
+     * Clears the map stored in this field.
+     * @param e Entity
+     * @throws ClassCastException If this field is not a map.
+     */
+    default void mapClear(E e) {
+        Map<?, ?> c = (Map<?, ?>) get(e);
+        if (c != null) {
+            c.clear();
+        }
     }
 
     /**

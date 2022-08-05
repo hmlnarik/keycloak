@@ -36,7 +36,7 @@ public class AuthenticatedClientSessionReferenceOnlyFieldDelegate implements Ent
     }
 
     @Override
-    public <EF extends Enum<? extends EntityField<MapAuthenticatedClientSessionEntity>> & EntityField<MapAuthenticatedClientSessionEntity>> Object get(EF field) {
+    public Object get(EntityField<MapAuthenticatedClientSessionEntity> field) {
         switch ((MapAuthenticatedClientSessionEntityFields)field) {
             case ID: return reference.getClientSessionId();
             case CLIENT_ID: return reference.getClientId();

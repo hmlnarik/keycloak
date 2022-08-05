@@ -115,7 +115,7 @@ import org.keycloak.storage.SearchableModelField;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class HotRodMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory, EnvironmentDependentProviderFactory {
+public class HotRodMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory.Native, EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "hotrod";
     private final Map<Class<?>, HotRodMapStorage> storages = new ConcurrentHashMap<>();

@@ -116,7 +116,7 @@ public class ComponentModelScope implements Scope {
 
     @Override
     public Set<String> getPropertyNames() {
-        throw new UnsupportedOperationException("Not implemented");
+        return componentConfig.getConfig().keySet();
     }
 
     public ComponentModel getComponentModel() {

@@ -5,7 +5,7 @@ stores:
         attribute.name:
           from: ${LOGO}
           read-only: true
-        client-id: ${NAME}
+        clientId: ${NAME}
         id: ${NAME}
         enabled: ${ENABLED}
         attribute.origin: partial

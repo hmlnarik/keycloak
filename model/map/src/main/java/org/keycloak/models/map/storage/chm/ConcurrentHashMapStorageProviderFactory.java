@@ -96,7 +96,7 @@ import static org.keycloak.models.map.storage.criteria.DefaultModelCriteria.crit
  *
  * @author hmlnarik
  */
-public class ConcurrentHashMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory, EnvironmentDependentProviderFactory {
+public class ConcurrentHashMapStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory.Native, EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "concurrenthashmap";
 

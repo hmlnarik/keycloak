@@ -36,7 +36,7 @@ import org.keycloak.provider.EnvironmentDependentProviderFactory;
 
 public class LdapMapStorageProviderFactory implements
         AmphibianProviderFactory<MapStorageProvider>,
-        MapStorageProviderFactory,
+        MapStorageProviderFactory.Native,
         EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "ldap-map-storage";

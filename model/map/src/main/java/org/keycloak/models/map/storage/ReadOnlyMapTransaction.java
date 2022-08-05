@@ -21,6 +21,7 @@ import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.common.EntityField;
 import org.keycloak.models.map.common.delegate.DelegateProvider;
 import java.util.stream.Stream;
+import org.keycloak.models.map.common.delegate.HasRawEntity;
 
 /**
  *
@@ -98,23 +99,41 @@ public class ReadOnlyMapTransaction<V extends AbstractEntity, M> implements MapK
         if (entity == null) {
             return null;
         }
-        final DelegateProvider<V> readOnlyDelegate = new DelegateProvider<V>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public V getDelegate(boolean isRead, Enum<? extends EntityField<V>> field, Object... parameters) {
-                if (isRead) {
-                    return entity;
-                } else {
-                    return (V) DeepCloner.DUMB_CLONER.emptyInstance(entity.getClass());
-                }
-            }
-
-            @Override
-            public boolean isUpdated() {
-                return false;
-            }
-        };
+        @SuppressWarnings("unchecked")
+        final V emptyInstance = (V) DeepCloner.DUMB_CLONER.emptyInstance(entity.getClass());
+        final DelegateProvider<V> readOnlyDelegate = new ReadOnlyDelegateProvider(entity, emptyInstance);
         return DeepCloner.DUMB_CLONER.delegate(entity, readOnlyDelegate);
+    }
+
+    private class ReadOnlyDelegateProvider implements DelegateProvider<V>, HasRawEntity<V> {
+
+        private final V entity;
+        private final V emptyInstance;
+
+        public ReadOnlyDelegateProvider(V entity, V emptyInstance) {
+            this.entity = entity;
+            this.emptyInstance = emptyInstance;
+        }
+
+        @Override
+        public V getRawEntity() {
+            return this.entity;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public V getDelegate(boolean isRead, Enum<? extends EntityField<V>> field, Object... parameters) {
+            if (isRead) {
+                return entity;
+            } else {
+                return emptyInstance;
+            }
+        }
+
+        @Override
+        public boolean isUpdated() {
+            return false;
+        }
     }
 
 }

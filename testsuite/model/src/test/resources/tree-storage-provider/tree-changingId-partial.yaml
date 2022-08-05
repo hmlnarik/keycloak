@@ -1,0 +1,35 @@
+stores:
+- partial:  ## <-- map storage provider ID
+    mappers[clients]:
+      id: "client{NAME}"
+      clientId: "client{NAME}"
+      name: "client client{NAME}'s name"
+      enabled: "{ENABLED}"
+      attributes.logo: "{LOGO}"
+      attributes.origin: "partial"
+      attributes.some-info: "${NAME} is ${ENABLED}"
+
+#    mappers[clients]:
+#      attributes.name:
+#        from: ${LOGO}
+#        read-only: true
+#      clientId: ${NAME}
+#      id: ${NAME}
+
+    read-only[clients]: true
+
+    contents[clients]:
+      - NAME: "1"
+        ENABLED: false
+
+      - NAME: "2"
+        ENABLED: true
+        LOGO: AQIDBAUGBwgJCgsMDQ4P
+        # To be able to use the following line, we first need binary <=> base64 mapper
+        #LOGO: !!binary "AQIDBAUGBwgJCgsMDQ4P"  # 0x01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
+
+      - NAME: "3"
+        ENABLED: true
+        LOGO: null
+
+

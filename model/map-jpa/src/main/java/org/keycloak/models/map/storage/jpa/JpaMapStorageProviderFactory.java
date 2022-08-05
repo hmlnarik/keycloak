@@ -142,7 +142,7 @@ import org.keycloak.sessions.RootAuthenticationSessionModel;
 
 public class JpaMapStorageProviderFactory implements 
         AmphibianProviderFactory<MapStorageProvider>,
-        MapStorageProviderFactory,
+        MapStorageProviderFactory.Native,
         EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "jpa";

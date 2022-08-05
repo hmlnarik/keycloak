@@ -25,10 +25,14 @@ import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.MapStorageProvider;
 import org.keycloak.component.AmphibianProviderFactory;
 import org.keycloak.models.KeycloakSessionFactory;
+import org.keycloak.models.map.storage.ModelEntityUtil;
+import org.keycloak.models.map.storage.mapper.ConstantMapper;
+import org.keycloak.models.map.storage.mapper.MappersMap;
 import org.keycloak.provider.EnvironmentDependentProviderFactory;
 import org.keycloak.provider.InvalidationHandler;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
+import org.keycloak.storage.SearchableModelField;
 import org.jboss.logging.Logger;
 
 /**
@@ -107,12 +111,25 @@ public abstract class AbstractMapProviderFactory<T extends Provider, V extends A
 
     public MapStorage<V, M> getStorage(KeycloakSession session) {
         ProviderFactory<MapStorageProvider> storageProviderFactory = getProviderFactoryOrComponentFactory(session, storageConfigScope);
+
         if (storageProviderFactory == null) {
             throw new IllegalStateException("No map storage provider configured for " + getClass().getSimpleName() + ", neither specifically for this provider, nor a default provider.");
         }
+
         final MapStorageProvider factory = storageProviderFactory.create(session);
         session.enlistForClose(factory);
-        return factory.getStorage(modelType);
+
+        final MapStorage<V, M> res = factory.getStorage(modelType);
+
+        if (res instanceof MapStorage.WithContextMappers && session.getContext().getRealm() != null && session.getContext().getRealm().getId() != null) {
+            SearchableModelField<M> searchableRealmIdField = ModelEntityUtil.getSearchableRealmIdField(modelType);
+            // Add top-level mapper for realm ID. Needed for stores which lack capability to store Keycloak realm ID, e.g. LDAP
+            ModelEntityUtil.fromSearchableField(searchableRealmIdField, null)
+              .map(ef -> new MappersMap<V, V>((EntityField<V>) ef, new ConstantMapper<>(session.getContext().getRealm().getId(), String.class)))
+              .ifPresent(((MapStorage.WithContextMappers) res)::setContextMappers);
+        }
+
+        return res;
     }
 
     public static ProviderFactory<MapStorageProvider> getProviderFactoryOrComponentFactory(KeycloakSession session, Scope storageConfigScope) {

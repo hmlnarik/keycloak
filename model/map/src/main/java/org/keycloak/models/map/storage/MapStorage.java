@@ -18,6 +18,7 @@ package org.keycloak.models.map.storage;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.map.common.AbstractEntity;
+import org.keycloak.models.map.storage.mapper.MappersMap;
 
 /**
  * Implementation of this interface interacts with a persistence storage storing various entities, e.g. users, realms.
@@ -31,7 +32,7 @@ import org.keycloak.models.map.common.AbstractEntity;
  *            layout and thus to support no-downtime upgrade.
  */
 public interface MapStorage<V extends AbstractEntity, M> {
-    
+
     /**
      * Creates a {@code MapKeycloakTransaction} object that tracks a new transaction related to this storage.
      * In case of JPA or similar, the transaction object might be supplied by the container (via JTA) or
@@ -41,5 +42,23 @@ public interface MapStorage<V extends AbstractEntity, M> {
      * @return See description. Never returns {@code null}
      */
     MapKeycloakTransaction<V, M> createTransaction(KeycloakSession session);
+
+    public interface Partial<V extends AbstractEntity, M, R> extends MapStorage<V, M>, WithContextMappers<V, R> {
+        /**
+         * Mappers configured in the store configuration.
+         * @param mapperPerField
+         */
+        void setMappers(MappersMap<V, R> mapperPerField);
+    }
+
+    public interface WithContextMappers<V extends AbstractEntity, R> {
+        /**
+         * Mappers predefined from the context, e.g. if the store is a partial store available
+         * in the context of a realm, then the realm ID is provided as one of the {@code contextMappers}.
+         *
+         * @param contextMappers 
+         */
+        void setContextMappers(MappersMap<V, R> contextMappers);
+    }
 
 }

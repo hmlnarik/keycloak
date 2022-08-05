@@ -35,26 +35,42 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.map.singleUseObject.MapSingleUseObjectEntity;
 import org.keycloak.models.map.authSession.MapRootAuthenticationSessionEntity;
 import org.keycloak.models.map.authorization.entity.MapPermissionTicketEntity;
+import org.keycloak.models.map.authorization.entity.MapPermissionTicketEntityFields;
 import org.keycloak.models.map.authorization.entity.MapPolicyEntity;
+import org.keycloak.models.map.authorization.entity.MapPolicyEntityFields;
 import org.keycloak.models.map.authorization.entity.MapResourceEntity;
+import org.keycloak.models.map.authorization.entity.MapResourceEntityFields;
 import org.keycloak.models.map.authorization.entity.MapResourceServerEntity;
+import org.keycloak.models.map.authorization.entity.MapResourceServerEntityFields;
 import org.keycloak.models.map.authorization.entity.MapScopeEntity;
+import org.keycloak.models.map.authorization.entity.MapScopeEntityFields;
 import org.keycloak.models.map.client.MapClientEntity;
+import org.keycloak.models.map.client.MapClientEntityFields;
 import org.keycloak.models.map.clientscope.MapClientScopeEntity;
+import org.keycloak.models.map.clientscope.MapClientScopeEntityFields;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.events.MapAdminEventEntity;
 import org.keycloak.models.map.events.MapAuthEventEntity;
+import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.ParameterizedEntityField;
 import org.keycloak.models.map.group.MapGroupEntity;
+import org.keycloak.models.map.group.MapGroupEntityFields;
 import org.keycloak.models.map.loginFailure.MapUserLoginFailureEntity;
 import org.keycloak.models.map.realm.MapRealmEntity;
 import org.keycloak.models.map.role.MapRoleEntity;
+import org.keycloak.models.map.role.MapRoleEntityFields;
+import org.keycloak.models.map.storage.chm.MapFieldPredicates;
 import org.keycloak.models.map.user.MapUserEntity;
+import org.keycloak.models.map.user.MapUserEntityFields;
 import org.keycloak.models.map.userSession.MapAuthenticatedClientSessionEntity;
 import org.keycloak.models.map.userSession.MapUserSessionEntity;
 import org.keycloak.sessions.RootAuthenticationSessionModel;
-import java.util.HashMap;
+import org.keycloak.storage.SearchableModelField;
+import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -64,7 +80,7 @@ import java.util.stream.Collectors;
  */
 public class ModelEntityUtil {
 
-    private static final Map<Class<?>, String> MODEL_TO_NAME = new HashMap<>();
+    private static final Map<Class<?>, String> MODEL_TO_NAME = new IdentityHashMap<>();
     static {
         MODEL_TO_NAME.put(SingleUseObjectValueModel.class, "single-use-objects");
         MODEL_TO_NAME.put(ClientScopeModel.class, "client-scopes");
@@ -90,7 +106,7 @@ public class ModelEntityUtil {
     }
     private static final Map<String, Class<?>> NAME_TO_MODEL = MODEL_TO_NAME.entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey));
 
-    private static final Map<Class<?>, Class<? extends AbstractEntity>> MODEL_TO_ENTITY_TYPE = new HashMap<>();
+    private static final Map<Class<?>, Class<? extends AbstractEntity>> MODEL_TO_ENTITY_TYPE = new IdentityHashMap<>();
     static {
         MODEL_TO_ENTITY_TYPE.put(SingleUseObjectValueModel.class, MapSingleUseObjectEntity.class);
         MODEL_TO_ENTITY_TYPE.put(ClientScopeModel.class, MapClientScopeEntity.class);
@@ -116,6 +132,28 @@ public class ModelEntityUtil {
         MODEL_TO_ENTITY_TYPE.put(Event.class, MapAuthEventEntity.class);
     }
     private static final Map<Class<?>, Class<?>> ENTITY_TO_MODEL_TYPE = MODEL_TO_ENTITY_TYPE.entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey));
+
+    private static final Map<Class<? extends AbstractEntity>, Class<? extends Enum<?>>> ENTITY_TO_FIELD_TYPE = new IdentityHashMap<>();
+    static {
+//        ENTITY_TO_FIELD_TYPE.put(MapAuthenticatedClientSessionEntity.class, MapAuthenticatedClientSessionEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapClientScopeEntity.class, MapClientScopeEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapClientEntity.class, MapClientEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapGroupEntity.class, MapGroupEntityFields.class);
+//        ENTITY_TO_FIELD_TYPE.put(MapRealmEntity.class, MapRealmEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapRoleEntity.class, MapRoleEntityFields.class);
+//        ENTITY_TO_FIELD_TYPE.put(MapRootAuthenticationSessionEntity.class, MapRootAuthenticationSessionEntityFields.class);
+//        ENTITY_TO_FIELD_TYPE.put(MapUserLoginFailureEntity.class, MapUserLoginFailureEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapUserEntity.class, MapUserEntityFields.class);
+//        ENTITY_TO_FIELD_TYPE.put(MapUserSessionEntity.class, MapUserSessionEntityFields.class);
+
+        // authz
+        ENTITY_TO_FIELD_TYPE.put(MapPermissionTicketEntity.class, MapPermissionTicketEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapPolicyEntity.class, MapPolicyEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapResourceServerEntity.class, MapResourceServerEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapResourceEntity.class, MapResourceEntityFields.class);
+        ENTITY_TO_FIELD_TYPE.put(MapScopeEntity.class, MapScopeEntityFields.class);
+    }
+    private static final Map<Class<?>, EntityField<?>> ENTITY_TO_ID_FIELD = ENTITY_TO_FIELD_TYPE.entrySet().stream().collect(Collectors.toMap(Entry::getKey, me -> (EntityField<?>) me.getValue().getEnumConstants()[0]));
 
     @SuppressWarnings("unchecked")
     public static <V extends AbstractEntity, M> Class<V> getEntityType(Class<M> modelClass) {
@@ -154,6 +192,63 @@ public class ModelEntityUtil {
         return (Class<M>) NAME_TO_MODEL.get(key);
     }
 
+    @SuppressWarnings("unchecked")
+    public static <V extends AbstractEntity> Optional<EntityField<V>> getEntityField(Class<V> entityClass, String fieldNameCamelCase) {
+        // TODO: Optimize lookup
+        Class<? extends Enum<?>> entityFieldClass = ENTITY_TO_FIELD_TYPE.get(entityClass);
+        if (entityFieldClass == null) {
+            return Optional.empty();
+        }
+        Object[] values = entityFieldClass.getEnumConstants();
+        if (values == null) {
+            return Optional.empty();
+        }
+        return Arrays.asList(values).stream()
+          .filter(EntityField.class::isInstance)
+          .map(EntityField.class::cast)
+          .filter(ef -> fieldNameCamelCase.equals(ef.getNameCamelCase()))
+          .map(ef -> (EntityField<V>) ef)
+          .findAny();
+    }
 
+    /**
+     * Returns a parameterized entity field for a string that is either a camel-case field name, or a
+     * camel-case field name followed by a dot followed by a string parameter.
+     * @param <V>
+     * @param entityClass
+     * @param fieldNameCamelCaseWithParameter
+     * @return
+     */
+    public static <V extends AbstractEntity> Optional<ParameterizedEntityField<V>> getParameterizedEntityField(Class<V> entityClass, String fieldNameCamelCaseWithParameter) {
+        int i = fieldNameCamelCaseWithParameter.indexOf('.');
+        final String fieldNameCamelCase = i == -1 ? fieldNameCamelCaseWithParameter : fieldNameCamelCaseWithParameter.substring(0, i);
+        final String parameter = i == -1 ? null : fieldNameCamelCaseWithParameter.substring(i + 1);
+        return getEntityField(entityClass, fieldNameCamelCase)
+            .map(field -> ParameterizedEntityField.from(field, parameter));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <V extends AbstractEntity> EntityField<V> getIdField(Class<V> targetEntityClass) {
+        return (EntityField<V>) ENTITY_TO_ID_FIELD.get(targetEntityClass);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <M> SearchableModelField<M> getSearchableIdField(Class<M> targetModelClass) {
+        return (SearchableModelField<M>) MapFieldPredicates.SEARCHABLE_FIELD_IDS.get(targetModelClass);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <M> SearchableModelField<M> getSearchableRealmIdField(Class<M> targetModelClass) {
+        return (SearchableModelField<M>) MapFieldPredicates.SEARCHABLE_FIELD_REALM_IDS.get(targetModelClass);
+    }
+
+    private static final String ATTRIBUTE_FIELD_NAME = MapClientEntityFields.ATTRIBUTES.getName();  // Any ATTRIBUTES field will do
+
+    @SuppressWarnings("unchecked")
+    public static <V extends AbstractEntity, M> Optional<ParameterizedEntityField<V>> fromSearchableField(SearchableModelField<M> searchableField, Object[] params) {
+        return Optional
+          .ofNullable((ParameterizedEntityField<V>) MapFieldPredicates.MODEL_TO_ENTITY_FIELD.get(searchableField))
+          .map(f -> ATTRIBUTE_FIELD_NAME.equals(f.getName()) && params != null && params.length > 0 ? ParameterizedEntityField.from(f, params[0]) : f);
+    }
 
 }

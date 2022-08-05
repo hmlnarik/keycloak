@@ -17,28 +17,22 @@
 package org.keycloak.testsuite.model.storage.tree.sample;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.keycloak.models.map.client.MapClientEntity;
 import org.keycloak.models.map.client.MapClientEntityFields;
-import org.keycloak.models.map.common.DeepCloner;
-import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
-import org.keycloak.models.map.common.delegate.EntityFieldDelegate;
 import org.keycloak.models.map.common.delegate.HasEntityFieldDelegate;
+import org.keycloak.models.map.storage.mapper.MappingEntityFieldDelegate;
 
 /**
  *
  * @author hmlnarik
  */
-public class Dict<E> extends UpdatableEntity.Impl implements EntityFieldDelegate<E> {
+public class Dict<E> extends UpdatableEntity.Impl implements AbstractEntity {
 
     public static final String CLIENT_FIELD_LOGO = "LOGO";
     public static final String CLIENT_FIELD_ENABLED = "ENABLED";
@@ -46,7 +40,7 @@ public class Dict<E> extends UpdatableEntity.Impl implements EntityFieldDelegate
 
     private static final Set<String> CLIENT_ALLOWED_KEYS = new HashSet<>(Arrays.asList(CLIENT_FIELD_NAME, CLIENT_FIELD_ENABLED, CLIENT_FIELD_LOGO));
 
-    public static MapClientEntity clientDelegate(DeepCloner cloner) {
+    public static Dict clientDelegate() {
         // To be replaced by dynamic mapper config
         Map<String, String> fieldName2key = new HashMap<>();
         fieldName2key.put(MapClientEntityFields.ID.getName(), CLIENT_FIELD_NAME);
@@ -56,79 +50,99 @@ public class Dict<E> extends UpdatableEntity.Impl implements EntityFieldDelegate
         Map<String, String> attributeName2key = new HashMap<>();
         attributeName2key.put("logo", CLIENT_FIELD_LOGO);
 
-        Dict<MapClientEntity> dict = new Dict<>(CLIENT_ALLOWED_KEYS, fieldName2key, attributeName2key);
-        return DeepCloner.DUMB_CLONER.entityFieldDelegate(MapClientEntity.class, dict);
+        return new Dict<>(CLIENT_FIELD_NAME, CLIENT_ALLOWED_KEYS, fieldName2key, attributeName2key);
     }
 
     @SuppressWarnings("unchecked")
     public static <E> Dict<E> asDict(E entity) {
-        return (entity instanceof HasEntityFieldDelegate && ((HasEntityFieldDelegate<?>) entity).getEntityFieldDelegate() instanceof Dict)
-          ? (Dict<E>) ((HasEntityFieldDelegate<E>) entity).getEntityFieldDelegate()
-          : null;
+        if (entity instanceof HasEntityFieldDelegate && ((HasEntityFieldDelegate<?>) entity).getEntityFieldDelegate() instanceof MappingEntityFieldDelegate<?, ?>) {
+            MappingEntityFieldDelegate<?, ?> mefd = (MappingEntityFieldDelegate<?, ?>) ((HasEntityFieldDelegate<?>) entity).getEntityFieldDelegate();
+            if (mefd.getRawEntity() instanceof Dict) {
+                return (Dict<E>) mefd.getRawEntity();
+            }
+        }
+        return null;
     }
 
+    private final String idField;
     private final Set<String> allowedKeys;
     private final Map<String, Object> contents = new HashMap<>();
     private final Map<String, String> fieldName2key;
     private final Map<String, String> attributeName2key;
 
-    public Dict(Set<String> allowedKeys, Map<String, String> fieldName2key, Map<String, String> attributeName2key) {
+    public Dict(String idField, Set<String> allowedKeys, Map<String, String> fieldName2key, Map<String, String> attributeName2key) {
+        this.idField = idField;
         this.allowedKeys = allowedKeys;
         this.fieldName2key = fieldName2key;
         this.attributeName2key = attributeName2key;
     }
 
     @Override
-    public <EF extends Enum<? extends EntityField<E>> & EntityField<E>> Object get(EF field) {
-        if ("Attributes".equals(field.getName())) {
-            return attributeName2key.entrySet().stream()
-              .filter(me -> get(me.getValue()) != null)
-              .collect(Collectors.toMap(me -> me.getKey(), me -> Collections.singletonList(get(me.getValue()))));
-        }
-        String key = fieldName2key.get(field.getName());
-        if (key != null) {
-            return get(key);
-        }
-        return null;
+    public String getId() {
+        return (String) get(idField());
     }
 
     @Override
-    public <T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void set(EF field, T value) {
-        String key = fieldName2key.get(field.getName());
-        if (key != null) {
-            put(key, value);
-        }
+    public void setId(String id) {
+        put(idField(), id);
     }
 
-    @Override
-    public <K, EF extends Enum<? extends EntityField<E>> & EntityField<E>> Object mapGet(EF field, K key) {
-        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key)) {
-            Object v = get(attributeName2key.get(key));
-            return v == null ? null : Collections.singletonList(get(attributeName2key.get(key)));
-        }
-        return null;
+    @SuppressWarnings("unchecked")
+    private String idField() {
+        return idField;
     }
 
-    @Override
-    public <K, T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void mapPut(EF field, K key, T value) {
-        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key) && (value instanceof List)) {
-            List<?> l = (List<?>) value;
-            if (l.isEmpty()) {
-                remove(attributeName2key.get(key));
-            } else {
-                put(attributeName2key.get(key), l.get(0));
-            }
-        }
-    }
-
-    @Override
-    public <K, EF extends Enum<? extends EntityField<E>> & EntityField<E>> Object mapRemove(EF field, K key) {
-        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key)) {
-            Object o = remove(attributeName2key.get(key));
-            return o == null ? null : Collections.singletonList(o);
-        }
-        return null;
-    }
+//    @Override
+//    public Object get(EntityField<E> field) {
+//        if ("Attributes".equals(field.getName())) {
+//            return attributeName2key.entrySet().stream()
+//              .filter(me -> get(me.getValue()) != null)
+//              .collect(Collectors.toMap(me -> me.getKey(), me -> Collections.singletonList(get(me.getValue()))));
+//        }
+//        String key = fieldName2key.get(field.getName());
+//        if (key != null) {
+//            return get(key);
+//        }
+//        return null;
+//    }
+//
+//    @Override
+//    public <T> void set(EntityField<E> field, T value) {
+//        String key = fieldName2key.get(field.getName());
+//        if (key != null) {
+//            put(key, value);
+//        }
+//    }
+//
+//    @Override
+//    public <K> Object mapGet(EntityField<E> field, K key) {
+//        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key)) {
+//            Object v = get(attributeName2key.get(key));
+//            return v == null ? null : Collections.singletonList(get(attributeName2key.get(key)));
+//        }
+//        return null;
+//    }
+//
+//    @Override
+//    public <K, T> void mapPut(EntityField<E> field, K key, T value) {
+//        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key) && (value instanceof List)) {
+//            List<?> l = (List<?>) value;
+//            if (l.isEmpty()) {
+//                remove(attributeName2key.get(key));
+//            } else {
+//                put(attributeName2key.get(key), l.get(0));
+//            }
+//        }
+//    }
+//
+//    @Override
+//    public <K> Object mapRemove(EntityField<E> field, K key) {
+//        if ("Attributes".equals(field.getName()) && attributeName2key.containsKey(key)) {
+//            Object o = remove(attributeName2key.get(key));
+//            return o == null ? null : Collections.singletonList(o);
+//        }
+//        return null;
+//    }
 
     protected boolean isKeyAllowed(String key) {
         return allowedKeys.contains(key);
@@ -140,7 +154,11 @@ public class Dict<E> extends UpdatableEntity.Impl implements EntityFieldDelegate
 
     public void put(String key, Object value) {
         if (isKeyAllowed(key)) {
-            updated |= ! Objects.equals(contents.put(key, value), value);
+            if (value == null) {
+                remove(key);
+            } else {
+                updated |= ! Objects.equals(contents.put(key, value), value);
+            }
         }
     }
 

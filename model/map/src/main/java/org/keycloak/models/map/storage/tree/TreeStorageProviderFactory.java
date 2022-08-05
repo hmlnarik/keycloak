@@ -44,7 +44,7 @@ import static org.keycloak.models.map.storage.tree.config.ConfigTranslator.STORE
  *
  * @author hmlnarik
  */
-public class TreeStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory, EnvironmentDependentProviderFactory {
+public class TreeStorageProviderFactory implements AmphibianProviderFactory<MapStorageProvider>, MapStorageProviderFactory.Native, EnvironmentDependentProviderFactory {
 
     public static final String PROVIDER_ID = "tree";
 
@@ -100,7 +100,7 @@ public class TreeStorageProviderFactory implements AmphibianProviderFactory<MapS
                 componentId = realmId + "-tree-" + uniqueId;
             }
             try {
-                this.prescription = new ConfigTranslator(realmId, uniqueId).parseConfiguration(input);
+                this.prescription = new ConfigTranslator(factory, realmId, uniqueId).parseConfiguration(input);
             } finally {
                 input.close();
             }
@@ -136,7 +136,7 @@ public class TreeStorageProviderFactory implements AmphibianProviderFactory<MapS
     <V extends AbstractEntity, M> TreeStorage getStorage(Class<M> modelType, Flag... flags) {
         return storages.computeIfAbsent(modelType, cl -> {
             Class<V> entityClass = ModelEntityUtil.getEntityType(modelType);
-            return new TreeStorage<>(forEntityClass(entityClass), null);
+            return new TreeStorage<>(forEntityClass(entityClass));
         });
     }
 }
