@@ -15,6 +15,10 @@
     <packaging>jar</packaging>
     
     <properties>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+
         <keycloak.connectionsJpa.driver>org.h2.Driver</keycloak.connectionsJpa.driver>
         <keycloak.connectionsJpa.database>keycloak</keycloak.connectionsJpa.database>
         <keycloak.connectionsJpa.user>sa</keycloak.connectionsJpa.user>
@@ -45,7 +49,6 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
@@ -137,6 +140,16 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <!--
+                    Setting version is necessary since the version inherited from jboss-parent is 3.8.1-jboss-1 and that fails
+                    to properly set test dependencies for maven.compiler.release >= 9. Once jboss-parent dependency is removed,
+                    remove this version declaration as well.
+                -->
+                <version>3.8.1-jboss-2</version>
+            </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -351,6 +364,15 @@
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
                 <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
                 <tree.configResource>/tree-storage-provider/tree-partial-composition.yaml</tree.configResource>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>tree-changing-id</id>
+            <properties>
+                <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
+                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <tree.configResource>/tree-storage-provider/tree-changingId-partial.yaml</tree.configResource>
             </properties>
         </profile>
 

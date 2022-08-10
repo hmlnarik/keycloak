@@ -13,6 +13,9 @@
 
     <properties>
         <jacoco.skip>true</jacoco.skip>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <build>
@@ -20,6 +23,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <!--
+                    Setting version is necessary since the version inherited from jboss-parent is 3.8.1-jboss-1 and that fails
+                    to properly set test dependencies for maven.compiler.release >= 9. Once jboss-parent dependency is removed,
+                    remove this version declaration as well.
+                -->
+                <version>3.8.1-jboss-2</version>
+
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
@@ -31,6 +41,10 @@
                     <annotationProcessors>
                         <annotationProcessor>org.keycloak.models.map.processor.GenerateEntityImplementationsProcessor</annotationProcessor>
                     </annotationProcessors>
+                    <compilerArgs>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>10000</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -47,7 +61,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
@@ -125,15 +138,14 @@
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
         </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>

@@ -54,7 +54,7 @@ import static org.keycloak.models.map.processor.Util.isMapType;
 import static org.keycloak.models.map.processor.Util.isSetType;
 import static org.keycloak.models.map.processor.Util.singularToPlural;
 
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
+@SupportedSourceVersion(SourceVersion.RELEASE_11)
 public abstract class AbstractGenerateEntityImplementationsProcessor extends AbstractProcessor {
 
     protected static final String FQN_DEEP_CLONER = "org.keycloak.models.map.common.DeepCloner";
