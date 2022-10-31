@@ -344,7 +344,7 @@
             <id>tree-single</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
-                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <keycloak.model.parameters>Map,ConcurrentHashMapStorage,Tree</keycloak.model.parameters>
                 <tree.configResource>/tree-storage-provider/tree-partial.yaml</tree.configResource>
             </properties>
         </profile>
@@ -353,7 +353,7 @@
             <id>tree-two-level</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
-                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <keycloak.model.parameters>Map,ConcurrentHashMapStorage,Tree</keycloak.model.parameters>
                 <tree.configResource>/tree-storage-provider/tree-partial-below-chm.yaml</tree.configResource>
             </properties>
         </profile>
@@ -362,19 +362,19 @@
             <id>tree-composition</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
-                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <keycloak.model.parameters>Map,ConcurrentHashMapStorage,Tree</keycloak.model.parameters>
                 <tree.configResource>/tree-storage-provider/tree-partial-composition.yaml</tree.configResource>
             </properties>
         </profile>
 
-        <profile>
+<!--        <profile>
             <id>tree-changing-id</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
-                <keycloak.model.parameters>Jpa,Map,Tree</keycloak.model.parameters>
+                <keycloak.model.parameters>Map,ConcurrentHashMapStorage,Tree</keycloak.model.parameters>
                 <tree.configResource>/tree-storage-provider/tree-changingId-partial.yaml</tree.configResource>
             </properties>
-        </profile>
+        </profile>-->
 
         <profile>
             <id>hot-rod</id>
@@ -388,7 +388,7 @@
             <id>map-ldap</id>
             <properties>
                 <keycloak.profile.feature.map_storage>enabled</keycloak.profile.feature.map_storage>
-                <keycloak.model.parameters>Map,LdapMapStorage</keycloak.model.parameters>
+                <keycloak.model.parameters>Map,ConcurrentHashMapStorage,LdapMapStorage</keycloak.model.parameters>
             </properties>
         </profile>
 

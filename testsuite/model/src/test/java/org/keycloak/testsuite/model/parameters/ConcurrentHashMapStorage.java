@@ -16,9 +16,17 @@
  */
 package org.keycloak.testsuite.model.parameters;
 
+import org.keycloak.authorization.store.StoreFactorySpi;
+import org.keycloak.events.EventStoreSpi;
+import org.keycloak.models.ActionTokenStoreSpi;
+import org.keycloak.models.DeploymentStateSpi;
+import org.keycloak.models.SingleUseObjectSpi;
+import org.keycloak.models.UserLoginFailureSpi;
+import org.keycloak.models.UserSessionSpi;
 import org.keycloak.models.map.storage.MapStorageSpi;
 import org.keycloak.testsuite.model.KeycloakModelParameters;
 import org.keycloak.models.map.storage.chm.ConcurrentHashMapStorageProviderFactory;
+import org.keycloak.models.map.storage.ldap.LdapMapStorageProviderFactory;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.Spi;
 import org.keycloak.testsuite.model.Config;
@@ -40,8 +48,26 @@ public class ConcurrentHashMapStorage extends KeycloakModelParameters {
 
     @Override
     public void updateConfig(Config cf) {
-        cf.spi(MapStorageSpi.NAME)
-            .defaultProvider(ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+        cf.spi(ActionTokenStoreSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("authorizationPersister").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("authenticationSessions").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("client").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("clientScope").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(DeploymentStateSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(EventStoreSpi.NAME).config("map.storage-admin-events.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(EventStoreSpi.NAME).config("map.storage-auth-events.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("group").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("realm").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("role").config("map.storage.provider", LdapMapStorageProviderFactory.PROVIDER_ID)
+          .spi(SingleUseObjectSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(StoreFactorySpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("user").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(UserSessionSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi(UserLoginFailureSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+          .spi("publicKeyStorage").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+
+          .spi(MapStorageSpi.NAME)
+//            .defaultProvider(ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
             .provider(ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
               .config("dir", "${project.build.directory:target}");
     }
