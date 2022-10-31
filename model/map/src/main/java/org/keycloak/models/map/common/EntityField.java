@@ -36,7 +36,7 @@ public interface EntityField<E> {
      * @param e Entity
      * @param value Value of the field
      */
-    default <T> void set(E e, T value) {};
+    default <T> void set(E e, T value) { throw new IllegalStateException("Setter not defined for field: " + this); };
 
     /**
      * Adds an element to the collection stored in this field.
