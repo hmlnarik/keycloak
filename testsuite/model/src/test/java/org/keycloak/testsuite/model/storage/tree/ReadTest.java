@@ -126,7 +126,7 @@ public class ReadTest extends KeycloakModelTest {
             MapStorageProvider store = session.getComponentProvider(MapStorageProvider.class, treeStorageId1);
             MapStorage<MapClientEntity, ClientModel> storage = store.getStorage(ClientModel.class);
 
-            // This is the same code as
+            // This is the same code as AbstractMapProviderFactory.getStorage
             if (storage instanceof MapStorage.WithContextMappers && session.getContext().getRealm() != null && session.getContext().getRealm().getId() != null) {
                 SearchableModelField<ClientModel> searchableRealmIdField = ModelEntityUtil.getSearchableRealmIdField(ClientModel.class);
                 final Optional<ParameterizedEntityField<MapClientEntity>> rid = ModelEntityUtil.fromSearchableField(searchableRealmIdField, null);
