@@ -2,14 +2,14 @@
 stores:
   - partial:
       mappers[clients]:
-        attribute.name:
-          from: ${LOGO}
+        attributes.logo:
+          template: ${LOGO}
           read-only: true
-        client-id: ${NAME}
+        clientId: ${NAME}
         id: ${NAME}
         enabled: ${ENABLED}
-        attribute.origin: partial
-        attribute.some-info: ${NAME} is ${ENABLED}
+        attributes.origin: partial
+        attributes.some-info: ${NAME} is ${ENABLED}
       read-only[clients]: true
 
       contents[clients]:
@@ -18,14 +18,14 @@ stores:
 
   - partial:
       mappers[clients]:
-        attribute.name:
-          from: ${LOGO}
+        attributes.logo:
+          template: ${LOGO}
           read-only: true
-        client-id: ${NAME}
+        clientId: ${NAME}
         id: ${NAME}
         enabled: ${ENABLED}
-        attribute.origin: partial
-        attribute.some-info: ${NAME} is ${ENABLED}
+        attributes.origin: partial
+        attributes.some-info: ${NAME} is ${ENABLED}
       read-only[clients]: true
 
       contents[clients]:
@@ -35,14 +35,14 @@ stores:
 
   - partial:
       mappers[clients]:
-        attribute.name:
-          from: ${LOGO}
+        attributes.logo:
+          template: ${LOGO}
           read-only: true
-        client-id: ${NAME}
+        clientId: ${NAME}
         id: ${NAME}
         enabled: ${ENABLED}
-        attribute.origin: partial
-        attribute.some-info: ${NAME} is ${ENABLED}
+        attributes.origin: partial
+        attributes.some-info: ${NAME} is ${ENABLED}
       read-only[clients]: true
 
       contents[clients]:

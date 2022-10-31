@@ -41,9 +41,9 @@ public class TemplateMapper {
 
     private static final Logger LOG = Logger.getLogger(TemplateMapper.class);
 
-    private static final Pattern CONSTANT_TEMPLATE = Pattern.compile("((?:\\\\.|[^\\\\{])*?)");
-    private static final Pattern DIRECT_EXPRESSION_TEMPLATE = Pattern.compile("\\{([^}]+)\\}");
-    private static final Pattern EXPRESSION_TEMPLATE = Pattern.compile("((?:\\\\.|[^\\\\{])*?)\\{([^}]+)\\}");
+    private static final Pattern CONSTANT_TEMPLATE = Pattern.compile("((?:\\\\.|[^\\\\$])*?)");
+    private static final Pattern DIRECT_EXPRESSION_TEMPLATE = Pattern.compile("\\$\\{([^}]+)\\}");
+    private static final Pattern EXPRESSION_TEMPLATE = Pattern.compile("((?:\\\\.|[^\\\\$])*?)\\$\\{([^}]+)\\}");
 
     public static <R> Mapper<R> forTemplate(Object templateObj, FieldDescriptorGetter<R> innerFieldDescGetter, Class<?> targetFieldClass) {
         if (templateObj == null) {
@@ -63,7 +63,7 @@ public class TemplateMapper {
             return new ConstantMapper<>(constant, targetFieldClass);
         }
 
-        // 3. If the template is of form {XYZ}, then just map a field to another field
+        // 3. If the template is of form ${XYZ}, then just map a field to another field
         //    TODO: Conversion may need to take place, e.g. when mapping an number to a String attribute and vice versa
         Matcher m = DIRECT_EXPRESSION_TEMPLATE.matcher(template);
         if (m.matches()) {
@@ -74,10 +74,6 @@ public class TemplateMapper {
         }
 
         // 4. Now we know the pattern is more complex so it is treated as a String mapping
-        if (targetFieldClass != String.class) {
-            throw new IllegalArgumentException("Only Strings are supported for complex mappings, found " + targetFieldClass);
-        }
-
         m = EXPRESSION_TEMPLATE.matcher(template);
         LinkedList<Function<R, String>> thereEx = new LinkedList<>();
         List<BiConsumer<R, Object>> exprConsumerList = new LinkedList<>();

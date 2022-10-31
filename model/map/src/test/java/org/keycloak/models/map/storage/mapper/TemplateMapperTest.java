@@ -14,10 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.keycloak.models.map.storage.tree.mapper;
+package org.keycloak.models.map.storage.mapper;
 
-import org.keycloak.models.map.storage.mapper.Mapper;
-import org.keycloak.models.map.storage.mapper.TemplateMapper;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -89,7 +87,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testVariableExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("{id}", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("${id}", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("ID"));
@@ -105,7 +103,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testIntegerToStringExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("{number/int}", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("${number/int}", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("12345"));
@@ -121,7 +119,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testLongToStringExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("{number/longString}", TemplateMapperTest::getTestFieldDescriptor, Long.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("${number/longString}", TemplateMapperTest::getTestFieldDescriptor, Long.class);
         final Object target = m.there(null);
 
         assertThat(target, is(67890L));
@@ -137,7 +135,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testIntegerToIntegerExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("{number/int}", TemplateMapperTest::getTestFieldDescriptor, Integer.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("${number/int}", TemplateMapperTest::getTestFieldDescriptor, Integer.class);
         final Object target = m.there(null);
 
         assertThat(target, is(12345));
@@ -153,7 +151,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testPrefixExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("prefix{id}", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("prefix${id}", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("prefixID"));
@@ -169,7 +167,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testPrefixIntegerExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("prefix{number/int}", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("prefix${number/int}", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("prefix12345"));
@@ -185,7 +183,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testSuffixExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("{id}suffix", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("${id}suffix", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("IDsuffix"));
@@ -201,7 +199,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testComplexExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("a{id}b{field}c", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("a${id}b${field}c", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("aIDbFIELDc"));
@@ -219,7 +217,7 @@ public class TemplateMapperTest {
 
     @Test
     public void testComplexTypedExpression() {
-        Mapper<Object> m = TemplateMapper.forTemplate("a{id}b{number/long}c", TemplateMapperTest::getTestFieldDescriptor, String.class);
+        Mapper<Object> m = TemplateMapper.forTemplate("a${id}b${number/long}c", TemplateMapperTest::getTestFieldDescriptor, String.class);
         final Object target = m.there(null);
 
         assertThat(target, is("aIDb67890c"));

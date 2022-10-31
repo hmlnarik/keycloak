@@ -2,14 +2,14 @@
 stores:
   - partial:  ## <-- map storage provider ID
       mappers[clients]:
-        attribute.name:
-          from: ${LOGO}
+        attributes.logo:
+          template: ${LOGO}
           read-only: true
         clientId: ${NAME}
         id: ${NAME}
         enabled: ${ENABLED}
-        attribute.origin: partial
-        attribute.some-info: ${NAME} is ${ENABLED}
+        attributes.origin: partial
+        attributes.some-info: ${NAME} is ${ENABLED}
 
       read-only[clients]: true
 
