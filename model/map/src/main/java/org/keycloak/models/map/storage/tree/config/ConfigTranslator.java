@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jboss.logging.Logger;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 /**
  *
@@ -52,7 +53,13 @@ public class ConfigTranslator {
     private static final ThreadLocal<Yaml> YAML_INSTANCE = new ThreadLocal<Yaml>() {
         @Override
         protected Yaml initialValue() {
-            return new Yaml();
+            return new Yaml(new Constructor() {
+                @Override
+                protected Class<?> getClassForName(String name) throws ClassNotFoundException {
+                    return null;
+                }
+
+            });
         }
     };
 
