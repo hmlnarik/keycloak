@@ -26,14 +26,13 @@ import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.ext.Provider;
-import org.keycloak.common.util.Resteasy;
-import org.keycloak.models.KeycloakSession;
 import org.keycloak.quarkus.runtime.transaction.TransactionalSessionHandler;
+import javax.ws.rs.container.ContainerRequestFilter;
 
 @Provider
 @PreMatching
 @Priority(1)
-public class TransactionalResponseFilter implements ContainerResponseFilter, TransactionalSessionHandler {
+public class TransactionalResponseFilter implements ContainerRequestFilter, ContainerResponseFilter, TransactionalSessionHandler {
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext)
@@ -44,12 +43,17 @@ public class TransactionalResponseFilter implements ContainerResponseFilter, Tra
             return;
         }
 
-        close(Resteasy.getContextData(KeycloakSession.class));
+        close();
     }
 
     private static boolean shouldDelaySessionClose(Object entity) {
         // do not close the session if the response entity is a stream
         // that is because we need the session open until the stream is transformed as it might require access to the database
         return entity instanceof Stream || entity instanceof StreamingOutput;
+    }
+
+    @Override
+    public void filter(ContainerRequestContext requestContext) {
+        markSessionUsed();
     }
 }

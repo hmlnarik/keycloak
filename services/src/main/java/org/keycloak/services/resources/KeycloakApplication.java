@@ -283,36 +283,29 @@ public class KeycloakApplication extends Application {
     }
 
     public void importRealm(RealmRepresentation rep, String from) {
-        KeycloakSession session = sessionFactory.create();
         boolean exists = false;
-        try {
+        try (KeycloakSession session = sessionFactory.create()) {
             session.getTransactionManager().begin();
 
-            try {
-                RealmManager manager = new RealmManager(session);
+            RealmManager manager = new RealmManager(session);
 
-                if (rep.getId() != null && manager.getRealm(rep.getId()) != null) {
-                    ServicesLogger.LOGGER.realmExists(rep.getRealm(), from);
-                    exists = true;
-                }
-
-                if (manager.getRealmByName(rep.getRealm()) != null) {
-                    ServicesLogger.LOGGER.realmExists(rep.getRealm(), from);
-                    exists = true;
-                }
-                if (!exists) {
-                    RealmModel realm = manager.importRealm(rep);
-                    ServicesLogger.LOGGER.importedRealm(realm.getName(), from);
-                }
-                session.getTransactionManager().commit();
-            } catch (Throwable t) {
-                session.getTransactionManager().rollback();
-                if (!exists) {
-                    ServicesLogger.LOGGER.unableToImportRealm(t, rep.getRealm(), from);
-                }
+            if (rep.getId() != null && manager.getRealm(rep.getId()) != null) {
+                ServicesLogger.LOGGER.realmExists(rep.getRealm(), from);
+                exists = true;
             }
-        } finally {
-            session.close();
+
+            if (manager.getRealmByName(rep.getRealm()) != null) {
+                ServicesLogger.LOGGER.realmExists(rep.getRealm(), from);
+                exists = true;
+            }
+            if (!exists) {
+                RealmModel realm = manager.importRealm(rep);
+                ServicesLogger.LOGGER.importedRealm(realm.getName(), from);
+            }
+        } catch (Throwable t) {
+            if (!exists) {
+                ServicesLogger.LOGGER.unableToImportRealm(t, rep.getRealm(), from);
+            }
         }
     }
 
@@ -334,9 +327,7 @@ public class KeycloakApplication extends Application {
 
                 for (RealmRepresentation realmRep : realms) {
                     for (UserRepresentation userRep : realmRep.getUsers()) {
-                        KeycloakSession session = sessionFactory.create();
-
-                        try {
+                        try (KeycloakSession session = sessionFactory.create()) {
                             session.getTransactionManager().begin();
                             RealmModel realm = session.realms().getRealmByName(realmRep.getRealm());
 
@@ -355,16 +346,10 @@ public class KeycloakApplication extends Application {
                                 RepresentationToModel.createRoleMappings(userRep, user, realm);
                                 ServicesLogger.LOGGER.addUserSuccess(userRep.getUsername(), realmRep.getRealm());
                             }
-
-                            session.getTransactionManager().commit();
                         } catch (ModelDuplicateException e) {
-                            session.getTransactionManager().rollback();
                             ServicesLogger.LOGGER.addUserFailedUserExists(userRep.getUsername(), realmRep.getRealm());
                         } catch (Throwable t) {
-                            session.getTransactionManager().rollback();
                             ServicesLogger.LOGGER.addUserFailed(t, userRep.getUsername(), realmRep.getRealm());
-                        } finally {
-                            session.close();
                         }
                     }
                 }

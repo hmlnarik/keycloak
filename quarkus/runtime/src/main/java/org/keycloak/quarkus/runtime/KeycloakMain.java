@@ -159,24 +159,18 @@ public class KeycloakMain implements QuarkusApplication {
         }
 
         KeycloakSessionFactory sessionFactory = KeycloakApplication.getSessionFactory();
-        KeycloakSession session = sessionFactory.create();
-        KeycloakTransactionManager transaction = session.getTransactionManager();
 
-        try {
+        try (KeycloakSession session = sessionFactory.create()) {
+            KeycloakTransactionManager transaction = session.getTransactionManager();
             transaction.begin();
 
             new ApplianceBootstrap(session).createMasterRealmUser(adminUserName, adminPassword);
             ServicesLogger.LOGGER.addUserSuccess(adminUserName, Config.getAdminRealm());
 
-            transaction.commit();
         } catch (IllegalStateException e) {
-            session.getTransactionManager().rollback();
             ServicesLogger.LOGGER.addUserFailedUserExists(adminUserName, Config.getAdminRealm());
         } catch (Throwable t) {
-            session.getTransactionManager().rollback();
             ServicesLogger.LOGGER.addUserFailed(t, adminUserName, Config.getAdminRealm());
-        } finally {
-            session.close();
         }
     }
 }

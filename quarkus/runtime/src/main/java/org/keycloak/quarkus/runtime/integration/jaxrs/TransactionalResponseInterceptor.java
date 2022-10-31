@@ -25,8 +25,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.ext.Provider;
 import javax.ws.rs.ext.WriterInterceptor;
 import javax.ws.rs.ext.WriterInterceptorContext;
-import org.keycloak.common.util.Resteasy;
-import org.keycloak.models.KeycloakSession;
 import org.keycloak.quarkus.runtime.transaction.TransactionalSessionHandler;
 
 @Provider
@@ -35,14 +33,13 @@ import org.keycloak.quarkus.runtime.transaction.TransactionalSessionHandler;
 public class TransactionalResponseInterceptor implements WriterInterceptor, TransactionalSessionHandler {
     @Override
     public void aroundWriteTo(WriterInterceptorContext context) throws IOException, WebApplicationException {
-        KeycloakSession session = Resteasy.getContextData(KeycloakSession.class);
-
         try {
+            markSessionUsed();
             context.proceed();
         } finally {
             // make sure response is closed after writing to the response output stream
             // this is needed in order to support streams from endpoints as they need access to underlying resources like database
-            close(session);
+            close();
         }
     }
 }

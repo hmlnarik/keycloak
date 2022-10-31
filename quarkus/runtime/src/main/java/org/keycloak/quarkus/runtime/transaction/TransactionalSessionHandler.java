@@ -17,12 +17,13 @@
 
 package org.keycloak.quarkus.runtime.transaction;
 
+import org.keycloak.common.util.Resteasy;
 import static org.keycloak.services.resources.KeycloakApplication.getSessionFactory;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.models.KeycloakTransactionManager;
-import org.keycloak.services.DefaultKeycloakSession;
+import io.vertx.ext.web.RoutingContext;
+import org.jboss.resteasy.core.ResteasyContext;
 
 /**
  * <p>A {@link TransactionalSessionHandler} is responsible for managing transaction sessions and its lifecycle. Its subtypes
@@ -39,9 +40,18 @@ public interface TransactionalSessionHandler {
     default KeycloakSession create() {
         KeycloakSessionFactory sessionFactory = getSessionFactory();
         KeycloakSession session = sessionFactory.create();
-        KeycloakTransactionManager tx = session.getTransactionManager();
-        tx.begin();
+        session.getTransactionManager().begin();
         return session;
+    }
+
+    default void markSessionUsed() {
+        RoutingContext context = ResteasyContext.getContextData(RoutingContext.class);
+
+        if (context == null) {
+            return;
+        }
+
+        context.data().merge(KeycloakSession.class.getName() + ".usages", 1, (a, b) -> ((Integer) a) + 1);
     }
 
     /**
@@ -49,22 +59,25 @@ public interface TransactionalSessionHandler {
      *
      * @param session a transactional session
      */
-    default void close(KeycloakSession session) {
-        if (DefaultKeycloakSession.class.cast(session).isClosed()) {
+    default void close() {
+        RoutingContext context = ResteasyContext.getContextData(RoutingContext.class);
+
+        if (context != null) {
+            close(context);
+        }
+    }
+
+    default void close(RoutingContext context) {
+        Integer usageCount = (Integer) context.data().merge(KeycloakSession.class.getName() + ".usages", 0, (a, b) -> ((Integer) a) - 1);
+        if (usageCount > 0) {
             return;
         }
 
-        KeycloakTransactionManager tx = session.getTransactionManager();
-
-        try {
-            if (tx.isActive()) {
-                if (tx.getRollbackOnly()) {
-                    tx.rollback();
-                } else {
-                    tx.commit();
-                }
-            }
-        } finally {
+        // Do not use Resteasy.getContextData(KeycloakSession.class) as this would
+        // fall back to context lookup anyway, see ResteasyVertxProvider.getContextData
+        KeycloakSession session = (KeycloakSession) context.data().replace(KeycloakSession.class.getName(), null);
+        if (session != null) {
+            Resteasy.pushContext(KeycloakSession.class, null);  // Clear both Resteasy and Vert.X contexts
             session.close();
         }
     }

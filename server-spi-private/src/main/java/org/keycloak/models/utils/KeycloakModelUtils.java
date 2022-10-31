@@ -40,7 +40,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakSessionTask;
 import org.keycloak.models.KeycloakSessionTaskWithResult;
-import org.keycloak.models.KeycloakTransaction;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.models.RoleModel;
@@ -253,26 +252,9 @@ public final class KeycloakModelUtils {
      * @param task
      */
     public static void runJobInTransaction(KeycloakSessionFactory factory, KeycloakSessionTask task) {
-        KeycloakSession session = factory.create();
-        KeycloakTransaction tx = session.getTransactionManager();
-        try {
-            tx.begin();
+        try (KeycloakSession session = factory.create()) {
+            session.getTransactionManager().begin();
             task.run(session);
-
-            if (tx.isActive()) {
-                if (tx.getRollbackOnly()) {
-                    tx.rollback();
-                } else {
-                    tx.commit();
-                }
-            }
-        } catch (RuntimeException re) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            throw re;
-        } finally {
-            session.close();
         }
     }
 
@@ -294,25 +276,11 @@ public final class KeycloakModelUtils {
                                                      final int attemptsCount, final int retryIntervalMillis) {
         int retryCount = 0;
         Random rand = new Random();
-        V result;
         while (true) {
-            KeycloakSession session = factory.create();
-            KeycloakTransaction tx = session.getTransactionManager();
-            try {
-                tx.begin();
-                result = callable.run(session);
-                if (tx.isActive()) {
-                    if (tx.getRollbackOnly()) {
-                        tx.rollback();
-                    } else {
-                        tx.commit();
-                    }
-                }
-                break;
+            try (KeycloakSession session = factory.create()) {
+                session.getTransactionManager().begin();
+                return callable.run(session);
             } catch (RuntimeException re) {
-                if (tx.isActive()) {
-                    tx.rollback();
-                }
                 if (isExceptionRetriable(re) && ++retryCount < attemptsCount) {
                     int delay = Math.min(retryIntervalMillis * attemptsCount, (1 << retryCount) * retryIntervalMillis)
                             + rand.nextInt(retryIntervalMillis);
@@ -325,11 +293,8 @@ public final class KeycloakModelUtils {
                 } else {
                     throw re;
                 }
-            } finally {
-                session.close();
             }
         }
-        return result;
     }
 
     /**

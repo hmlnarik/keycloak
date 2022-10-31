@@ -76,9 +76,10 @@ public class QuarkusRequestFilter implements Handler<RoutingContext>, Transactio
 
     private Runnable createBlockingHandler(RoutingContext context) {
         return () -> {
-            KeycloakSession session = configureContextualData(context);
+            configureContextualData(context);
 
             try {
+                markSessionUsed();
                 context.next();
             } catch (Throwable cause) {
                 // re-throw so that the any exception is handled from parent
@@ -87,7 +88,7 @@ public class QuarkusRequestFilter implements Handler<RoutingContext>, Transactio
                 // force closing the session if not already closed
                 // under some circumstances resteasy might not be invoked like when no route is found for a particular path
                 // in this case context is set with status code 404, and we need to close the session
-                close(session);
+                close(context);
             }
         };
     }
