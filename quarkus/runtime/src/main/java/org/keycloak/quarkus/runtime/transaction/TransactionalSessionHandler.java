@@ -45,13 +45,6 @@ public interface TransactionalSessionHandler {
     }
 
     default void markSessionUsed() {
-        RoutingContext context = ResteasyContext.getContextData(RoutingContext.class);
-
-        if (context == null) {
-            return;
-        }
-
-        context.data().merge(KeycloakSession.class.getName() + ".usages", 1, (a, b) -> ((Integer) a) + 1);
     }
 
     /**
@@ -68,11 +61,6 @@ public interface TransactionalSessionHandler {
     }
 
     default void close(RoutingContext context) {
-        Integer usageCount = (Integer) context.data().merge(KeycloakSession.class.getName() + ".usages", 0, (a, b) -> ((Integer) a) - 1);
-        if (usageCount > 0) {
-            return;
-        }
-
         // Do not use Resteasy.getContextData(KeycloakSession.class) as this would
         // fall back to context lookup anyway, see ResteasyVertxProvider.getContextData
         KeycloakSession session = (KeycloakSession) context.data().replace(KeycloakSession.class.getName(), null);

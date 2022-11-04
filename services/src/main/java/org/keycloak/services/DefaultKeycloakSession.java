@@ -93,6 +93,9 @@ public class DefaultKeycloakSession implements KeycloakSession {
         this.factory = factory;
         this.transactionManager = new DefaultKeycloakTransactionManager(this);
         context = new DefaultKeycloakContext(this);
+        if (LOG.isDebugEnabled()) {
+            LOG.debugf("Created %s%s", this, StackUtil.getShortStackTrace());
+        }
     }
 
     @Override
@@ -450,7 +453,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
     @Override
     public void close() {
         if (LOG.isDebugEnabled()) {
-            LOG.debugf("Closing session %s%s%s", System.identityHashCode(this),
+            LOG.debugf("Closing %s%s%s", this,
               getTransactionManager().isActive() ? " (transaction active" + (getTransactionManager().getRollbackOnly() ? ", ROLLBACK-ONLY" : "") + ")" : "",
               StackUtil.getShortStackTrace());
         }
@@ -504,4 +507,8 @@ public class DefaultKeycloakSession implements KeycloakSession {
         return null;
     }
 
+    @Override
+    public String toString() {
+        return String.format("session@%08x", System.identityHashCode(this));
+    }
 }
