@@ -80,15 +80,25 @@ public class QuarkusRequestFilter implements Handler<RoutingContext>, Transactio
 
             try {
                 markSessionUsed();
-                context.next();
+                context.addBodyEndHandler(event -> close(context));
+                context.next(); // <<< This can cause response to be sent fully from another thread
             } catch (Throwable cause) {
                 // re-throw so that the any exception is handled from parent
                 throw new RuntimeException(cause);
-            } finally {
                 // force closing the session if not already closed
                 // under some circumstances resteasy might not be invoked like when no route is found for a particular path
                 // in this case context is set with status code 404, and we need to close the session
-                close(context);
+
+                // We cannot use close(context) here since the context.next() is possibly executed by a different
+                // thread (especially its I/O) and might cause the session be closed asynchronously still causing the following behaviour:
+                //   The content is sent and processed fully by the browser but the session is not closed until
+                //   some undefined time in the future.
+                //   This means that the commit() operation might only be executed _after_ some next step requested by the browser
+                //   which would rely on the data from the previous step.
+
+                // Hence commenting out:
+//            } finally {
+//                 close(context);
             }
         };
     }
