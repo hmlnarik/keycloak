@@ -283,7 +283,6 @@ public class MapFieldPredicates {
             sf.stream().filter(f -> SEARCHABLE_FIELD_NAME_REALM_ID.equals(f.getName())).findAny()
               .ifPresent(f -> SEARCHABLE_FIELD_REALM_IDS.put(modelClass, f));
         }
->>>>>>> 963c1a6589 (WIP)
     }
 
     private static <K, V extends AbstractEntity, M, L extends Comparable<L>> void put(
