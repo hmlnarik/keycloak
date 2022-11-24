@@ -18,7 +18,6 @@ package org.keycloak.testsuite.model.parameters;
 
 import org.keycloak.authorization.store.StoreFactorySpi;
 import org.keycloak.events.EventStoreSpi;
-import org.keycloak.models.ActionTokenStoreSpi;
 import org.keycloak.models.DeploymentStateSpi;
 import org.keycloak.models.SingleUseObjectSpi;
 import org.keycloak.models.UserLoginFailureSpi;
@@ -48,8 +47,7 @@ public class ConcurrentHashMapStorage extends KeycloakModelParameters {
 
     @Override
     public void updateConfig(Config cf) {
-        cf.spi(ActionTokenStoreSpi.NAME).config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
-          .spi("authorizationPersister").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
+        cf.spi("authorizationPersister").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
           .spi("authenticationSessions").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
           .spi("client").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
           .spi("clientScope").config("map.storage.provider", ConcurrentHashMapStorageProviderFactory.PROVIDER_ID)
