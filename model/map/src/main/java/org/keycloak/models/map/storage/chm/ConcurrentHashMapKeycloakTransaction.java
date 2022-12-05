@@ -19,6 +19,8 @@ package org.keycloak.models.map.storage.chm;
 import org.keycloak.models.map.common.StringKeyConverter;
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.common.EntityField;
+import org.keycloak.models.map.common.HasRealmId;
 import org.keycloak.models.map.common.UpdatableEntity;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -31,12 +33,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jboss.logging.Logger;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
+import org.keycloak.models.map.storage.ModelEntityUtil;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.chm.MapModelCriteriaBuilder.UpdatePredicatesFunc;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 import org.keycloak.storage.SearchableModelField;
 
-public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<V, M> {
+public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<V, M>, HasRealmId {
 
     private final static Logger log = Logger.getLogger(ConcurrentHashMapKeycloakTransaction.class);
 
@@ -47,16 +50,23 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
     protected final StringKeyConverter<K> keyConverter;
     protected final DeepCloner cloner;
     protected final Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates;
+    protected final EntityField<V> realmIdEntityField;
+    private String realmId;
 
     enum MapOperation {
         CREATE, UPDATE, DELETE,
     }
 
     public ConcurrentHashMapKeycloakTransaction(ConcurrentHashMapCrudOperations<V, M> map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates) {
+        this(map, keyConverter, cloner, fieldPredicates, null);
+    }
+
+    public ConcurrentHashMapKeycloakTransaction(ConcurrentHashMapCrudOperations<V, M> map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates, EntityField<V> realmIdEntityField) {
         this.map = map;
         this.keyConverter = keyConverter;
         this.cloner = cloner;
         this.fieldPredicates = fieldPredicates;
+        this.realmIdEntityField = realmIdEntityField;
     }
 
     @Override
@@ -99,7 +109,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
     }
 
     private MapModelCriteriaBuilder<K, V, M> createCriteriaBuilder() {
-        return new MapModelCriteriaBuilder<K, V, M>(keyConverter, fieldPredicates);
+        return new MapModelCriteriaBuilder<>(keyConverter, fieldPredicates);
     }
 
     /**
@@ -128,7 +138,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
         }
         // Else enlist its copy in the transaction. Never return direct reference to the underlying map
         final V res = cloner.from(origEntity);
-        return updateIfChanged(res, e -> e.isUpdated());
+        return postProcess(updateIfChanged(res, e -> e.isUpdated()));
     }
 
     @Override
@@ -162,7 +172,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
             }
         }
 
-        return value;
+        return postProcess(value);
     }
 
     /**
@@ -189,6 +199,15 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
           .map(this::getUpdated)      // If the object has been removed, tx.get will return null, otherwise it will return me.getValue()
           .filter(Objects::nonNull)
           .map(this::registerEntityForChanges);
+
+        updatedAndNotRemovedObjectsStream = postProcess(updatedAndNotRemovedObjectsStream);
+
+        if (mapMcb != null) {
+            // Add explicitfiltering for the case when the map returns raw stream of untested values (ie. realize sequential scan)
+            updatedAndNotRemovedObjectsStream = updatedAndNotRemovedObjectsStream
+              .filter(e -> mapMcb.getKeyFilter().test(keyConverter.fromStringSafe(e.getId())))
+              .filter(mapMcb.getEntityFilter());
+        }
 
         // In case of created values stored in MapKeycloakTransaction, we need filter those according to the filter
         Stream<V> res = mapMcb == null
@@ -423,4 +442,39 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
             return map.getCount(queryParameters);
         }
     }
+
+    @Override
+    public String getRealmId() {
+        if (map instanceof HasRealmId) {
+            return ((HasRealmId) map).getRealmId();
+        }
+        return null;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void setRealmId(String realmId) {
+        if (map instanceof HasRealmId) {
+            ((HasRealmId) map).setRealmId(realmId);
+            this.realmId = realmId;
+        } else {
+            this.realmId = null;
+        }
+    }
+
+    private V postProcess(V value) {
+        return (realmId == null || value == null)
+          ? value
+          : ModelEntityUtil.supplyReadOnlyFieldValueIfUnset(value, realmIdEntityField, realmId);
+    }
+
+    private Stream<V> postProcess(Stream<V> stream) {
+        if (this.realmId == null) {
+            return stream;
+        }
+
+        String localRealmId = this.realmId;
+        return stream.map((V value) -> ModelEntityUtil.supplyReadOnlyFieldValueIfUnset(value, realmIdEntityField, localRealmId));
+    }
+
 }

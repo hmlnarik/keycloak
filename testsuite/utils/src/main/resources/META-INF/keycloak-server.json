@@ -165,6 +165,9 @@
             "mode": "LDAP_ONLY",
             "use.realm.roles.mapping": "true",
             "connectionPooling": "true"
+        },
+        "file": {
+            "dir.groups": "${keycloak.group.map.storage.provider.directory.groups:target/file/groups}"
         }
     },
 
