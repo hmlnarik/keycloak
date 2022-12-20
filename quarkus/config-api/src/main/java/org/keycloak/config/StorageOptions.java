@@ -217,19 +217,7 @@ public class StorageOptions {
             .buildTime(true)
             .build();
 
-    public static final Option<String> STORAGE_ACTION_TOKEN_PROVIDER = new OptionBuilder<>("storage-action-token-provider", String.class)
-            .category(OptionCategory.STORAGE)
-            .hidden()
-            .buildTime(true)
-            .build();
-
-    public static final Option<StorageType> STORAGE_ACTION_TOKEN_STORE = new OptionBuilder<>("storage-area-action-token", StorageType.class)
-            .category(OptionCategory.STORAGE)
-            .description(descriptionForStorageAreas("action tokens"))
-            .buildTime(true)
-            .build();
-
-    public static final Option<String> STORAGE_DBLOCK = new OptionBuilder<>("storage-dblock", String.class)
+    public static final Option<String> STORAGE_GLOBAL_LOCK_PROVIDER = new OptionBuilder<>("storage-global-lock-provider", String.class)
             .category(OptionCategory.STORAGE)
             .hidden()
             .buildTime(true)
@@ -330,9 +318,9 @@ public class StorageOptions {
 
     public static final Option<String> STORAGE_HOTROD_CACHE_REINDEX = new OptionBuilder<>("storage-hotrod-cache-reindex", String.class)
             .category(OptionCategory.STORAGE)
-            .defaultValue("all")
+            .defaultValue(Optional.empty())
             .expectedValues(StorageOptions::getExpectedCacheNames)
-            .description("List of cache names that should be indexed on Keycloak startup. Defaulting to `all` which means all caches are reindexed.")
+            .description("List of cache names that should be indexed on Keycloak startup. When set to `all`, all caches are reindexed. By default no caches are reindexed.")
             .hidden()
             .build();
 

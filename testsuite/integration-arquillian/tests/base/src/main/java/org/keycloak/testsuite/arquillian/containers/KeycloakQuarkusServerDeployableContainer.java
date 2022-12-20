@@ -27,7 +27,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,6 +49,7 @@ import org.jboss.logging.Logger;
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.exporter.ZipExporter;
 import org.jboss.shrinkwrap.descriptor.api.Descriptor;
+import org.keycloak.common.crypto.FipsMode;
 import org.keycloak.testsuite.arquillian.SuiteContext;
 import org.keycloak.testsuite.model.StoreProvider;
 
@@ -173,7 +176,7 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
     }
 
     private Process startContainer() throws IOException {
-        ProcessBuilder pb = new ProcessBuilder(getProcessCommands());
+        ProcessBuilder pb = getProcessBuilder();
         File wrkDir = configuration.getProvidersPath().resolve("bin").toFile();
         ProcessBuilder builder = pb.directory(wrkDir).redirectErrorStream(true);
 
@@ -198,8 +201,10 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
         return builder.start();
     }
 
-    private String[] getProcessCommands() {
+    private ProcessBuilder getProcessBuilder() {
         List<String> commands = new ArrayList<>();
+        Map<String, String> env = new HashMap<>();
+
         commands.add(getCommand());
         commands.add("-v");
         commands.add("start");
@@ -208,10 +213,13 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
 
         if (Boolean.parseBoolean(System.getProperty("auth.server.debug", "false"))) {
             commands.add("--debug");
-            if (configuration.getDebugPort() > 0) {
-                commands.add(Integer.toString(configuration.getDebugPort()));
-            } else {
-                commands.add(System.getProperty("auth.server.debug.port", "5005"));
+
+            String debugPort = configuration.getDebugPort() > 0 ? Integer.toString(configuration.getDebugPort()) : System.getProperty("auth.server.debug.port", "5005");
+            env.put("DEBUG_PORT", debugPort);
+
+            String debugSuspend = System.getProperty("auth.server.debug.suspend");
+            if (debugSuspend != null) {
+                env.put("DEBUG_SUSPEND", debugSuspend);
             }
         }
 
@@ -227,8 +235,10 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
         final Supplier<Boolean> shouldSetUpDb = () -> !restart.get() && !storeProvider.equals(StoreProvider.DEFAULT);
         final Supplier<String> getClusterConfig = () -> System.getProperty("auth.server.quarkus.cluster.config", "local");
 
+        log.debugf("FIPS Mode: %s", configuration.getFipsMode());
+
         // only run build during first execution of the server (if the DB is specified), restarts or when running cluster tests
-        if (restart.get() || shouldSetUpDb.get() || "ha".equals(getClusterConfig.get())) {
+        if (restart.get() || shouldSetUpDb.get() || "ha".equals(getClusterConfig.get()) || configuration.getFipsMode() != FipsMode.disabled) {
             commands.removeIf("--optimized"::equals);
             commands.add("--http-relative-path=/auth");
 
@@ -241,6 +251,10 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
                     commands.add("--cache-config-file=cluster-" + cacheMode + ".xml");
                 }
             }
+
+            if (configuration.getFipsMode() != FipsMode.disabled) {
+                addFipsOptions(commands);
+            }
         }
 
         addStorageOptions(storeProvider, commands);
@@ -249,12 +263,37 @@ public class KeycloakQuarkusServerDeployableContainer implements DeployableConta
 
         log.debugf("Quarkus parameters: %s", commands);
 
-        return commands.toArray(new String[0]);
+        String[] processCommands = commands.toArray(new String[0]);
+
+        ProcessBuilder pb = new ProcessBuilder(processCommands);
+        pb.environment().putAll(env);
+
+        return pb;
     }
 
     private void addStorageOptions(StoreProvider storeProvider, List<String> commands) {
         log.debugf("Store '%s' is used.", storeProvider.name());
         storeProvider.addStoreOptions(commands);
+    }
+
+    private void addFipsOptions(List<String> commands) {
+        commands.add("--fips-mode=" + configuration.getFipsMode().toString());
+
+        log.debugf("Keystore file: %s, keystore type: %s, truststore file: %s, truststore type: %s",
+                configuration.getKeystoreFile(), configuration.getKeystoreType(),
+                configuration.getTruststoreFile(), configuration.getTruststoreType());
+        commands.add("--https-key-store-file=" + configuration.getKeystoreFile());
+        commands.add("--https-key-store-type=" + configuration.getKeystoreType());
+        commands.add("--https-key-store-password=" + configuration.getKeystorePassword());
+        commands.add("--https-trust-store-file=" + configuration.getTruststoreFile());
+        commands.add("--https-trust-store-type=" + configuration.getTruststoreType());
+        commands.add("--https-trust-store-password=" + configuration.getTruststorePassword());
+        commands.add("--spi-truststore-file-file=" + configuration.getTruststoreFile());
+        commands.add("--spi-truststore-file-password=" + configuration.getTruststorePassword());
+        commands.add("--spi-truststore-file-type=" + configuration.getTruststoreType());
+        commands.add("--log-level=INFO,org.keycloak.common.crypto:TRACE,org.keycloak.crypto:TRACE,org.keycloak.truststore:TRACE");
+
+        configuration.appendJavaOpts("-Djava.security.properties=" + System.getProperty("auth.server.java.security.file"));
     }
 
     private void waitForReadiness() throws MalformedURLException, LifecycleException {

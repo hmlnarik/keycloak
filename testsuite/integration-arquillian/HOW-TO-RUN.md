@@ -34,12 +34,12 @@ And then re-run the LoginTest (or any other test you wish) and the changes shoul
 If you use Intellij Idea, you don't even need to re-build anything with the maven. After doing any
 change in the codebase, the change is immediately effective when running the test with Junit runner. 
 
-### Running tests in the production mode (Keycloak on Wildfly)
+### Running tests in the production mode (Keycloak on Quarkus)
 
-For the "production" testing, it is possible to run the Keycloak server deployed on real Wildfly server.
-This can be achieved by add the `auth-server-wildfly` profile when running the testsuite.
+For the "production" testing, it is possible to run the Keycloak server deployed on real Quarkus server.
+This can be achieved by add the `auth-server-quarkus` profile when running the testsuite.
 
-    mvn -f testsuite/integration-arquillian/pom.xml -Pauth-server-wildfly clean install
+    mvn -f testsuite/integration-arquillian/pom.xml -Pauth-server-quarkus clean install
 
 Unlike the "development" setup described above, this requires re-build the whole distribution
 after doing any change in the code.
@@ -81,16 +81,9 @@ Or slightly longer version (that allows you to specify debugging port as well as
 
 and you will be able to attach remote debugger to the test. Unfortunately server and adapter are running in different JVMs, so this won't help to debug those.
 
-### JBoss auth server debugging
+### Auth server debugging
 
-When tests are run on JBoss based container (WildFly/EAP) there is possibility to attach a debugger, by default on localhost:5005.
-
-The server won't wait to attach the debugger. There are some properties what can change the default behaviour.
-
-    -Dauth.server.debug.port=$PORT
-    -Dauth.server.debug.suspend=y
-
-More info: http://javahowto.blogspot.cz/2010/09/java-agentlibjdwp-for-attaching.html
+See below in the "Quarkus" section.
 
 ### JBoss app server debugging
 
@@ -424,18 +417,6 @@ The setup includes:
 *  a load balancer on embedded Undertow (SimpleUndertowLoadBalancer)
 *  two clustered nodes of Keycloak server on Wildfly/EAP or on embedded undertow
 *  shared DB
-
-### Cluster tests with Keycloak on Wildfly
-
-After you build the distribution, you run this command to setup servers and run cluster tests using shared Docker database:
-
-    mvn -f testsuite/integration-arquillian/pom.xml \
-    -Pauth-server-wildfly,auth-server-cluster,db-mysql,jpa \
-    -Dsession.cache.owners=2 \
-    -Dbackends.console.output=true \
-    -Dauth.server.log.check=false \
-    -Dfrontend.console.output=true \
-    -Dtest=org.keycloak.testsuite.cluster.**.*Test clean install
     
 ### Cluster tests with Keycloak on Quarkus
 
@@ -573,6 +554,8 @@ necessary to download the artifact and install it to local Maven repository. For
 For Data Grid 7 and older use: `-Dfile=jboss-datagrid-${DATAGRID_VERSION}-server.zip`.
 
 ### Run Cross-DC Tests from Maven
+
+Warning: The Cross-DC tests doesn't work with Quarkus distribution
 
 Note: Profile `auth-servers-crossdc-undertow` currently doesn't work (see [KEYCLOAK-18335](https://issues.redhat.com/browse/KEYCLOAK-18335)).
 Use `-Pauth-servers-crossdc-jboss,auth-server-wildfly` instead.
@@ -770,11 +753,11 @@ Then, before running the test, setup Keycloak Server distribution for the tests:
 
     mvn -f testsuite/integration-arquillian/servers/pom.xml \
         clean install \
-        -Pauth-server-wildfly
+        -Pauth-server-quarkus
 
 When running the test, add the following arguments to the command line:
 
-    -Pauth-server-wildfly -Pauth-server-enable-disable-feature -Dfeature.name=docker -Dfeature.value=enabled
+    -Pauth-server-quarkus -Pauth-server-enable-disable-feature -Dfeature.name=docker -Dfeature.value=enabled
 
 ## Java 11 support
 Java 11 requires some arguments to be passed to JVM. Those can be activated using `-Pjava11-auth-server` and
@@ -798,7 +781,14 @@ Run tests using the `auth-server-quarkus` profile:
     
 Right now, the server runs in a separate process. To debug the server set `auth.server.debug` system property to `true`.
 
-To configure the debugger port, set the `auth.server.debug.port` system property with any valid port number. Default is `5005`. 
+To configure the debugger port, set the `auth.server.debug.port` system property with any valid port number. Default is `5005`.
+Note you can also set port for example to `*:5005` or `my-host:5005` to set the bind host.
+
+By default, quarkus server is started in the testsuite and you need to attach remote debugger to it during running. You can
+use `auth.server.debug.suspend=y` to "suspend" server startup when running testsuite, which means that server startup is blocked
+until debugger is attached.
+
+More info: http://javahowto.blogspot.cz/2010/09/java-agentlibjdwp-for-attaching.html
 
 ## Cookies testing
 In order to reproduce some specific cookies behaviour in browsers (like SameSite policies or 3rd party cookie blocking),
@@ -847,15 +837,38 @@ mvn clean install -f testsuite/integration-arquillian/tests/base \
 
 ### Running tests with JPA Map storage
 
-Run PostgreSQL database:
-```shell
-podman run --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=pass -e POSTGRES_USER=keycloak -e POSTGRES_DB=keycloak -d postgres:13.2
-```
+By default, testing with the profile `map-storage-jpa-postgres` spawns a new Postgres container
+with each test execution. The default image used is `postgres:alpine`. To spawn a different
+version, use the system property `keycloak.map.storage.postgres.docker.image`.
+
+In a similar way the profile `map-storage-jpa-cockroach` spawns a new CockroachDB container
+with each test execution. It uses the official CockroachDB image in the version stated in the
+class `CockroachdbContainerTestEnricher`. To spawn a different
+version, use the system property `keycloak.map.storage.cockroachdb.docker.image`.
 
 Execute tests:
 ```shell
 mvn clean install -f testsuite/integration-arquillian/tests/base \
-                  -Pmap-storage,map-storage-jpa
+                  -Pmap-storage,map-storage-jpa-postgres
+```
+
+It's also possible to configure tests to connect to an external database, it might be useful 
+for debugging purposes as the database is not removed after the testsuite run. On the other hand
+it'll require manual cleaning between two runs.
+
+PostgreSQL database can be started e.g. by following command:
+```shell
+podman run --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=pass -e POSTGRES_USER=keycloak -e POSTGRES_DB=keycloak -d postgres:alpine
+```
+
+To run the tests without spawning the container for you, execute tests with the following command:
+```shell
+mvn clean install -f testsuite/integration-arquillian/tests/base \
+  -Pmap-storage,map-storage-jpa-postgres \
+  -Dpostgres.start-container=false \
+  -Dkeycloak.map.storage.connectionsJpa.url=<jdbc_url> \
+  -Dkeycloak.map.storage.connectionsJpa.user=<user> \
+  -Dkeycloak.map.storage.connectionsJpa.password=<password>
 ```
 
 ### Running tests with HotRod Map storage
@@ -933,3 +946,25 @@ DefaultHostnameTest.java:226)
 when running these tests on your local machine. This happens when something on your machine or network is blocking DNS queries to [nip.io](https://nip.io)
 One possible workaround is to add a commonly used public dns server (e.g. 8.8.8.8 for google dns server) to your local 
 networks dns configuration and run the tests. 
+
+## FIPS 140-2 testing
+
+On the FIPS enabled platform with FIPS enabled OpenJDK 11, you can run this to test against Keycloak server on Quarkus
+with FIPS 140.2 integration enabled
+```
+mvn -B -f testsuite/integration-arquillian/pom.xml \
+  clean install \
+  -Pauth-server-quarkus,auth-server-fips140-2 \
+  -Dcom.redhat.fips=false
+```
+NOTE 1: The property `com.redhat.fips` is needed so that testsuite itself is executed in the JVM with FIPS disabled. However
+most important part is that Keycloak itself is running on the JVM with FIPS enabled. You can check log from server startup and
+there should be messages similar to those:
+```
+2022-10-11 19:34:29,521 DEBUG [org.keycloak.common.crypto.CryptoIntegration] (main) Using the crypto provider: org.keycloak.crypto.fips.FIPS1402Provider
+2022-10-11 19:34:31,072 TRACE [org.keycloak.common.crypto.CryptoIntegration] (main) Java security providers: [ 
+ KC(BCFIPS version 1.000203) version 1.0 - class org.keycloak.crypto.fips.KeycloakFipsSecurityProvider, 
+ BCFIPS version 1.000203 - class org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider, 
+ BCJSSE version 1.001202 - class org.bouncycastle.jsse.provider.BouncyCastleJsseProvider,
+]
+```

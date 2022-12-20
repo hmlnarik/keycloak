@@ -44,7 +44,7 @@ public class MigrationModelTest extends KeycloakModelTest {
 
     @Override
     public void createEnvironment(KeycloakSession s) {
-        RealmModel realm = s.realms().createRealm("realm");
+        RealmModel realm = createRealm(s, "realm");
         realm.setDefaultRole(s.roles().addRealmRole(realm, Constants.DEFAULT_ROLES_ROLE_PREFIX + "-" + realm.getName()));
         this.realmId = realm.getId();
     }
@@ -58,7 +58,7 @@ public class MigrationModelTest extends KeycloakModelTest {
     public void test() {
         inComittedTransaction(1, (session , i) -> {
 
-            String currentVersion = new ModelVersion(Version.VERSION_KEYCLOAK).toString();
+            String currentVersion = new ModelVersion(Version.VERSION).toString();
 
             JpaConnectionProvider p = session.getProvider(JpaConnectionProvider.class);
             EntityManager em = p.getEntityManager();

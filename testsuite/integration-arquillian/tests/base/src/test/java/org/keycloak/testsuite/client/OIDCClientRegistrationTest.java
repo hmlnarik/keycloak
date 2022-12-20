@@ -587,32 +587,6 @@ public class OIDCClientRegistrationTest extends AbstractClientRegistrationTest {
     }
 
     @Test
-    public void testOIDCEndpointCreateWithSamlClient() throws Exception {
-        ClientsResource clientsResource = adminClient.realm(TEST).clients();
-        ClientRepresentation samlClient = clientsResource.findByClientId("saml-client").get(0);
-        String samlClientServiceId = clientsResource.get(samlClient.getId()).getServiceAccountUser().getId();
-
-        String realmManagementId = clientsResource.findByClientId("realm-management").get(0).getId();
-        RoleRepresentation role = clientsResource.get(realmManagementId).roles().get("create-client").toRepresentation();
-
-        adminClient.realm(TEST).users().get(samlClientServiceId).roles().clientLevel(realmManagementId).add(Arrays.asList(role));
-
-        String accessToken = oauth.clientId("saml-client").doClientCredentialsGrantAccessTokenRequest("secret").getAccessToken();
-        reg.auth(Auth.token(accessToken));
-
-        // change client to saml
-        samlClient.setProtocol("saml");
-        clientsResource.get(samlClient.getId()).update(samlClient);
-
-        OIDCClientRepresentation client = createRep();
-        assertCreateFail(client, 400, Errors.INVALID_CLIENT);
-
-        // revert client
-        samlClient.setProtocol("openid-connect");
-        clientsResource.get(samlClient.getId()).update(samlClient);
-    }
-
-    @Test
     public void testOIDCEndpointGetWithSamlClient() throws Exception {
         OIDCClientRepresentation response = create();
         reg.auth(Auth.token(response));
@@ -866,6 +840,22 @@ public class OIDCClientRegistrationTest extends AbstractClientRegistrationTest {
     public void testPostLogoutRedirectUriNull() throws Exception {
         OIDCClientRepresentation clientRep = createRep();
         OIDCClientRepresentation response = reg.oidc().create(clientRep);
-        assertNull(response.getPostLogoutRedirectUris());
+        assertEquals("http://redirect", response.getPostLogoutRedirectUris().get(0));
+    }
+
+    @Test
+    public void testPostLogoutRedirectUriEmpty() throws Exception {
+        OIDCClientRepresentation clientRep = createRep();
+        clientRep.setPostLogoutRedirectUris(new ArrayList<String>());
+        OIDCClientRepresentation response = reg.oidc().create(clientRep);
+        assertEquals("http://redirect", response.getPostLogoutRedirectUris().get(0));
+    }
+
+    @Test
+    public void testPostLogoutRedirectUriMinus() throws Exception {
+        OIDCClientRepresentation clientRep = createRep();
+        clientRep.setPostLogoutRedirectUris(Collections.singletonList("-"));
+        OIDCClientRepresentation response = reg.oidc().create(clientRep);
+        assertTrue(response.getPostLogoutRedirectUris().isEmpty());
     }
 }

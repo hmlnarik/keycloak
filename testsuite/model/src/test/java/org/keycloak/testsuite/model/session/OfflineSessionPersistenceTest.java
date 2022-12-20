@@ -85,7 +85,7 @@ public class OfflineSessionPersistenceTest extends KeycloakModelTest {
     }
 
     private static RealmModel prepareRealm(KeycloakSession s, String name) {
-        RealmModel realm = s.realms().createRealm(name);
+        RealmModel realm = createRealm(s, name);
         realm.setDefaultRole(s.roles().addRealmRole(realm, Constants.DEFAULT_ROLES_ROLE_PREFIX + "-" + realm.getName()));
         realm.setSsoSessionMaxLifespan(10 * 60 * 60);
         realm.setSsoSessionIdleTimeout(1 * 60 * 60);
@@ -257,8 +257,9 @@ public class OfflineSessionPersistenceTest extends KeycloakModelTest {
                     // IllegalLifecycleStateException: ISPN000324: Cache 'clientSessions' is in 'STOPPING' state and this is an invocation not belonging to an
                     // on-going transaction, so it does not accept new invocations."
                     // also: org.infinispan.commons.CacheException: java.lang.IllegalStateException: Read commands must ignore leavers
-                    if ((ex.getCause() != null && ex.getCause().getMessage().contains("ISPN000324") ||
-                            (ex instanceof CacheException && ex.getMessage().contains("Read commands must ignore leavers")))) {
+                    if ((ex.getCause() != null && ex.getCause().getMessage().contains("ISPN000324")) || 
+                            (ex.getMessage() != null && ex.getMessage().contains("ISPN000217")) ||
+                            (ex instanceof CacheException && ex.getMessage().contains("Read commands must ignore leavers"))) {
                         log.warn("invocation failed, skipping. Retrying might lead to a 'Unique index or primary key violation' when the offline session has already been stored in the DB in the current session", ex);
                     } else {
                         throw ex;

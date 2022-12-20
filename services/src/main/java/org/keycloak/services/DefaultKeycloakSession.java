@@ -53,6 +53,7 @@ import org.keycloak.vault.VaultProvider;
 import org.keycloak.vault.VaultTranscriber;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -69,7 +70,6 @@ import java.util.stream.Collectors;
  */
 public class DefaultKeycloakSession implements KeycloakSession {
 
-    private final static Logger log = Logger.getLogger(DefaultKeycloakSession.class);
     private final DefaultKeycloakSessionFactory factory;
     private final Map<Integer, Provider> providers = new HashMap<>();
     private final List<Provider> closable = new LinkedList<>();
@@ -89,10 +89,12 @@ public class DefaultKeycloakSession implements KeycloakSession {
     private VaultTranscriber vaultTranscriber;
     private ClientPolicyManager clientPolicyManager;
 
+    private boolean closed;
+
     public DefaultKeycloakSession(DefaultKeycloakSessionFactory factory) {
         this.factory = factory;
         this.transactionManager = new DefaultKeycloakTransactionManager(this);
-        context = new DefaultKeycloakContext(this);
+        context = createKeycloakContext(this);
     }
 
     @Override
@@ -127,6 +129,11 @@ public class DefaultKeycloakSession implements KeycloakSession {
 
     @Override
     public void enlistForClose(Provider provider) {
+        for (Provider p : closable) {
+            if (p == provider) {    // Do not add the same provider twice
+                return;
+            }
+        }
         closable.add(provider);
     }
 
@@ -150,6 +157,11 @@ public class DefaultKeycloakSession implements KeycloakSession {
     @Override
     public void setAttribute(String name, Object value) {
         attributes.put(name, value);
+    }
+
+    @Override
+    public Map<String, Object> getAttributes() {
+        return Collections.unmodifiableMap(attributes);
     }
 
     @Override
@@ -440,7 +452,11 @@ public class DefaultKeycloakSession implements KeycloakSession {
         return clientPolicyManager;
     }
 
+    @Override
     public void close() {
+        if (closed) {
+            throw new IllegalStateException("Illegal call to #close() on already closed KeycloakSession");
+        }
         Consumer<? super Provider> safeClose = p -> {
             try {
                 p.close();
@@ -453,6 +469,14 @@ public class DefaultKeycloakSession implements KeycloakSession {
         for (Entry<InvalidableObjectType, Set<Object>> me : invalidationMap.entrySet()) {
             factory.invalidate(this, me.getKey(), me.getValue().toArray());
         }
+        closed = true;
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
+    protected DefaultKeycloakContext createKeycloakContext(KeycloakSession session) {
+        return new DefaultKeycloakContext(session);
+    }
 }

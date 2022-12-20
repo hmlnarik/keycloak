@@ -17,6 +17,7 @@
 
 package org.keycloak.models.map.group;
 
+import java.security.Key;
 import org.jboss.logging.Logger;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.GroupModel.SearchableFields;
@@ -25,6 +26,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
+import org.keycloak.models.map.common.DeepCloner;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
 
@@ -32,6 +34,7 @@ import org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator;
 import org.keycloak.models.map.storage.QueryParameters;
 
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
+import org.keycloak.models.utils.KeycloakModelUtils;
 
 import java.util.Map;
 import java.util.Objects;
@@ -136,7 +139,7 @@ public class MapGroupProvider implements GroupProvider {
 
     @Override
     public Long getGroupsCountByNameContaining(RealmModel realm, String search) {
-        return searchForGroupByNameStream(realm, search, null, null).count();
+        return searchForGroupByNameStream(realm, search, false, null, null).count();
     }
 
     @Override
@@ -166,25 +169,29 @@ public class MapGroupProvider implements GroupProvider {
         );
     }
 
-    @Override
-    public Stream<GroupModel> searchForGroupByNameStream(RealmModel realm, String search, Integer firstResult, Integer maxResults) {
-        LOG.tracef("searchForGroupByNameStream(%s, %s, %d, %d)%s", realm, search, firstResult, maxResults, getShortStackTrace());
+    public Stream<GroupModel> searchForGroupByNameStream(RealmModel realm, String search, Boolean exact, Integer firstResult, Integer maxResults) {
+        LOG.tracef("searchForGroupByNameStream(%s, %s, %s, %b, %d, %d)%s", realm, session, search, exact, firstResult, maxResults, getShortStackTrace());
 
 
         DefaultModelCriteria<GroupModel> mcb = criteria();
-        mcb = mcb.compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
-                .compare(SearchableFields.NAME, Operator.ILIKE, "%" + search + "%");
+        if (exact != null && exact.equals(Boolean.TRUE)) {
+            mcb = mcb.compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
+                    .compare(SearchableFields.NAME, Operator.EQ, search);
+        } else {
+            mcb = mcb.compare(SearchableFields.REALM_ID, Operator.EQ, realm.getId())
+                    .compare(SearchableFields.NAME, Operator.ILIKE, "%" + search + "%");
+        }
 
 
         return tx.read(withCriteria(mcb).pagination(firstResult, maxResults, SearchableFields.NAME))
-            .map(MapGroupEntity::getId)
-            .map(id -> {
-                GroupModel groupById = session.groups().getGroupById(realm, id);
-                while (Objects.nonNull(groupById.getParentId())) {
-                    groupById = session.groups().getGroupById(realm, groupById.getParentId());
-                }
-                return groupById;
-            }).sorted(GroupModel.COMPARE_BY_NAME).distinct();
+                .map(MapGroupEntity::getId)
+                .map(id -> {
+                    GroupModel groupById = session.groups().getGroupById(realm, id);
+                    while (Objects.nonNull(groupById.getParentId())) {
+                        groupById = session.groups().getGroupById(realm, groupById.getParentId());
+                    }
+                    return groupById;
+                }).sorted(GroupModel.COMPARE_BY_NAME).distinct();
     }
 
     @Override
@@ -215,7 +222,7 @@ public class MapGroupProvider implements GroupProvider {
             throw new ModelDuplicateException("Group with name '" + name + "' in realm " + realm.getName() + " already exists for requested parent" );
         }
 
-        MapGroupEntity entity = new MapGroupEntityImpl();
+        MapGroupEntity entity = DeepCloner.DUMB_CLONER.newInstance(MapGroupEntity.class);
         entity.setId(id);
         entity.setRealmId(realm.getId());
         entity.setName(name);
@@ -248,6 +255,8 @@ public class MapGroupProvider implements GroupProvider {
     public void moveGroup(RealmModel realm, GroupModel group, GroupModel toParent) {
         LOG.tracef("moveGroup(%s, %s, %s)%s", realm, group, toParent, getShortStackTrace());
 
+        GroupModel previousParent = group.getParent();
+
         if (toParent != null && group.getId().equals(toParent.getId())) {
             return;
         }
@@ -271,6 +280,33 @@ public class MapGroupProvider implements GroupProvider {
         }
         group.setParent(toParent);
         if (toParent != null) toParent.addChild(group);
+
+        String newPath = KeycloakModelUtils.buildGroupPath(group);
+        String previousPath = KeycloakModelUtils.buildGroupPath(group, previousParent);
+
+        GroupModel.GroupPathChangeEvent event =
+                new GroupModel.GroupPathChangeEvent() {
+                    @Override
+                    public RealmModel getRealm() {
+                        return realm;
+                    }
+
+                    @Override
+                    public String getNewPath() {
+                        return newPath;
+                    }
+
+                    @Override
+                    public String getPreviousPath() {
+                        return previousPath;
+                    }
+
+                    @Override
+                    public KeycloakSession getKeycloakSession() {
+                        return session;
+                    }
+                };
+        session.getKeycloakSessionFactory().publish(event);
     }
 
     @Override
