@@ -2,7 +2,6 @@ package org.keycloak.models.map.storage.chm;
 
 import org.keycloak.models.map.common.AbstractEntity;
 import org.keycloak.models.map.common.UpdatableEntity;
-import org.keycloak.models.map.storage.ModelCriteriaBuilder;
 import org.keycloak.models.map.storage.QueryParameters;
 
 
@@ -79,4 +78,13 @@ public interface ConcurrentHashMapCrudOperations<V extends AbstractEntity & Upda
      * @return Number of objects. Never returns {@code null}.
      */
     long getCount(QueryParameters<M> queryParameters);
+
+    /**
+     * Determines first available key from the value upon creation.
+     * @param value
+     * @return
+     */
+    default String determineKeyFromValue(V value, boolean forCreate) {
+        return value == null ? null : value.getId();
+    }
 }

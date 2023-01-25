@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.keycloak.models.map.storage.file.yaml.parser;
+package org.keycloak.models.map.storage.file.yaml;
 
-import org.keycloak.models.map.storage.file.yaml.parser.YamlContext.DefaultListContext;
-import org.keycloak.models.map.storage.file.yaml.parser.YamlContext.DefaultMapContext;
-import org.keycloak.models.map.storage.file.yaml.parser.YamlContext.DefaultObjectContext;
+import org.keycloak.models.map.storage.file.common.YamlContext;
+import org.keycloak.models.map.storage.file.common.YamlContext.DefaultListContext;
+import org.keycloak.models.map.storage.file.common.YamlContext.DefaultMapContext;
+import org.keycloak.models.map.storage.file.common.YamlContext.DefaultObjectContext;
 import java.io.InputStream;
 import java.util.EnumMap;
 import java.util.Objects;
@@ -88,6 +89,7 @@ public class YamlContextAwareParser<E> {
         this.contextStack = new YamlContextStack(initialContext);
     }
 
+    @SuppressWarnings("unchecked")
     protected <E> E parse() {
         consumeEvent(Event.ID.StreamStart, "Expected a stream");
 
