@@ -171,13 +171,18 @@ public abstract class DescriptiveModelCriteria<M, Self extends DescriptiveModelC
 
     /**
      * Returns the realm ID which limits the results of this criteria.
-     * Does not support formulae which include negation of a condition containing realm ID.
-     * Ignores all instances of realm ID comparison which do not use plain equality.
-     * @return {@code null} if the realm ID is not contained in the formula, there are multiple
-     *   mutually different realm IDs in the formula, or the formula contains realm ID check within
+     * Does not support formulae which include negation of a condition containing the given field.
+     * Only supports plain equality ({@link Operator#EQ}), ignores all
+     * instances of the field comparison which do not use plain equality.
+     * @return {@code null} if the field is not contained in the formula, there are multiple
+     *   mutually different field values in the formula, or the formula contains field check within
      *   a negation.
      */
     public <T extends DescriptiveModelCriteria<?, ?>> Object getSingleRestrictionArgument(String fieldName) {
+        if (node == null) {
+            return null;
+        }
+
         // relax all conditions but those which check realmId equality. For this moment,
         // other operators like NE or IN are disregarded and will be added only if need
         // arises, since the current queries do not use them.
@@ -185,7 +190,7 @@ public abstract class DescriptiveModelCriteria<M, Self extends DescriptiveModelC
           instantiateForNode(node.cloneTree(n -> {
             switch (n.getNodeOperator()) {
                 case ATOMIC_FORMULA:
-                    if ("realmId".equals(n.getField().getName()) && n.getSimpleOperator() == Operator.EQ) {
+                    if (fieldName.equals(n.getField().getName()) && n.getSimpleOperator() == Operator.EQ) {
                         return new ModelCriteriaNode<>(n.getField(), n.getSimpleOperator(), n.getSimpleOperatorArguments());
                     }
                     return getNotParentsParity(n.getParent(), true) 
