@@ -47,7 +47,7 @@ public interface MapRoleEntity extends AbstractEntity, UpdatableEntity, EntityWi
 
         @Override
         public Boolean isClientRole() {
-            return getClientId() != null;
+            return getId() == null ? null : getClientId() != null;
         }
     }
 
