@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import static org.keycloak.models.map.common.CastUtils.cast;
 
 /**
  * A class implementing a {@code YamlContext} interface represents a transformer
@@ -130,22 +131,32 @@ public interface YamlContext<V> {
         }
     }
 
-    public static class DefaultListContext implements YamlContext<Collection<Object>> {
-        private final List<Object> result = new LinkedList<>();
+    public static class DefaultListContext<T> implements YamlContext<Collection<T>> {
+        private final List<T> result = new LinkedList<>();
 
-        @Override
-        public void add(Object value) {
-            result.add(value);
+        protected final Class<T> itemClass;
+
+        public static DefaultListContext<Object> newDefaultListContext() {
+            return new DefaultListContext<>(Object.class);
+        }
+
+        public DefaultListContext(Class<T> itemClass) {
+            this.itemClass = itemClass;
         }
 
         @Override
-        public List<Object> getResult() {
+        public void add(Object value) {
+            result.add(cast(value, itemClass));
+        }
+
+        @Override
+        public List<T> getResult() {
             return result;
         }
 
         @Override
         @SuppressWarnings("unchecked")
-        public void writeValue(Collection<Object> value, WritingMechanism mech) {
+        public void writeValue(Collection<T> value, WritingMechanism mech) {
             if (UndefinedValuesUtils.isUndefined(value)) return;
             mech.writeSequence(() -> value.forEach(v -> getContextByValue(v).writeValue(v, mech)));
         }
@@ -161,7 +172,7 @@ public interface YamlContext<V> {
                 return res;
             }
             if (value instanceof Collection) {
-                return new DefaultListContext();
+                return new DefaultListContext<>(Object.class);
             } else if (value instanceof Map) {
                 return new DefaultMapContext();
             } else {
@@ -208,7 +219,7 @@ public interface YamlContext<V> {
                 return res;
             }
             if (value instanceof Collection) {
-                return new DefaultListContext();
+                return new DefaultListContext<>(Object.class);
             } else if (value instanceof Map) {
                 return new DefaultMapContext();
             } else {

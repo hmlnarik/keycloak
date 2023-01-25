@@ -189,7 +189,7 @@ public class YamlContextAwareParser<E> {
     private static final EnumMap<Event.ID, Supplier<YamlContext<?>>> CONTEXT_CONSTRUCTORS = new EnumMap<>(Event.ID.class);
     static {
         CONTEXT_CONSTRUCTORS.put(ID.Scalar, DefaultObjectContext::new);
-        CONTEXT_CONSTRUCTORS.put(ID.SequenceStart, DefaultListContext::new);
+        CONTEXT_CONSTRUCTORS.put(ID.SequenceStart, DefaultListContext::newDefaultListContext);
         CONTEXT_CONSTRUCTORS.put(ID.MappingStart, DefaultMapContext::new);
     }
 

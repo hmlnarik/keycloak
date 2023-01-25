@@ -62,7 +62,7 @@ public class AttributesLikeYamlContext extends DefaultMapContext {
             AttributeValueYamlContext c = getContext(YamlContextAwareParser.ARRAY_CONTEXT);
             for (Map.Entry<String, Object> entry : new TreeMap<>(value).entrySet()) {
                 @SuppressWarnings("unchecked")
-                Collection<Object> attrValues = (Collection<Object>) entry.getValue();
+                Collection<String> attrValues = (Collection<String>) entry.getValue();
                 mech.writePair(entry.getKey(), () -> c.writeValue(attrValues, mech));
             }
         });
@@ -99,10 +99,14 @@ public class AttributesLikeYamlContext extends DefaultMapContext {
         }
     }
 
-    public static class AttributeValueYamlContext extends DefaultListContext {
+    public static class AttributeValueYamlContext extends DefaultListContext<String> {
+
+        public AttributeValueYamlContext() {
+            super(String.class);
+        }
 
         @Override
-        public void writeValue(Collection<Object> value, WritingMechanism mech) {
+        public void writeValue(Collection<String> value, WritingMechanism mech) {
             if (UndefinedValuesUtils.isUndefined(value)) return;
             if (value.size() == 1) {
                 mech.writeObject(value.iterator().next());

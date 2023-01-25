@@ -27,6 +27,7 @@ import org.keycloak.models.map.storage.file.common.YamlContext.DefaultMapContext
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -176,8 +177,11 @@ public class MapEntityYamlContext<T> implements YamlContext<T> {
         EntityField<?> ef = nameToEntityField.get(nameOfSubcontext);
         if (ef != null) {
             if (ef.getCollectionElementClass() != Void.class) {
-                return contextFor(ef.getCollectionElementClass(), MapEntitySequenceYamlContext::new, DefaultListContext::new);
+                return contextFor(ef.getCollectionElementClass(), MapEntitySequenceYamlContext::new, () -> new DefaultListContext<>(Object.class));
             } else if (ef.getMapValueClass() != Void.class) {
+                if (ef.getMapValueClass() == List.class || Collection.class.isAssignableFrom(ef.getMapValueClass())) {
+                    return new AttributesLikeYamlContext();
+                }
                 return contextFor(ef.getMapValueClass(), MapEntityMappingYamlContext::new, DefaultMapContext::new);
             }
             return contextFor(ef.getFieldClass(), MapEntityYamlContext::new, DefaultObjectContext::new);
@@ -228,18 +232,16 @@ public class MapEntityYamlContext<T> implements YamlContext<T> {
     }
     protected static final String SCHEMA_VERSION = "schemaVersion";
 
-    public static class MapEntitySequenceYamlContext<T> extends DefaultListContext {
+    public static class MapEntitySequenceYamlContext<T> extends DefaultListContext<T> {
 
-        private final Class<T> collectionElementClass;
-
-        public MapEntitySequenceYamlContext(Class<T> collectionElementClass) {
-            this.collectionElementClass = collectionElementClass;
+        public MapEntitySequenceYamlContext(Class<T> itemClass) {
+            super(itemClass);
         }
 
         @Override
         public YamlContext<?> getContext(String nameOfSubcontext) {
-            return ModelEntityUtil.entityFieldsKnown(collectionElementClass)
-              ? new MapEntityYamlContext<>(collectionElementClass, false)
+            return ModelEntityUtil.entityFieldsKnown(itemClass)
+              ? new MapEntityYamlContext<>(itemClass, false)
               : null;
         }
 
