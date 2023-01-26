@@ -27,10 +27,10 @@ import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
 import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.chm.ConcurrentHashMapCrudOperations;
-import org.keycloak.models.map.storage.file.yaml.YamlContextAwareParser;
-import org.keycloak.models.map.storage.file.common.MapEntityYamlContext;
-import org.keycloak.models.map.storage.file.yaml.writer.PathWriter;
-import org.keycloak.models.map.storage.file.yaml.writer.YamlWritingMechanism;
+import org.keycloak.models.map.storage.file.yaml.YamlParser;
+import org.keycloak.models.map.storage.file.common.MapEntityContext;
+import org.keycloak.models.map.storage.file.yaml.PathWriter;
+import org.keycloak.models.map.storage.file.yaml.YamlWritingMechanism;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.DirectoryStream;
@@ -172,7 +172,7 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
 
         protected V parse(Path fileName) {
             try {
-                final V parsedObject = YamlContextAwareParser.parse(Files.newInputStream(fileName), new MapEntityYamlContext<>(entityClass));
+                final V parsedObject = YamlParser.parse(Files.newInputStream(fileName), new MapEntityContext<>(entityClass));
                 final String fileNameStr = fileName.getFileName().toString();
                 String id = determineKeyFromValue(parsedObject, false);
                 final String desanitizedId = desanitizeId(fileNameStr.substring(0, fileNameStr.length() - FILE_SUFFIX.length()));
@@ -330,7 +330,7 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
             try (PathWriter w = new PathWriter(sp)) {
                 final Emitter emitter = new Emitter(DUMP_SETTINGS, w);
                 try (YamlWritingMechanism mech = new YamlWritingMechanism(emitter::emit)) {
-                    new MapEntityYamlContext<>(entityClass).writeValue(value, mech);
+                    new MapEntityContext<>(entityClass).writeValue(value, mech);
                 }
             } catch (IOException ex) {
                 throw new IllegalStateException("Cannot write " + sp, ex);

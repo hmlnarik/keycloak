@@ -17,7 +17,7 @@
 package org.keycloak.models.map.storage.file.common;
 
 import org.keycloak.models.map.common.UndefinedValuesUtils;
-import org.keycloak.models.map.storage.file.yaml.YamlContextAwareParser;
+import org.keycloak.models.map.storage.file.yaml.YamlParser;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -44,7 +44,7 @@ import static org.keycloak.models.map.common.CastUtils.cast;
  * @author hmlnarik
  * @param <V> Type of the result
  */
-public interface YamlContext<V> {
+public interface BlockContext<V> {
 
     /**
      * Writes the given value using {@link WritingMechanism}.
@@ -69,7 +69,7 @@ public interface YamlContext<V> {
      * @see DefaultListContext
      * @see DefaultMapContext
      */
-    YamlContext<?> getContext(String nameOfSubcontext);
+    BlockContext<?> getContext(String nameOfSubcontext);
 
     /**
      * Modifies the {@link #getResult() result returned} from within this context by
@@ -106,7 +106,7 @@ public interface YamlContext<V> {
      */
     V getResult();
 
-    public static class DefaultObjectContext implements YamlContext<Object> {
+    public static class DefaultObjectContext implements BlockContext<Object> {
         private Object result;
 
         @Override
@@ -126,12 +126,12 @@ public interface YamlContext<V> {
         }
 
         @Override
-        public YamlContext<?> getContext(String nameOfSubcontext) {
+        public BlockContext<?> getContext(String nameOfSubcontext) {
             return null;
         }
     }
 
-    public static class DefaultListContext<T> implements YamlContext<Collection<T>> {
+    public static class DefaultListContext<T> implements BlockContext<Collection<T>> {
         private final List<T> result = new LinkedList<>();
 
         protected final Class<T> itemClass;
@@ -162,12 +162,12 @@ public interface YamlContext<V> {
         }
 
         @Override
-        public YamlContext<?> getContext(String nameOfSubcontext) {
+        public BlockContext<?> getContext(String nameOfSubcontext) {
             return null;
         }
 
-        private YamlContext getContextByValue(Object value) {
-            YamlContext res = getContext(YamlContextAwareParser.ARRAY_CONTEXT);
+        private BlockContext getContextByValue(Object value) {
+            BlockContext res = getContext(YamlParser.ARRAY_CONTEXT);
             if (res != null) {
                 return res;
             }
@@ -181,7 +181,7 @@ public interface YamlContext<V> {
         }
     }
 
-    public static class DefaultMapContext implements YamlContext<Map<String, Object>> {
+    public static class DefaultMapContext implements BlockContext<Map<String, Object>> {
         private final Map<String, Object> result = new LinkedHashMap<>();
 
         @Override
@@ -209,12 +209,12 @@ public interface YamlContext<V> {
         }
 
         @Override
-        public YamlContext getContext(String nameOfSubcontext) {
+        public BlockContext getContext(String nameOfSubcontext) {
             return null;
         }
 
-        private YamlContext getContext(String nameOfSubcontext, Object value) {
-            YamlContext res = getContext(nameOfSubcontext);
+        private BlockContext getContext(String nameOfSubcontext, Object value) {
+            BlockContext res = getContext(nameOfSubcontext);
             if (res != null) {
                 return res;
             }
