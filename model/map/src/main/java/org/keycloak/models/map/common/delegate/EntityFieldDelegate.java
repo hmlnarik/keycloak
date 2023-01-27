@@ -5,8 +5,34 @@ import java.util.Map;
 
 import org.keycloak.models.map.common.EntityField;
 import org.keycloak.models.map.common.UpdatableEntity;
+import java.util.Collections;
+import java.util.Set;
 
 public interface EntityFieldDelegate<E> extends UpdatableEntity {
+
+    public abstract class WithEntity<E extends UpdatableEntity> implements EntityFieldDelegate<E> {
+        private final E entity;
+
+        public WithEntity(E entity) {
+            this.entity = entity;
+        }
+
+        @Override
+        public <EF extends Enum<? extends EntityField<E>> & EntityField<E>> Object get(EF field) {
+            return field.get(entity);
+        }
+
+        @Override
+        public <T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void set(EF field, T value) {
+            field.set(entity, value);
+        }
+
+        @Override
+        public boolean isUpdated() {
+            return entity.isUpdated();
+        }
+    }
+
     // Non-collection values
     <EF extends Enum<? extends EntityField<E>> & EntityField<E>> Object get(EF field);
     default <T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void set(EF field, T value) {}
@@ -14,7 +40,9 @@ public interface EntityFieldDelegate<E> extends UpdatableEntity {
     default <T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void collectionAdd(EF field, T value) {
         @SuppressWarnings("unchecked")
         Collection<T> c = (Collection<T>) get(field);
-        if (c != null) {
+        if (c == null) {
+            set(field, field.getFieldClass().isAssignableFrom(Set.class) ? Collections.singleton(value) : Collections.singletonList(value));
+        } else {
             c.add(value);
         }
     }
@@ -40,7 +68,9 @@ public interface EntityFieldDelegate<E> extends UpdatableEntity {
     default <K, T, EF extends Enum<? extends EntityField<E>> & EntityField<E>> void mapPut(EF field, K key, T value) {
         @SuppressWarnings("unchecked")
         Map<K, T> m = (Map<K, T>) get(field);
-        if (m != null) {
+        if (m == null) {
+            set(field, Collections.singletonMap(key, value));
+        } else {
             m.put(key, value);
         }
     }
