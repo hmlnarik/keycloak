@@ -106,7 +106,7 @@ public interface ConcurrentHashMapCrudOperations<V extends AbstractEntity & Upda
      * @param value
      * @return
      */
-    default String determineKeyFromValue(V value, boolean forCreate) {
+    default String determineKeyFromValue(V value) {
         return value == null ? null : value.getId();
     }
 }

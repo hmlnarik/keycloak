@@ -303,7 +303,7 @@ public class HotRodMapStorage<K, E extends AbstractHotRodEntity, V extends Abstr
         // Here we return transaction that has no action because the returned transaction is enlisted to different
         //  phase than we need. Instead of tx returned by this method txWrapper is enlisted and executes all changes
         //  performed by the returned transaction.
-        return new NoActionHotRodTransactionWrapper<>((ConcurrentHashMapKeycloakTransaction<K, V, M>) txWrapper.getOrCreateTxForModel(storedEntityDescriptor.getModelTypeClass(), () -> createTransactionInternal(session)));
+        return new NoActionHotRodTransactionWrapper<>((ConcurrentHashMapKeycloakTransaction<K, V, M, HotRodMapStorage<K, E, V, M>>) txWrapper.getOrCreateTxForModel(storedEntityDescriptor.getModelTypeClass(), () -> createTransactionInternal(session)));
     }
 
     protected MapKeycloakTransaction<V, M> createTransactionInternal(KeycloakSession session) {

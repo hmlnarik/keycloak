@@ -40,14 +40,14 @@ import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 import org.keycloak.storage.SearchableModelField;
 import java.util.function.Consumer;
 
-public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<V, M>, HasRealmId {
+public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & UpdatableEntity, M, CRUD extends ConcurrentHashMapCrudOperations<V, M>> implements MapKeycloakTransaction<V, M>, HasRealmId {
 
     private final static Logger log = Logger.getLogger(ConcurrentHashMapKeycloakTransaction.class);
 
     protected boolean active;
     protected boolean rollback;
     protected final Map<String, MapTaskWithValue> tasks = new LinkedHashMap<>();
-    protected final ConcurrentHashMapCrudOperations<V, M> map;
+    protected final CRUD map;
     protected final StringKeyConverter<K> keyConverter;
     protected final DeepCloner cloner;
     protected final Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates;
@@ -59,11 +59,11 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
         CREATE, UPDATE, DELETE,
     }
 
-    public ConcurrentHashMapKeycloakTransaction(ConcurrentHashMapCrudOperations<V, M> map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates) {
+    public ConcurrentHashMapKeycloakTransaction(CRUD map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates) {
         this(map, keyConverter, cloner, fieldPredicates, null);
     }
 
-    public ConcurrentHashMapKeycloakTransaction(ConcurrentHashMapCrudOperations<V, M> map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates, EntityField<V> realmIdEntityField) {
+    public ConcurrentHashMapKeycloakTransaction(CRUD map, StringKeyConverter<K> keyConverter, DeepCloner cloner, Map<SearchableModelField<? super M>, UpdatePredicatesFunc<K, V, M>> fieldPredicates, EntityField<V> realmIdEntityField) {
         this.map = map;
         this.keyConverter = keyConverter;
         this.cloner = cloner;
@@ -246,7 +246,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
 
     @Override
     public V create(V value) {
-        String key = map.determineKeyFromValue(value, true);
+        String key = map.determineKeyFromValue(value);
         if (key == null) {
             K newKey = keyConverter.yieldNewUniqueKey();
             key = keyConverter.keyToString(newKey);

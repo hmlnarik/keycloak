@@ -213,9 +213,9 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
                 return null;
             }
 
-            String escapedId = determineKeyFromValue(parsedObject, false);
             final String fileNameStr = fileName.getFileName().toString();
             final String idFromFilename = fileNameStr.substring(0, fileNameStr.length() - FILE_SUFFIX.length());
+            String escapedId = determineKeyFromValue(parsedObject, idFromFilename);
             if (escapedId == null) {
                 LOG.debugf("Determined ID from filename: %s%s", idFromFilename);
                 escapedId = idFromFilename;
@@ -239,6 +239,23 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
             return value;
         }
 
+        public String determineKeyFromValue(V value, String lastIdComponentIfUnset) {
+            String[] proposedId = suggestedPath.apply(value);
+
+            if (proposedId == null || proposedId.length == 0) {
+                return lastIdComponentIfUnset;
+            } else if (proposedId[proposedId.length - 1] == null) {
+                proposedId[proposedId.length - 1] = lastIdComponentIfUnset;
+            }
+
+            String[] escapedProposedId = escapeId(proposedId);
+            final String res = String.join(ID_COMPONENT_SEPARATOR, escapedProposedId);
+            if (LOG.isDebugEnabled()) {
+                LOG.tracef("determineKeyFromValue: got %s (%s) for %s", res, res == null ? null : String.join(" [/] ", proposedId), value);
+            }
+            return res;
+        }
+
         /**
          * Returns escaped ID - relative file name in the file system with path separator {@link #ID_COMPONENT_SEPARATOR}.
          * @param value Object
@@ -246,22 +263,16 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
          * @return
          */
         @Override
-        public String determineKeyFromValue(V value, boolean forCreate) {
+        public String determineKeyFromValue(V value) {
             final boolean randomId;
             String[] proposedId = suggestedPath.apply(value);
-
-            if (! forCreate) {
-                String[] escapedProposedId = escapeId(proposedId);
-                final String res = proposedId == null ? null : String.join(ID_COMPONENT_SEPARATOR, escapedProposedId);
-                if (LOG.isDebugEnabled()) {
-                    LOG.debugf("determineKeyFromValue: got %s (%s) for %s", res, res == null ? null : String.join(" [/] ", proposedId), value);
-                }
-                return res;
-            }
 
             if (proposedId == null || proposedId.length == 0) {
                 randomId = value.getId() == null;
                 proposedId = new String[] { value.getId() == null ? StringKey.INSTANCE.yieldNewUniqueKey() : value.getId() };
+            } else if (proposedId[proposedId.length - 1] == null) {
+                randomId = true;
+                proposedId[proposedId.length - 1] = StringKey.INSTANCE.yieldNewUniqueKey();
             } else {
                 randomId = false;
             }
@@ -283,7 +294,7 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
                 try {
                     touch(sp);
                     final String res = String.join(ID_COMPONENT_SEPARATOR, escapedProposedId);
-                    LOG.debugf("determineKeyFromValue: got %s for created %s", res, value);
+                    LOG.tracef("determineKeyFromValue: got %s for created %s", res, value);
                     return res;
                 } catch (FileAlreadyExistsException ex) {
                     if (! randomId) {
