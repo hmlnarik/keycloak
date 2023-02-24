@@ -49,7 +49,7 @@ import java.util.function.Function;
  * @author <a href="mailto:sguilhen@redhat.com">Stefan Guilhen</a>
  */
 public class FileMapKeycloakTransaction<V extends AbstractEntity & UpdatableEntity, M>
-  extends ConcurrentHashMapKeycloakTransaction<String, V, M> {
+  extends ConcurrentHashMapKeycloakTransaction<String, V, M, FileMapStorage.Crud<V, M>> {
 
     private final List<Path> pathsToDelete = new LinkedList<>();
     private final Map<Path, Path> renameOnCommit = new HashMap<>();
@@ -169,7 +169,7 @@ public class FileMapKeycloakTransaction<V extends AbstractEntity & UpdatableEnti
         public <T, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> void set(EF field, T value) {
             String id = entity.getId();
             super.set(field, value);
-            if (! Objects.equals(id, map.determineKeyFromValue(entity, false))) {
+            if (! Objects.equals(id, map.determineKeyFromValue(entity, "RAND"))) {
                 throw new ReadOnlyException("Cannot change " + field + " as that would change primary key");
             }
         }

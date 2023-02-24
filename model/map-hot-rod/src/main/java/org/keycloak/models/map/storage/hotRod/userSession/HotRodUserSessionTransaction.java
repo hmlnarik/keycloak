@@ -45,7 +45,7 @@ import java.util.stream.Stream;
 
 import static org.keycloak.models.map.storage.ModelCriteriaBuilder.Operator.IN;
 
-public class HotRodUserSessionTransaction<K> extends ConcurrentHashMapKeycloakTransaction<K, MapUserSessionEntity, UserSessionModel> {
+public class HotRodUserSessionTransaction<K> extends ConcurrentHashMapKeycloakTransaction<K, MapUserSessionEntity, UserSessionModel, ConcurrentHashMapCrudOperations<MapUserSessionEntity, UserSessionModel>> {
 
     private final MapKeycloakTransaction<MapAuthenticatedClientSessionEntity, AuthenticatedClientSessionModel> clientSessionTransaction;
 

@@ -33,9 +33,9 @@ import java.util.stream.Stream;
 public class NoActionHotRodTransactionWrapper<K, V extends AbstractEntity & UpdatableEntity, M> implements MapKeycloakTransaction<V, M> {
 
 
-    private final ConcurrentHashMapKeycloakTransaction<K, V, M> actualTx;
+    private final ConcurrentHashMapKeycloakTransaction<K, V, M, ?> actualTx;
 
-    public NoActionHotRodTransactionWrapper(ConcurrentHashMapKeycloakTransaction<K, V, M> actualTx) {
+    public NoActionHotRodTransactionWrapper(ConcurrentHashMapKeycloakTransaction<K, V, M, ?> actualTx) {
         this.actualTx = actualTx;
     }
 

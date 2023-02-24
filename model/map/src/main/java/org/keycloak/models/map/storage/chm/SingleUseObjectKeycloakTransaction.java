@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * @author <a href="mailto:mkanis@redhat.com">Martin Kanis</a>
  */
-public class SingleUseObjectKeycloakTransaction<K> extends ConcurrentHashMapKeycloakTransaction<K, MapSingleUseObjectEntity, SingleUseObjectValueModel> {
+public class SingleUseObjectKeycloakTransaction<K> extends ConcurrentHashMapKeycloakTransaction<K, MapSingleUseObjectEntity, SingleUseObjectValueModel, ConcurrentHashMapCrudOperations<MapSingleUseObjectEntity, SingleUseObjectValueModel>> {
 
     public SingleUseObjectKeycloakTransaction(ConcurrentHashMapCrudOperations<MapSingleUseObjectEntity, SingleUseObjectValueModel> map,
                                               StringKeyConverter<K> keyConverter,
