@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import static org.keycloak.models.map.storage.file.FileMapStorage.Crud.ID_COMPONENT_SEPARATOR;
 
 /**
  * {@link MapKeycloakTransaction} implementation used with the file map storage.
@@ -169,7 +170,45 @@ public class FileMapKeycloakTransaction<V extends AbstractEntity & UpdatableEnti
         public <T, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> void set(EF field, T value) {
             String id = entity.getId();
             super.set(field, value);
-            if (! Objects.equals(id, map.determineKeyFromValue(entity, "RAND"))) {
+            checkIdMatches(id, field);
+        }
+
+        @Override
+        public <T, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> void collectionAdd(EF field, T value) {
+            String id = entity.getId();
+            super.collectionAdd(field, value);
+            checkIdMatches(id, field);
+        }
+
+        @Override
+        public <T, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> Object collectionRemove(EF field, T value) {
+            String id = entity.getId();
+            final Object res = super.collectionRemove(field, value);
+            checkIdMatches(id, field);
+            return res;
+        }
+
+        @Override
+        public <K, T, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> void mapPut(EF field, K key, T value) {
+            String id = entity.getId();
+            super.mapPut(field, key, value);
+            checkIdMatches(id, field);
+        }
+
+        @Override
+        public <K, EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> Object mapRemove(EF field, K key) {
+            String id = entity.getId();
+            final Object res = super.mapRemove(field, key);
+            checkIdMatches(id, field);
+            return res;
+        }
+
+        private <EF extends java.lang.Enum<? extends org.keycloak.models.map.common.EntityField<V>> & org.keycloak.models.map.common.EntityField<V>> void checkIdMatches(String id, EF field) throws ReadOnlyException {
+            final String idNow = map.determineKeyFromValue(entity, "");
+            if (! Objects.equals(id, idNow)) {
+                if (idNow.endsWith(ID_COMPONENT_SEPARATOR) && id.startsWith(idNow)) {
+                    return;
+                }
                 throw new ReadOnlyException("Cannot change " + field + " as that would change primary key");
             }
         }
