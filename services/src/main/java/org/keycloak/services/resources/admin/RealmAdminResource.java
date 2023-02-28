@@ -387,7 +387,7 @@ public class RealmAdminResource {
         logger.debug("updating realm: " + realm.getName());
 
         if (Config.getAdminRealm().equals(realm.getName()) && (rep.getRealm() != null && !rep.getRealm().equals(Config.getAdminRealm()))) {
-            return ErrorResponse.error("Can't rename master realm", Status.BAD_REQUEST);
+            throw ErrorResponse.error("Can't rename master realm", Status.BAD_REQUEST);
         }
         
         ReservedCharValidator.validate(rep.getRealm());
@@ -398,7 +398,7 @@ public class RealmAdminResource {
                 try {
                     KeyPairVerifier.verify(rep.getPrivateKey(), rep.getPublicKey());
                 } catch (VerificationException e) {
-                    return ErrorResponse.error(e.getMessage(), Status.BAD_REQUEST);
+                    throw ErrorResponse.error(e.getMessage(), Status.BAD_REQUEST);
                 }
             }
 
@@ -406,10 +406,10 @@ public class RealmAdminResource {
                 try {
                     X509Certificate cert = PemUtils.decodeCertificate(rep.getCertificate());
                     if (cert == null) {
-                        return ErrorResponse.error("Failed to decode certificate", Status.BAD_REQUEST);
+                        throw ErrorResponse.error("Failed to decode certificate", Status.BAD_REQUEST);
                     }
                 } catch (Exception e)  {
-                    return ErrorResponse.error("Failed to decode certificate", Status.BAD_REQUEST);
+                    throw ErrorResponse.error("Failed to decode certificate", Status.BAD_REQUEST);
                 }
             }
 
@@ -430,12 +430,12 @@ public class RealmAdminResource {
             
             return Response.noContent().build();
         } catch (ModelDuplicateException e) {
-            return ErrorResponse.exists("Realm with same name exists");
+            throw ErrorResponse.exists("Realm with same name exists");
         } catch (ModelException e) {
-            return ErrorResponse.error(e.getMessage(), Status.BAD_REQUEST);
+            throw ErrorResponse.error(e.getMessage(), Status.BAD_REQUEST);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            return ErrorResponse.error("Failed to update realm", Response.Status.INTERNAL_SERVER_ERROR);
+            throw ErrorResponse.error("Failed to update realm", Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -926,7 +926,7 @@ public class RealmAdminResource {
         try {
             UserModel user = auth.adminAuth().getUser();
             if (user.getEmail() == null) {
-                return ErrorResponse.error("Logged in user does not have an e-mail.", Response.Status.INTERNAL_SERVER_ERROR);
+                throw ErrorResponse.error("Logged in user does not have an e-mail.", Response.Status.INTERNAL_SERVER_ERROR);
             }
             if (ComponentRepresentation.SECRET_VALUE.equals(settings.get("password"))) {
                 settings.put("password", realm.getSmtpConfig().get("password"));
@@ -935,7 +935,7 @@ public class RealmAdminResource {
         } catch (Exception e) {
             e.printStackTrace();
             logger.errorf("Failed to send email \n %s", e.getCause());
-            return ErrorResponse.error("Failed to send email", Response.Status.INTERNAL_SERVER_ERROR);
+            throw ErrorResponse.error("Failed to send email", Response.Status.INTERNAL_SERVER_ERROR);
         }
 
         return Response.noContent().build();
@@ -1031,11 +1031,11 @@ public class RealmAdminResource {
                     })
             ).build();
         } catch (ModelDuplicateException e) {
-            return ErrorResponse.exists(e.getLocalizedMessage());
+            throw ErrorResponse.exists(e.getLocalizedMessage());
         } catch (ErrorResponseException error) {
             return error.getResponse();
         } catch (Exception e) {
-            return ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
+            throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
