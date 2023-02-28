@@ -38,6 +38,9 @@ import org.keycloak.models.map.storage.QueryParameters;
 import org.keycloak.models.map.storage.chm.MapModelCriteriaBuilder.UpdatePredicatesFunc;
 import org.keycloak.models.map.storage.criteria.DefaultModelCriteria;
 import org.keycloak.storage.SearchableModelField;
+import java.util.Collection;
+import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & UpdatableEntity, M, CRUD extends ConcurrentHashMapCrudOperations<V, M>> implements MapKeycloakTransaction<V, M>, HasRealmId {
@@ -46,7 +49,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
 
     protected boolean active;
     protected boolean rollback;
-    protected final Map<String, MapTaskWithValue> tasks = new LinkedHashMap<>();
+    protected final TaskMap tasks = new TaskMap();
     protected final CRUD map;
     protected final StringKeyConverter<K> keyConverter;
     protected final DeepCloner cloner;
@@ -54,6 +57,90 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
     protected final EntityField<V> realmIdEntityField;
     private String realmId;
     private final boolean mapHasRealmId;
+
+    protected static final class TaskKey {
+        private final String realmId;
+        private final String key;
+
+        public TaskKey(String realmId, String key) {
+            this.realmId = realmId;
+            this.key = key;
+        }
+
+        private Object getRealmId() {
+            return this.realmId;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.key, this.realmId);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final TaskKey other = (TaskKey) obj;
+            return Objects.equals(this.key, other.key) && Objects.equals(this.realmId, other.realmId);
+        }
+
+        @Override
+        public String toString() {
+            return key + " / " + realmId;
+        }
+
+        static TaskKey keyFor(String realmId, String id) {
+            return new TaskKey(realmId, id);
+        }
+    }
+
+    protected class TaskMap {
+
+        private final Map<TaskKey, MapTaskWithValue> map = new LinkedHashMap<>();
+
+        public boolean isEmpty() {
+            return map.isEmpty();
+        }
+
+        public boolean containsKey(String key) {
+            return map.containsKey(TaskKey.keyFor(realmId, key));
+        }
+
+        public MapTaskWithValue get(String key) {
+            return map.get(TaskKey.keyFor(realmId, key));
+        }
+
+        public MapTaskWithValue put(String key, MapTaskWithValue value) {
+            return map.put(TaskKey.keyFor(realmId, key), value);
+        }
+
+        public void clear() {
+            map.clear();
+        }
+
+        public Collection<MapTaskWithValue> values() {
+            return map.values();
+        }
+
+        public Set<Entry<TaskKey, MapTaskWithValue>> entrySet() {
+            return map.entrySet();
+        }
+
+        public MapTaskWithValue merge(String key, MapTaskWithValue value, BiFunction<? super MapTaskWithValue, ? super MapTaskWithValue, ? extends MapTaskWithValue> remappingFunction) {
+            return map.merge(TaskKey.keyFor(realmId, key), value, remappingFunction);
+        }
+    }
 
     enum MapOperation {
         CREATE, UPDATE, DELETE,
@@ -293,8 +380,8 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
         final BulkDeleteOperation bdo = new BulkDeleteOperation(queryParameters);
         Predicate<V> filterForNonDeletedObjects = bdo.getFilterForNonDeletedObjects();
         long res = 0;
-        for (Iterator<Entry<String, MapTaskWithValue>> it = tasks.entrySet().iterator(); it.hasNext();) {
-            Entry<String, MapTaskWithValue> me = it.next();
+        for (Iterator<Entry<TaskKey, MapTaskWithValue>> it = tasks.entrySet().iterator(); it.hasNext();) {
+            Entry<TaskKey, MapTaskWithValue> me = it.next();
             if (! filterForNonDeletedObjects.test(me.getValue().getValue())) {
                 log.tracef(" [DELETE_BULK] removing %s", me.getKey());
                 it.remove();
@@ -326,7 +413,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
 
     private Stream<V> createdValuesStream(Predicate<? super K> keyFilter, Predicate<? super V> entityFilter) {
         return this.tasks.entrySet().stream()
-          .filter(me -> keyFilter.test(keyConverter.fromStringSafe(me.getKey())))
+          .filter(me -> Objects.equals(realmId, me.getKey().getRealmId()) && keyFilter.test(keyConverter.fromStringSafe(me.getKey().getKey())))
           .map(Map.Entry::getValue)
           .filter(v -> v.containsCreate() && ! v.isReplace())
           .map(MapTaskWithValue::getValue)
