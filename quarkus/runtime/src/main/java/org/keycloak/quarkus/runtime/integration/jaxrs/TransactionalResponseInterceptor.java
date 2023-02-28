@@ -40,6 +40,9 @@ public class TransactionalResponseInterceptor implements WriterInterceptor, Tran
 
         try {
             context.proceed();
+        } catch (Exception e) {
+            session.getTransactionManager().setRollbackOnly();
+            throw e;
         } finally {
             // make sure response is closed after writing to the response output stream
             // this is needed in order to support streams from endpoints as they need access to underlying resources like database
