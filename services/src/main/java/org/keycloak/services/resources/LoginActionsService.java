@@ -445,7 +445,7 @@ public class LoginActionsService {
 
         if (!realm.isResetPasswordAllowed()) {
             event.error(Errors.NOT_ALLOWED);
-            return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
+            return ErrorPage.rollback(session, authSession, Response.Status.BAD_REQUEST, Messages.RESET_CREDENTIAL_NOT_ALLOWED);
 
         }
 

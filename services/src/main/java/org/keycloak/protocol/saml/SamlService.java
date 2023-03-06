@@ -966,7 +966,7 @@ public class SamlService extends AuthorizationEndpointBase {
         if (authSession == null) {
             logger.error("SAML assertion consumer url not set up");
             event.error(Errors.INVALID_REDIRECT_URI);
-            return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REDIRECT_URI);
+            return ErrorPage.rollback(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REDIRECT_URI);
         }
 
         return newBrowserAuthentication(authSession, false, false);
