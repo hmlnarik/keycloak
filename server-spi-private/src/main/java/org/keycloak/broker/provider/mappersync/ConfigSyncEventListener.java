@@ -66,7 +66,7 @@ public final class ConfigSyncEventListener implements ProviderEventListener {
                     configSynchronizer.handleEvent(event, idpMapper);
                 });
             } else {
-                LOG.debugf("Synchronizer %s does not match event: %s", configSynchronizer, event);
+                LOG.tracef("Synchronizer %s does not match event: %s", configSynchronizer, event);
             }
         }
     }

@@ -217,7 +217,7 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
             final String idFromFilename = fileNameStr.substring(0, fileNameStr.length() - FILE_SUFFIX.length());
             String escapedId = determineKeyFromValue(parsedObject, idFromFilename);
             if (escapedId == null) {
-                LOG.debugf("Determined ID from filename: %s%s", idFromFilename);
+                LOG.tracef("Determined ID from filename: %s%s", idFromFilename);
                 escapedId = idFromFilename;
             } else if (! escapedId.endsWith(idFromFilename)) {
                 LOG.warnf("Id \"%s\" does not conform with filename \"%s\", expected: %s", escapedId, fileNameStr, escapeId(escapedId));
