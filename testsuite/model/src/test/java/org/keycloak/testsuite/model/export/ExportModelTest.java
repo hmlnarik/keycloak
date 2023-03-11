@@ -34,10 +34,13 @@ import org.keycloak.models.RoleModel;
 import org.keycloak.testsuite.model.KeycloakModelTest;
 import org.keycloak.testsuite.model.RequireProvider;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RequireProvider(value = ExportProvider.class)
 public class ExportModelTest extends KeycloakModelTest {
@@ -77,9 +80,12 @@ public class ExportModelTest extends KeycloakModelTest {
                     .config(SingleFileExportProviderFactory.REALM_NAME, REALM_NAME);
 
             withRealm(realmId, (session, realm) -> {
-                ExportImportConfig.setAction(ExportImportConfig.ACTION_EXPORT);
-                ExportImportManager exportImportManager = new ExportImportManager(session);
-                exportImportManager.runExport();
+                try (Closeable c = ExportImportConfig.setAction(ExportImportConfig.ACTION_EXPORT)) {
+                    ExportImportManager exportImportManager = new ExportImportManager(session);
+                    exportImportManager.runExport();
+                } catch (IOException ex) {
+                    log.error(ex.getMessage(), ex);
+                }
                 return null;
             });
 
@@ -113,9 +119,12 @@ public class ExportModelTest extends KeycloakModelTest {
                     .config(DirExportProviderFactory.REALM_NAME, REALM_NAME);
 
             withRealm(realmId, (session, realm) -> {
-                ExportImportConfig.setAction(ExportImportConfig.ACTION_EXPORT);
-                ExportImportManager exportImportManager = new ExportImportManager(session);
-                exportImportManager.runExport();
+                try (Closeable c = ExportImportConfig.setAction(ExportImportConfig.ACTION_EXPORT)) {
+                    ExportImportManager exportImportManager = new ExportImportManager(session);
+                    exportImportManager.runExport();
+                } catch (IOException ex) {
+                    log.error(ex.getMessage(), ex);
+                }
                 return null;
             });
 
