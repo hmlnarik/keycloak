@@ -43,6 +43,7 @@ import org.keycloak.testsuite.util.ClientBuilder;
 import org.keycloak.testsuite.util.ClientScopeBuilder;
 import org.keycloak.testsuite.util.RealmBuilder;
 import org.keycloak.testsuite.util.UserBuilder;
+import java.util.Objects;
 
 /**
  * Test for the various "Advanced" scenarios of java admin-client
@@ -78,11 +79,9 @@ public class AdminClientTest extends AbstractKeycloakTest {
         RealmBuilder realm = RealmBuilder.create().name(realmName)
                 .testEventListener();
 
-        clientUUID = KeycloakModelUtils.generateId();
         clientId = "service-account-cl";
         clientSecret = "secret1";
         ClientRepresentation enabledAppWithSkipRefreshToken = ClientBuilder.create()
-                .id(clientUUID)
                 .clientId(clientId)
                 .secret(clientSecret)
                 .serviceAccountsEnabled(true)
@@ -92,7 +91,6 @@ public class AdminClientTest extends AbstractKeycloakTest {
         userId = KeycloakModelUtils.generateId();
         userName = ServiceAccountConstants.SERVICE_ACCOUNT_USER_PREFIX + enabledAppWithSkipRefreshToken.getClientId();
         UserBuilder serviceAccountUser = UserBuilder.create()
-                .id(userId)
                 .username(userName)
                 .serviceAccountId(enabledAppWithSkipRefreshToken.getClientId())
                 .role(Constants.REALM_MANAGEMENT_CLIENT_ID, AdminRoles.REALM_ADMIN);
@@ -106,6 +104,15 @@ public class AdminClientTest extends AbstractKeycloakTest {
         realm.user(defaultUser);
 
         testRealms.add(realm.build());
+    }
+
+    @Override
+    public void importRealm(RealmRepresentation realm) {
+        super.importRealm(realm);
+        if (Objects.equals(realm.getRealm(), realmName)) {
+            clientUUID = adminClient.realm(realmName).clients().findByClientId(clientId).get(0).getId();
+            userId = adminClient.realm(realmName).users().searchByUsername(userName, true).get(0).getId();
+        }
     }
 
     @Test

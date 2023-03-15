@@ -145,7 +145,6 @@ public class OfflineTokenTest extends AbstractKeycloakTest {
 
         realm.client(app);
 
-        serviceAccountUserId = KeycloakModelUtils.generateId();
         UserRepresentation serviceAccountUser = UserBuilder.create()
                 .id(serviceAccountUserId)
                 .addRoles("user", "offline_access")
@@ -157,6 +156,12 @@ public class OfflineTokenTest extends AbstractKeycloakTest {
 
         testRealms.add(realm.build());
 
+    }
+
+    @Override
+    public void importTestRealms() {
+        super.importTestRealms();
+        serviceAccountUserId = adminClient.realm("test").users().search(ServiceAccountConstants.SERVICE_ACCOUNT_USER_PREFIX + "offline-client", true).get(0).getId();
     }
 
     @Test
