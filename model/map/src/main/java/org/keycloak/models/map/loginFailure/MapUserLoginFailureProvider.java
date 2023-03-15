@@ -22,6 +22,7 @@ import org.keycloak.models.UserLoginFailureProvider;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserLoginFailureModel;
 import org.keycloak.models.map.common.DeepCloner;
+import org.keycloak.models.map.common.HasRealmId;
 import org.keycloak.models.map.storage.MapKeycloakTransaction;
 import org.keycloak.models.map.storage.MapStorage;
 
@@ -41,12 +42,21 @@ public class MapUserLoginFailureProvider implements UserLoginFailureProvider {
     private static final Logger LOG = Logger.getLogger(MapUserLoginFailureProvider.class);
     private final KeycloakSession session;
     protected final MapKeycloakTransaction<MapUserLoginFailureEntity, UserLoginFailureModel> userLoginFailureTx;
+    private final boolean txHasRealmId;
 
     public MapUserLoginFailureProvider(KeycloakSession session, MapStorage<MapUserLoginFailureEntity, UserLoginFailureModel> userLoginFailureStore) {
         this.session = session;
 
         userLoginFailureTx = userLoginFailureStore.createTransaction(session);
         session.getTransactionManager().enlistAfterCompletion(userLoginFailureTx);
+        this.txHasRealmId = userLoginFailureTx instanceof HasRealmId;
+    }
+
+    private MapKeycloakTransaction<MapUserLoginFailureEntity, UserLoginFailureModel> txInRealm(RealmModel realm) {
+        if (txHasRealmId) {
+            ((HasRealmId) userLoginFailureTx).setRealmId(realm == null ? null : realm.getId());
+        }
+        return userLoginFailureTx;
     }
 
     private Function<MapUserLoginFailureEntity, UserLoginFailureModel> userLoginFailureEntityToAdapterFunc(RealmModel realm) {
@@ -62,7 +72,7 @@ public class MapUserLoginFailureProvider implements UserLoginFailureProvider {
 
         LOG.tracef("getUserLoginFailure(%s, %s)%s", realm, userId, getShortStackTrace());
 
-        return userLoginFailureTx.read(withCriteria(mcb))
+        return txInRealm(realm).read(withCriteria(mcb))
                 .findFirst()
                 .map(userLoginFailureEntityToAdapterFunc(realm))
                 .orElse(null);
@@ -76,14 +86,14 @@ public class MapUserLoginFailureProvider implements UserLoginFailureProvider {
 
         LOG.tracef("addUserLoginFailure(%s, %s)%s", realm, userId, getShortStackTrace());
 
-        MapUserLoginFailureEntity userLoginFailureEntity = userLoginFailureTx.read(withCriteria(mcb)).findFirst().orElse(null);
+        MapUserLoginFailureEntity userLoginFailureEntity = txInRealm(realm).read(withCriteria(mcb)).findFirst().orElse(null);
 
         if (userLoginFailureEntity == null) {
             userLoginFailureEntity = DeepCloner.DUMB_CLONER.newInstance(MapUserLoginFailureEntity.class);
             userLoginFailureEntity.setRealmId(realm.getId());
             userLoginFailureEntity.setUserId(userId);
 
-            userLoginFailureEntity = userLoginFailureTx.create(userLoginFailureEntity);
+            userLoginFailureEntity = txInRealm(realm).create(userLoginFailureEntity);
         }
 
         return userLoginFailureEntityToAdapterFunc(realm).apply(userLoginFailureEntity);
@@ -97,7 +107,7 @@ public class MapUserLoginFailureProvider implements UserLoginFailureProvider {
 
         LOG.tracef("removeUserLoginFailure(%s, %s)%s", realm, userId, getShortStackTrace());
 
-        userLoginFailureTx.delete(withCriteria(mcb));
+        txInRealm(realm).delete(withCriteria(mcb));
     }
 
     @Override
@@ -107,7 +117,7 @@ public class MapUserLoginFailureProvider implements UserLoginFailureProvider {
 
         LOG.tracef("removeAllUserLoginFailures(%s)%s", realm, getShortStackTrace());
 
-        userLoginFailureTx.delete(withCriteria(mcb));
+        txInRealm(realm).delete(withCriteria(mcb));
     }
 
     @Override
