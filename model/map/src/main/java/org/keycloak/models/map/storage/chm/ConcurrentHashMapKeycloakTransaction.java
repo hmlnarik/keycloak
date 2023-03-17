@@ -142,7 +142,7 @@ public class ConcurrentHashMapKeycloakTransaction<K, V extends AbstractEntity & 
         }
     }
 
-    enum MapOperation {
+    protected enum MapOperation {
         CREATE, UPDATE, DELETE,
     }
 

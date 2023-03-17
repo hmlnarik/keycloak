@@ -41,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import static org.keycloak.models.map.storage.file.FileMapStorage.Crud.ID_COMPONENT_SEPARATOR;
 
@@ -108,7 +109,11 @@ public class FileMapKeycloakTransaction<V extends AbstractEntity & UpdatableEnti
         }
     }
 
-    public void touch(Path path) throws FileAlreadyExistsException, IOException {
+    public void touch(String proposedId, Path path) throws FileAlreadyExistsException, IOException {
+        if (Optional.ofNullable(tasks.get(proposedId)).map(MapTaskWithValue::getOperation).orElse(null) == MapOperation.DELETE) {
+            // If deleted in the current transaction before this operation, then do not touch
+            return;
+        }
         Files.createFile(path);
         pathsToDelete.add(path);
     }
@@ -140,8 +145,8 @@ public class FileMapKeycloakTransaction<V extends AbstractEntity & UpdatableEnti
         }
 
         @Override
-        protected void touch(Path sp) throws IOException {
-            tx.touch(sp);
+        protected void touch(String proposedId, Path sp) throws IOException {
+            tx.touch(proposedId, sp);
         }
 
         @Override
