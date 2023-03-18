@@ -26,7 +26,7 @@ import org.keycloak.authorization.client.util.Throwables;
 import org.keycloak.authorization.client.util.TokenCallable;
 import org.keycloak.representations.idm.authorization.UmaPermissionRepresentation;
 import org.keycloak.util.JsonSerialization;
-import static org.keycloak.common.util.Encode.encodePath;
+import static org.keycloak.common.util.Encode.encodePathAsIs;
 
 /**
  * An entry point for managing user-managed permissions for a particular resource
@@ -61,7 +61,7 @@ public class PolicyResource {
         Callable<UmaPermissionRepresentation> callable = new Callable<UmaPermissionRepresentation>() {
             @Override
             public UmaPermissionRepresentation call() throws Exception {
-                return http.<UmaPermissionRepresentation>post(serverConfiguration.getPolicyEndpoint() + "/" + encodePath(resourceId))
+                return http.<UmaPermissionRepresentation>post(serverConfiguration.getPolicyEndpoint() + "/" + encodePathAsIs(resourceId))
                         .authorizationBearer(pat.call())
                         .json(JsonSerialization.writeValueAsBytes(permission))
                         .response().json(UmaPermissionRepresentation.class).execute();
@@ -91,7 +91,7 @@ public class PolicyResource {
         Callable<Void> callable = new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                http.<Void>put(serverConfiguration.getPolicyEndpoint() + "/"+ encodePath(permission.getId()))
+                http.<Void>put(serverConfiguration.getPolicyEndpoint() + "/"+ encodePathAsIs(permission.getId()))
                         .authorizationBearer(pat.call())
                         .json(JsonSerialization.writeValueAsBytes(permission)).execute();
                 return null;
@@ -113,7 +113,7 @@ public class PolicyResource {
         Callable<Void> callable = new Callable<Void>() {
             @Override
             public Void call() {
-                http.<UmaPermissionRepresentation>delete(serverConfiguration.getPolicyEndpoint() + "/" + encodePath(id))
+                http.<UmaPermissionRepresentation>delete(serverConfiguration.getPolicyEndpoint() + "/" + encodePathAsIs(id))
                         .authorizationBearer(pat.call())
                         .response().execute();
                 return null;
@@ -174,7 +174,7 @@ public class PolicyResource {
         Callable<UmaPermissionRepresentation> callable = new Callable<UmaPermissionRepresentation>() {
             @Override
             public UmaPermissionRepresentation call() {
-                return http.<UmaPermissionRepresentation>get(serverConfiguration.getPolicyEndpoint() + "/" + encodePath(id))
+                return http.<UmaPermissionRepresentation>get(serverConfiguration.getPolicyEndpoint() + "/" + encodePathAsIs(id))
                         .authorizationBearer(pat.call())
                         .response().json(UmaPermissionRepresentation.class).execute();
             }

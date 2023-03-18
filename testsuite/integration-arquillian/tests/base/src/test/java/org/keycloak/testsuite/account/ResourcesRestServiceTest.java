@@ -66,7 +66,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.keycloak.common.util.Encode.encodePath;
+import static org.keycloak.common.util.Encode.encodePathAsIs;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Igor</a>
@@ -304,7 +304,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
 
     @Test
     public void testGetResource() {
-        Resource resource = doGet("/" + encodePath(getMyResources().get(0).getId()), Resource.class);
+        Resource resource = doGet("/" + encodePathAsIs(getMyResources().get(0).getId()), Resource.class);
 
         String uri = resource.getUri();
         int id = Integer.parseInt(uri.substring(uri.lastIndexOf('/') + 1));
