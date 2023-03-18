@@ -180,8 +180,7 @@ public class AdminClientTest extends AbstractKeycloakTest {
 
         // we need to create custom scope after import, otherwise the default scopes are missing.
         final String scopeName = "myScope";
-        final String scopeId = KeycloakModelUtils.generateId();
-        createScope(testRealm, scopeName, scopeId);
+        String scopeId = createScope(testRealm, scopeName, KeycloakModelUtils.generateId());
         testRealm.clients().get(clientUUID).addOptionalClientScope(scopeId);
 
         // with scope
@@ -205,11 +204,13 @@ public class AdminClientTest extends AbstractKeycloakTest {
         client.update(clientRep);
     }
 
-    private void createScope(RealmResource testRealm, String scopeName, String scopeId) {
+    private String createScope(RealmResource testRealm, String scopeName, String scopeId) {
         final ClientScopeRepresentation testScope =
             ClientScopeBuilder.create().name(scopeName).protocol("openid-connect").build();
         testScope.setId(scopeId);
-        final Response scope = testRealm.clientScopes().create(testScope);
-        Assert.assertEquals(201, scope.getStatus());
+        try (Response response = testRealm.clientScopes().create(testScope)) {
+            Assert.assertEquals(201, response.getStatus());
+            return ApiUtil.getCreatedId(response);
+        }
     }
 }
