@@ -320,14 +320,14 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
         OAuth2ErrorRepresentation response = doGet("/invalid_resource", OAuth2ErrorRepresentation.class);
         assertEquals("resource_not_found", response.getError());
 
-        response = doGet("/" + encodePath(getMyResources().get(0).getId()), authzClient.obtainAccessToken("jdoe", "password").getToken(), OAuth2ErrorRepresentation.class);
+        response = doGet("/" + encodePathAsIs(getMyResources().get(0).getId()), authzClient.obtainAccessToken("jdoe", "password").getToken(), OAuth2ErrorRepresentation.class);
         assertEquals("invalid_resource", response.getError());
     }
 
     @Test
     public void testGetPermissions() throws Exception {
         Resource resource = getMyResources().get(0);
-        List<Permission> shares = doGet("/" + encodePath(resource.getId()) + "/permissions", new TypeReference<List<Permission>>() {});
+        List<Permission> shares = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions", new TypeReference<List<Permission>>() {});
 
         assertEquals(1, shares.size());
 
@@ -350,11 +350,11 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
             permissions.add(permission);
         }
 
-        SimpleHttp.doPut(getAccountUrl("resources/" + encodePath(resource.getId()) + "/permissions"), httpClient)
+        SimpleHttp.doPut(getAccountUrl("resources/" + encodePathAsIs(resource.getId()) + "/permissions"), httpClient)
                 .auth(tokenUtil.getToken())
                 .json(permissions).asResponse();
 
-        shares = doGet("/" + encodePath(resource.getId()) + "/permissions", new TypeReference<List<Permission>>() {});
+        shares = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions", new TypeReference<List<Permission>>() {});
 
         assertEquals(3, shares.size());
 
@@ -386,7 +386,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
         permissions.add(new Permission(users.get(users.size() - 1), "Scope A", "Scope B", "Scope C", "Scope D"));
 
         String resourceId = sharedResource.getId();
-        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePath(resourceId) + "/permissions"), httpClient)
+        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePathAsIs(resourceId) + "/permissions"), httpClient)
                 .auth(tokenUtil.getToken())
                 .json(permissions).asResponse();
 
@@ -410,7 +410,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
     public void failShareResourceInvalidPermissions() throws Exception {
         List<Permission> permissions = new ArrayList<>();
 
-        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePath(getMyResources().get(0).getId()) + "/permissions"), httpClient)
+        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePathAsIs(getMyResources().get(0).getId()) + "/permissions"), httpClient)
                 .auth(tokenUtil.getToken())
                 .json(permissions).asResponse();
 
@@ -436,7 +436,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
         final String resourcesUrl = getAccountUrl("resources");
         final String sharedWithOthersUrl = resourcesUrl + "/shared-with-others";
         final String sharedWithMeUrl = resourcesUrl + "/shared-with-me";
-        final String resourceUrl = resourcesUrl + "/" + encodePath(resourceId);
+        final String resourceUrl = resourcesUrl + "/" + encodePathAsIs(resourceId);
         final String permissionsUrl = resourceUrl + "/permissions";
         final String requestsUrl = resourceUrl + "/permissions/requests";
 
@@ -475,7 +475,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
         permissions.add(new Permission(users.get(users.size() - 1), "Scope B", "Scope D"));
 
         String resourceId = sharedResource.getId();
-        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePath(resourceId) + "/permissions"), httpClient)
+        SimpleHttp.Response response = SimpleHttp.doPut(getAccountUrl("resources/" + encodePathAsIs(resourceId) + "/permissions"), httpClient)
                 .auth(tokenUtil.getToken())
                 .json(permissions).asResponse();
 
@@ -498,7 +498,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
     @Test
     public void testGetPermissionRequests() {
         Resource resource = getMyResources().get(0);
-        List<Permission> requests = doGet("/" + encodePath(resource.getId()) + "/permissions/requests",
+        List<Permission> requests = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions/requests",
                 new TypeReference<List<Permission>>() {});
 
         assertTrue(requests.isEmpty());
@@ -528,7 +528,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
             }
         }
 
-        requests = doGet("/" + encodePath(resource.getId()) + "/permissions/requests",
+        requests = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions/requests",
                 new TypeReference<List<Permission>>() {});
 
         assertEquals(3, requests.size());
@@ -562,7 +562,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
     @Test
     public void testApprovePermissionRequest() throws IOException {
         Resource resource = getMyResources().get(0);
-        List<Permission> requests = doGet("/" + encodePath(resource.getId()) + "/permissions/requests",
+        List<Permission> requests = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions/requests",
                 new TypeReference<List<Permission>>() {});
 
         assertTrue(requests.isEmpty());
@@ -592,7 +592,7 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
             }
         }
 
-        requests = doGet("/" + encodePath(resource.getId()) + "/permissions/requests",
+        requests = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions/requests",
                 new TypeReference<List<Permission>>() {});
 
         assertEquals(3, requests.size());
@@ -611,11 +611,11 @@ public class ResourcesRestServiceTest extends AbstractRestServiceTest {
             }
         }
 
-        SimpleHttp.doPut(getAccountUrl("resources/" + encodePath(resource.getId()) + "/permissions"), httpClient)
+        SimpleHttp.doPut(getAccountUrl("resources/" + encodePathAsIs(resource.getId()) + "/permissions"), httpClient)
                 .auth(tokenUtil.getToken())
                 .json(requests).asResponse();
 
-        requests = doGet("/" + encodePath(resource.getId()) + "/permissions/requests",
+        requests = doGet("/" + encodePathAsIs(resource.getId()) + "/permissions/requests",
                 new TypeReference<List<Permission>>() {});
 
         assertThat(requests, empty());
