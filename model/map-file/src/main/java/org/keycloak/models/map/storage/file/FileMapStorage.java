@@ -338,7 +338,7 @@ public class FileMapStorage<V extends AbstractEntity & UpdatableEntity, M> imple
 
             // We cannot use Files.find since it throws an UncheckedIOException if it lists a file which is removed concurrently
             // before its BasicAttributes can be retrieved for its BiPredicate parameter
-            try (Stream<Path> dirStream = Files.walk(dataDirectory, entityClass == MapRealmEntity.class ? 1 : 2)) {
+            try (Stream<Path> dirStream = Files.walk(dataDirectory, entityClass == MapRealmEntity.class ? 1 : 3)) {
                 // The paths list has to be materialized first, otherwise "dirStream" would be closed
                 // before the resulting stream would be read and would return empty result
                 paths = dirStream.collect(Collectors.toList());

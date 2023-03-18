@@ -83,7 +83,9 @@ public class FileMapStorageProviderFactory implements AmphibianProviderFactory<M
       entry(MapResourceServerEntity.class,  ((Function<MapResourceServerEntity, String[]>) v -> new String[] { v.getClientId() })),
       entry(MapPolicyEntity.class,          ((Function<MapPolicyEntity, String[]>) v -> new String[] { v.getResourceServerId(), v.getName() })),
       entry(MapPermissionTicketEntity.class,((Function<MapPermissionTicketEntity, String[]>) v -> new String[] { v.getResourceServerId(), null })),
-      entry(MapResourceEntity.class,        ((Function<MapResourceEntity, String[]>) v -> new String[] { v.getResourceServerId(), v.getName() })),
+      entry(MapResourceEntity.class,        ((Function<MapResourceEntity, String[]>) v -> Objects.equals(v.getResourceServerId(), v.getOwner())
+                                                                                          ? new String[] { v.getResourceServerId(), v.getName() }
+                                                                                          : new String[] { v.getResourceServerId(), v.getName(), v.getOwner() })),
       entry(MapScopeEntity.class,           ((Function<MapScopeEntity, String[]>) v -> new String[] { v.getResourceServerId(), v.getName() }))
     );
 
