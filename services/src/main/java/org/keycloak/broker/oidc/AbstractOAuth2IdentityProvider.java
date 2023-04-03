@@ -527,7 +527,7 @@ public abstract class AbstractOAuth2IdentityProvider<C extends OAuth2IdentityPro
         private Response errorIdentityProviderLogin(String message) {
             event.event(EventType.IDENTITY_PROVIDER_LOGIN);
             event.error(Errors.IDENTITY_PROVIDER_LOGIN_FAILURE);
-            return ErrorPage.error(session, null, Response.Status.BAD_GATEWAY, message);
+            return ErrorPage.rollback(session, null, Response.Status.BAD_GATEWAY, message);
         }
 
         public SimpleHttp generateTokenRequest(String authorizationCode) {

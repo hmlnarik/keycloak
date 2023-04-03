@@ -31,5 +31,10 @@ public class ErrorPage {
         return session.getProvider(LoginFormsProvider.class).setAuthenticationSession(authenticationSession).setError(message, parameters).createErrorPage(status);
     }
 
+    public static Response rollback(KeycloakSession session, AuthenticationSessionModel authenticationSession, Response.Status status, String message, Object... parameters) {
+        session.getTransactionManager().setRollbackOnly();
+        return session.getProvider(LoginFormsProvider.class).setAuthenticationSession(authenticationSession).setError(message, parameters).createErrorPage(status);
+    }
+
 
 }

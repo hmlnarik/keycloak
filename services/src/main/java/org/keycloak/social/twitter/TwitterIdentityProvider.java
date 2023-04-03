@@ -250,11 +250,11 @@ public class TwitterIdentityProvider extends AbstractIdentityProvider<OAuth2Iden
                 return callback.authenticated(identity);
             } catch (WebApplicationException e) {
                 sendErrorEvent();
-                return e.getResponse();
+                throw e;
             } catch (Exception e) {
                 logger.error("Couldn't get user profile from twitter.", e);
                 sendErrorEvent();
-                return ErrorPage.error(session, authSession, Response.Status.BAD_GATEWAY, Messages.UNEXPECTED_ERROR_HANDLING_RESPONSE);
+                return ErrorPage.rollback(session, authSession, Response.Status.BAD_GATEWAY, Messages.UNEXPECTED_ERROR_HANDLING_RESPONSE);
             }
         }
 
