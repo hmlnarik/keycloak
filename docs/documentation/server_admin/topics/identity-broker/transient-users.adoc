@@ -1,0 +1,33 @@
+[[_transient-users]]
+== Transient users
+
+:tech_feature_name: Transient users
+:tech_feature_setting: -Dkeycloak.profile.feature.transient_users=enabled
+:tech_feature_id: transient_users
+include::../templates/techpreview.adoc[]
+
+When using {project_name} as an identity broker, you can configure {project_name}
+to not create users in its local database when a user authenticates with an external
+identity provider. This user is called a _transient user_. Transient users are only
+stored within respective user session and cease to exist once this session is removed.
+It thus increases the session size.
+
+In administration console, transitive users can be only tracked from their
+respective client session. They cannot be looked up using
+the xref:proc-searching-user_{context}[Users search] because they are not stored
+in any user store. For the same reason, it is not possible to add additional
+authentication factors to them.
+
+Roles and groups can be assigned to the transient users only via
+<<_mappers, identity provider mappers>> of the appropriate identity provider.
+
+It is possible to leverage <<_offline-access,offline sessions>> with transient users.
+To do so, you need to add role mapper to the identity provider that will assign
+the `offline_access` role to transient users. Beware that the transient user may then
+be stored in Keycloak database until the respective session expires or the token is revoked.
+Always consider using persistent rather than transient users when offline sessions are
+needed since persistent users can manage offline tokens more easily
+via <<_account-service, User Account Console>>. Also transient users feature contributes
+to serve the purpose of not storing any personally identifiable information into the database.
+Since offline sessions are persisted in database, the transient user data would be stored
+there as well. It is up to the administrator to determine whether this is acceptable or not.

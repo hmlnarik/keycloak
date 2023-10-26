@@ -74,6 +74,9 @@ Although each type of identity provider has its configuration options, all share
 |Post Login Flow
 |The authentication flow {project_name} triggers when a user finishes logging in with the external identity provider.
 
+|Do Not Store Users
+|The identity provider does not store users in the {project_name} database. When *ON*, {project_name} does not store users from this identity provider in the {project_name} database, and the user is removed upon logout. See <<_transient-users, Transient Users for Brokering>> for more information.
+
 |Sync Mode
 |Strategy to update user information from the identity provider through mappers. When choosing *legacy*, {project_name} used the current behavior. *Import* does not update user data and *force* updates user data when possible. See <<_mappers, Identity Provider Mappers>> for more information.
 |===

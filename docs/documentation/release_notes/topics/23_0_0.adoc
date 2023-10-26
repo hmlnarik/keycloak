@@ -14,6 +14,11 @@ the latest FAPI 2 draft specifications when communicating with your clients. Tha
 Keycloak has preview for support for OAuth 2.0 Demonstrating Proof-of-Possession at the Application Layer (DPoP). Thanks to
 https://github.com/tnorimat[Takashi Norimatsu] and https://github.com/dteleguin[Dmitry Telegin] for their contributions.
 
+= Transient users for brokering preview support
+
+Keycloak has preview for transient users for brokering where an identity provider can be configured to not store
+its users into Keycloak database.
+
 = Passkeys support
 
 Keycloak has preview support for https://fidoalliance.org/passkeys/[Passkeys].
