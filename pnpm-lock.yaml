@@ -132,6 +132,9 @@ importers:
       lightningcss:
         specifier: ^1.25.1
         version: 1.25.1
+      playwright-core:
+        specifier: ^1.45.1
+        version: 1.45.1
       vite:
         specifier: ^5.3.3
         version: 5.3.3(@types/node@20.14.10)(lightningcss@1.25.1)(terser@5.31.0)

@@ -6,4 +6,5 @@ setup("delete realm", async () => {
   await deleteRealm("groups");
   await deleteRealm("user-profile");
   await deleteRealm("verifiable-credentials");
+  await deleteRealm("webauthn");
 });
