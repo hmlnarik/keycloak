@@ -43,6 +43,7 @@ import org.keycloak.storage.UserStorageProvider;
 import org.keycloak.storage.UserStorageUtil;
 import org.keycloak.testsuite.AbstractAuthTest;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.arquillian.annotation.ModelTest;
 import org.keycloak.testsuite.federation.UserMapStorage;
 import org.keycloak.testsuite.federation.UserMapStorageFactory;
@@ -78,6 +79,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static java.util.Calendar.DAY_OF_WEEK;
 import static java.util.Calendar.HOUR_OF_DAY;
 import static java.util.Calendar.MINUTE;
@@ -106,6 +108,7 @@ import static org.keycloak.testsuite.util.URLAssert.assertCurrentUrlDoesntStartW
  *
  * @author tkyjovsk
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class UserStorageTest extends AbstractAuthTest {
 
     private String memProviderId;

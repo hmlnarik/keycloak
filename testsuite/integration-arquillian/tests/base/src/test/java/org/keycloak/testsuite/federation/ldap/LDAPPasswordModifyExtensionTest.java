@@ -36,11 +36,13 @@ import org.keycloak.storage.ldap.mappers.HardcodedLDAPAttributeMapper;
 import org.keycloak.storage.ldap.mappers.HardcodedLDAPAttributeMapperFactory;
 import org.keycloak.storage.ldap.mappers.LDAPStorageMapper;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.util.AccountHelper;
 import org.keycloak.testsuite.util.LDAPRule;
 import org.keycloak.testsuite.util.LDAPTestConfiguration;
 import org.keycloak.testsuite.util.LDAPTestUtils;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Test for the LDAPv3 Password modify extension (https://tools.ietf.org/html/rfc3062)
@@ -48,6 +50,7 @@ import org.keycloak.testsuite.util.LDAPTestUtils;
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class LDAPPasswordModifyExtensionTest extends AbstractLDAPTest  {
 
     // Run this test for embedded ApacheDS

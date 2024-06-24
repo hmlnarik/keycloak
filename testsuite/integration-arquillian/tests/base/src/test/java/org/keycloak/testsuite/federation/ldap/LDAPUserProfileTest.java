@@ -44,17 +44,20 @@ import org.keycloak.storage.UserStorageProviderModel;
 import org.keycloak.storage.ldap.LDAPStorageProvider;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.LoginUpdateProfilePage;
 import org.keycloak.testsuite.util.LDAPRule;
 import org.keycloak.testsuite.util.LDAPTestUtils;
 import org.keycloak.userprofile.config.UPConfigUtils;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.keycloak.storage.UserStorageProviderModel.IMPORT_ENABLED;
 import static org.keycloak.userprofile.UserProfileUtil.USER_METADATA_GROUP;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class LDAPUserProfileTest extends AbstractLDAPTest {
 

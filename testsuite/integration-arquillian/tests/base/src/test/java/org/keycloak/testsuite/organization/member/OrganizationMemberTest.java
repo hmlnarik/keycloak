@@ -58,10 +58,13 @@ import org.keycloak.representations.userprofile.config.UPConfig;
 import org.keycloak.representations.userprofile.config.UPConfig.UnmanagedAttributePolicy;
 import org.keycloak.testsuite.Assert;
 import org.keycloak.testsuite.arquillian.annotation.EnableFeature;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.organization.admin.AbstractOrganizationTest;
 import org.keycloak.testsuite.updaters.RealmAttributeUpdater;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 @EnableFeature(Feature.ORGANIZATION)
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class OrganizationMemberTest extends AbstractOrganizationTest {
 
     @Test

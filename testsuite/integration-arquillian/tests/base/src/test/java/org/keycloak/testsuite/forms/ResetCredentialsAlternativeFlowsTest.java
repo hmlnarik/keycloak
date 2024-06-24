@@ -35,6 +35,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.actions.AbstractAppInitiatedActionTest;
 import org.keycloak.testsuite.admin.ApiUtil;
 import org.keycloak.testsuite.admin.authentication.AbstractAuthenticationTest;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.LoginConfigTotpPage;
@@ -52,6 +53,7 @@ import jakarta.mail.internet.MimeMessage;
 import java.util.Arrays;
 import java.util.List;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -60,6 +62,7 @@ import static org.junit.Assert.assertEquals;
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  * @author <a href="mailto:jlieskov@redhat.com">Jan Lieskovsky</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class ResetCredentialsAlternativeFlowsTest extends AbstractAppInitiatedActionTest {
 
     private String userId;

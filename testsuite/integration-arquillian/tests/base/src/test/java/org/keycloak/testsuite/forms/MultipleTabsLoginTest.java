@@ -54,6 +54,7 @@ import org.keycloak.testsuite.ActionURIUtils;
 import org.keycloak.testsuite.Assert;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.InfoPage;
@@ -80,6 +81,7 @@ import org.openqa.selenium.htmlunit.HtmlUnitDriver;
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class MultipleTabsLoginTest extends AbstractTestRealmKeycloakTest {
 
     private String userId;

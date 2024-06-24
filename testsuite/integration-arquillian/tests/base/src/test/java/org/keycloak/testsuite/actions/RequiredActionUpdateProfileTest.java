@@ -66,6 +66,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RequiredActionUpdateProfileTest extends AbstractTestRealmKeycloakTest {
 
     @Rule

@@ -32,6 +32,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.InfoPage;
@@ -46,12 +47,14 @@ import org.keycloak.testsuite.pages.VerifyEmailPage;
 import org.keycloak.testsuite.util.GreenMailRule;
 import org.keycloak.testsuite.util.MailUtils;
 import org.keycloak.testsuite.util.UserBuilder;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Test for browser back/forward/refresh buttons
  *
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class BrowserButtonsTest extends AbstractTestRealmKeycloakTest {
 
     private String userId;

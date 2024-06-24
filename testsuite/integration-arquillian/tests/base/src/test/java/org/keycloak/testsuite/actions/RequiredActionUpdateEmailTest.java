@@ -32,9 +32,12 @@ import org.keycloak.models.UserModel;
 import org.keycloak.representations.idm.EventRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.representations.idm.UserSessionRepresentation;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.util.OAuthClient;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RequiredActionUpdateEmailTest extends AbstractRequiredActionUpdateEmailTest {
 
     @Override

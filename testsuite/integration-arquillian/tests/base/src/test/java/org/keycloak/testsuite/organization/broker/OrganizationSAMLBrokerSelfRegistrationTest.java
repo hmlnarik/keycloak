@@ -22,10 +22,13 @@ import org.keycloak.common.Profile.Feature;
 import org.keycloak.models.IdentityProviderSyncMode;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.testsuite.arquillian.annotation.EnableFeature;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.broker.BrokerConfiguration;
 import org.keycloak.testsuite.broker.KcSamlBrokerConfiguration;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 @EnableFeature(Feature.ORGANIZATION)
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class OrganizationSAMLBrokerSelfRegistrationTest extends AbstractBrokerSelfRegistrationTest {
 
     @Override

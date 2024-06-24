@@ -8,10 +8,12 @@ import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.IdentityProviderSyncMode;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.testsuite.Assert;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.broker.oidc.TestKeycloakOidcIdentityProviderFactory;
 
 import java.util.Map;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.keycloak.testsuite.broker.BrokerTestConstants.IDP_OIDC_ALIAS;
 import static org.keycloak.testsuite.broker.BrokerTestTools.createIdentityProvider;
 import static org.keycloak.testsuite.broker.BrokerTestTools.getConsumerRoot;
@@ -22,6 +24,7 @@ import static org.keycloak.testsuite.broker.BrokerTestTools.waitForPage;
  *
  * see https://issues.redhat.com/browse/KEYCLOAK-18499
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class KcOidcBrokerPassMaxAgeTest extends AbstractBrokerTest {
 
     @Override

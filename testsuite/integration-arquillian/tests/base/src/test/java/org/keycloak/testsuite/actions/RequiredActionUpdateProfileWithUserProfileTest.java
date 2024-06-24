@@ -50,6 +50,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.forms.RegisterWithUserProfileTest;
 import org.keycloak.testsuite.forms.VerifyProfileTest;
 import org.keycloak.testsuite.pages.AppPage;
@@ -61,12 +62,14 @@ import org.keycloak.testsuite.util.ClientScopeBuilder;
 import org.keycloak.testsuite.util.KeycloakModelUtils;
 import org.keycloak.testsuite.util.UserBuilder;
 import org.openqa.selenium.By;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Test update-profile required action with custom user profile configurations
  *
  * @author Vlastimil Elias <velias@redhat.com>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RequiredActionUpdateProfileWithUserProfileTest extends AbstractTestRealmKeycloakTest {
 
     protected static final String PASSWORD = "password";

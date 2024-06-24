@@ -39,6 +39,7 @@ import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.Assert;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.broker.util.SimpleHttpDefault;
 import org.keycloak.testsuite.updaters.RealmAttributeUpdater;
 import org.keycloak.testsuite.util.AccountHelper;
@@ -54,6 +55,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
@@ -72,6 +74,7 @@ import static org.keycloak.testsuite.broker.BrokerTestTools.getProviderRoot;
 /**
  * Final class as it's not intended to be overriden. Feel free to remove "final" if you really know what you are doing.
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public final class KcOidcBrokerTest extends AbstractAdvancedBrokerTest {
     private final static String USER_ATTRIBUTE_NAME = "user-attribute";
     private final static String USER_ATTRIBUTE_VALUE = "attribute-value";

@@ -19,8 +19,11 @@ package org.keycloak.testsuite.organization.broker;
 
 import org.keycloak.common.Profile.Feature;
 import org.keycloak.testsuite.arquillian.annotation.EnableFeature;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 @EnableFeature(Feature.ORGANIZATION)
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class OrganizationOIDCBrokerSelfRegistrationTest extends AbstractBrokerSelfRegistrationTest {
 
 }

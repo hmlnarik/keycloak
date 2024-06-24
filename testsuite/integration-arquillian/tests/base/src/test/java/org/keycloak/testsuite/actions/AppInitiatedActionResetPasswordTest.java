@@ -31,6 +31,7 @@ import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.representations.idm.UserSessionRepresentation;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.LoginPasswordUpdatePage;
 import org.keycloak.testsuite.util.GreenMailRule;
 import org.keycloak.testsuite.util.OAuthClient;
@@ -39,6 +40,7 @@ import org.openqa.selenium.WebDriver;
 
 import java.util.List;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -46,6 +48,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author Stan Silvert
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class AppInitiatedActionResetPasswordTest extends AbstractAppInitiatedActionTest {
 
     @Override

@@ -21,11 +21,14 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.auth.page.login.DeleteAccountActionConfirmPage;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.LoginPage;
 import org.keycloak.testsuite.util.UserBuilder;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class DeleteAccountActionTest extends AbstractTestRealmKeycloakTest {
 
   @Rule

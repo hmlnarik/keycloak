@@ -41,6 +41,7 @@ import org.keycloak.representations.idm.UserSessionRepresentation;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.AppPage.RequestType;
 import org.keycloak.testsuite.pages.LanguageComboboxAwarePage;
@@ -63,6 +64,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -70,6 +72,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RequiredActionTotpSetupTest extends AbstractTestRealmKeycloakTest {
 
     @Override

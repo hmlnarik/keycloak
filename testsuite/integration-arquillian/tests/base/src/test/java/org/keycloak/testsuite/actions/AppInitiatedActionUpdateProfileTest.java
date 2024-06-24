@@ -32,15 +32,18 @@ import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.LoginUpdateProfileEditUsernameAllowedPage;
 import org.keycloak.testsuite.util.UserBuilder;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Only covers basic use cases for App Initialized actions. Complete dynamic user profile behavior is tested in {@link RequiredActionUpdateProfileWithUserProfileTest} as it shares same code as the App initialized action.
  *
  * @author Stan Silvert
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class AppInitiatedActionUpdateProfileTest extends AbstractAppInitiatedActionTest {
 
     @Override

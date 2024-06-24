@@ -38,6 +38,7 @@ import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.AppPage.RequestType;
 import org.keycloak.testsuite.pages.LoginConfigTotpPage;
@@ -51,10 +52,12 @@ import org.keycloak.testsuite.util.GreenMailRule;
 import org.keycloak.testsuite.util.OAuthClient;
 
 import java.util.List;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * @author <a href="mailto:wadahiro@gmail.com">Hiroyuki Wada</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RequiredActionPriorityTest extends AbstractTestRealmKeycloakTest {
 
     private static final String EMAIL = "test-user@localhost";

@@ -57,6 +57,7 @@ import org.keycloak.representations.userprofile.config.UPConfig;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.arquillian.annotation.EnableFeature;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.AppPage.RequestType;
 import org.keycloak.testsuite.pages.LoginPage;
@@ -73,10 +74,12 @@ import org.keycloak.testsuite.util.UserBuilder;
 import org.keycloak.userprofile.UserProfileContext;
 import org.keycloak.util.JsonSerialization;
 import org.openqa.selenium.By;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * @author Vlastimil Elias <velias@redhat.com>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class VerifyProfileTest extends AbstractTestRealmKeycloakTest {
 
     public static final String SCOPE_DEPARTMENT = "department";

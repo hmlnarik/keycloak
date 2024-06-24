@@ -37,11 +37,14 @@ import org.keycloak.representations.idm.ErrorRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.admin.ApiUtil;
 import org.keycloak.testsuite.arquillian.annotation.EnableFeature;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.broker.util.SimpleHttpDefault;
 import org.keycloak.testsuite.organization.admin.AbstractOrganizationTest;
 import org.keycloak.testsuite.util.TokenUtil;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 @EnableFeature(Feature.ORGANIZATION)
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class OrganizationAccountTest extends AbstractOrganizationTest {
 
     @Rule

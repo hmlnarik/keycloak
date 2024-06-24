@@ -37,15 +37,18 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.admin.ApiUtil;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.DeleteCredentialPage;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.LoginConfigTotpPage;
 import org.keycloak.testsuite.pages.LoginTotpPage;
 import org.keycloak.testsuite.util.UserBuilder;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class AppInitiatedActionDeleteCredentialTest extends AbstractAppInitiatedActionTest {
 
     @Override

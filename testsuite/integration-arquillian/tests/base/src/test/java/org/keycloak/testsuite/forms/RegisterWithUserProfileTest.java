@@ -45,6 +45,7 @@ import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.AppPage.RequestType;
 import org.keycloak.testsuite.pages.ErrorPage;
@@ -55,12 +56,14 @@ import org.keycloak.testsuite.util.GreenMailRule;
 import org.keycloak.testsuite.util.KeycloakModelUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Test user registration with customized user-profile configurations
  *
  * @author Vlastimil Elias <velias@redhat.com>
  */
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class RegisterWithUserProfileTest extends AbstractTestRealmKeycloakTest {
 
     private static final String SCOPE_LAST_NAME = "lastName";

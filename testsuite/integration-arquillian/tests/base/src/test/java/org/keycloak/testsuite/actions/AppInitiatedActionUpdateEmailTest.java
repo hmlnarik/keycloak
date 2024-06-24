@@ -34,8 +34,11 @@ import org.keycloak.representations.userprofile.config.UPAttribute;
 import org.keycloak.representations.userprofile.config.UPAttributePermissions;
 import org.keycloak.representations.userprofile.config.UPAttributeRequired;
 import org.keycloak.representations.userprofile.config.UPConfig;
+import org.keycloak.testsuite.arquillian.annotation.IgnoreBrowserDriver;
 import org.keycloak.validate.validators.LengthValidator;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
+@IgnoreBrowserDriver(HtmlUnitDriver.class)
 public class AppInitiatedActionUpdateEmailTest extends AbstractAppInitiatedActionUpdateEmailTest {
 
     @Test
